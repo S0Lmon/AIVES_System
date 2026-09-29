@@ -1,0 +1,9 @@
+@model AIVES.WebMVC.Models.ViewModels.VerifyEmailViewModel
+@{ Layout = "_AuthLayout"; ViewData["Title"] = "Xác minh email"; }
+<section class="verify-shell panel">
+    <div class="verify-code-mark" aria-hidden="true">06</div><span class="page-kicker">Email verification</span><h1>Nhập mã xác minh</h1><p>Mã 6 chữ số đã được gửi đến <strong>@Model.Email</strong>. Mã hết hạn sau 10 phút.</p>
+    @if (TempData["AuthMessage"] != null) { <div class="alert alert-success">@TempData["AuthMessage"]</div> }
+    <form asp-action="VerifyEmail" method="post"><input asp-for="Email" type="hidden" /><div asp-validation-summary="ModelOnly" class="alert alert-danger"></div><label asp-for="Code" class="form-label">Mã xác minh</label><input asp-for="Code" class="form-control otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" autofocus /><span asp-validation-for="Code" class="text-danger small"></span><button type="submit" class="btn btn-primary auth-submit">Xác minh tài khoản</button></form>
+    <form asp-action="ResendCode" method="post" class="resend-form"><input name="email" value="@Model.Email" type="hidden" /><button type="submit" class="btn btn-light">Gửi lại mã</button></form>
+</section>
+@section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }

@@ -1,0 +1,23 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionViewModel
+@{ ViewData["Title"] = "Tạo câu hỏi"; }
+
+<div class="page-heading form-panel"><div><span class="page-kicker">Ngân hàng câu hỏi</span><h1>Tạo câu hỏi vấn đáp</h1><p>Xây dựng câu hỏi rõ ràng, gắn mức độ Bloom và rubric chấm điểm.</p></div><span class="ai-assist-chip">✦ Có thể sinh bằng AI</span></div>
+<form asp-action="Create" method="post" class="panel form-panel">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger m-4 mb-0"></div>
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">1</span><div><h2>Nội dung câu hỏi</h2><p>Nhập câu hỏi chính và các ý cần có trong câu trả lời.</p></div></div>
+        <div class="mb-4"><label asp-for="Content" class="form-label">Câu hỏi vấn đáp <span class="text-danger">*</span></label><textarea asp-for="Content" class="form-control" rows="5" placeholder="Ví dụ: Hãy giải thích tính đa hình và đưa ra một ví dụ thực tế?"></textarea><span asp-validation-for="Content" class="text-danger small"></span><div class="form-text">Tối thiểu 10 ký tự. Câu hỏi nên tập trung vào một năng lực cần đánh giá.</div></div>
+        <div><label asp-for="ExpectedAnswer" class="form-label">Đáp án mong đợi / ý chính</label><textarea asp-for="ExpectedAnswer" class="form-control" rows="4" placeholder="Liệt kê khái niệm và các ý quan trọng mà sinh viên cần trình bày..."></textarea><span asp-validation-for="ExpectedAnswer" class="text-danger small"></span></div>
+    </section>
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">2</span><div><h2>Khung đánh giá</h2><p>Xác định mức độ nhận thức và phương pháp chấm điểm.</p></div></div>
+        <div class="row g-4"><div class="col-md-6"><label asp-for="BloomLevelId" class="form-label">Mức độ nhận thức Bloom <span class="text-danger">*</span></label><select asp-for="BloomLevelId" asp-items="ViewBag.BloomLevels" class="form-select"><option value="">Chọn mức độ Bloom</option></select><span asp-validation-for="BloomLevelId" class="text-danger small"></span></div><div class="col-md-6"><label asp-for="RubricId" class="form-label">Rubric chấm điểm <span class="text-danger">*</span></label><select asp-for="RubricId" asp-items="ViewBag.Rubrics" class="form-select"><option value="">Chọn rubric</option></select><span asp-validation-for="RubricId" class="text-danger small"></span></div></div>
+    </section>
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">3</span><div><h2>Phân loại & trạng thái</h2><p>Gắn môn học, chủ đề và thứ tự hiển thị.</p></div></div>
+        <div class="row g-4 mb-4"><div class="col-md-8"><label asp-for="Context" class="form-label">Môn học / chủ đề</label><input asp-for="Context" class="form-control" placeholder="Ví dụ: Lập trình hướng đối tượng" /><span asp-validation-for="Context" class="text-danger small"></span></div><div class="col-md-4"><label asp-for="DisplayOrder" class="form-label">Thứ tự hiển thị</label><input asp-for="DisplayOrder" type="number" class="form-control" min="0" /><span asp-validation-for="DisplayOrder" class="text-danger small"></span></div></div>
+        <div class="switch-row"><div><strong>Đưa vào ngân hàng chính thức</strong><small>Câu hỏi có thể được sử dụng trong kỳ thi</small></div><div class="form-check form-switch m-0"><input asp-for="IsActive" class="form-check-input" type="checkbox" /></div></div>
+    </section>
+    <div class="form-actions"><a asp-action="Index" class="btn btn-light">Hủy</a><button type="submit" class="btn btn-primary">Lưu câu hỏi →</button></div>
+</form>
+@section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }

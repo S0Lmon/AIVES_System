@@ -1,0 +1,11 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionViewModel
+@{ ViewData["Title"] = "Delete Question"; }
+
+<div class="panel danger-panel">
+    <div class="danger-header"><h1>Delete this question?</h1><p>This action is permanent and cannot be undone.</p></div>
+    <div class="panel-body">
+        <span class="page-kicker">Question #@Model.Id</span><div class="content-quote mb-4">@Model.Content</div>
+        <div class="detail-grid mb-4"><div class="detail-item"><small>Bloom taxonomy</small><span class="badge-soft">@Model.BloomLevelName</span></div><div class="detail-item"><small>Scoring rubric</small><strong>@Model.RubricName</strong></div></div>
+        <form asp-action="Delete" method="post" class="d-flex justify-content-end gap-2"><input type="hidden" asp-for="Id" /><a asp-action="Index" class="btn btn-light">Keep question</a><button type="submit" class="btn btn-danger">Yes, delete permanently</button></form>
+    </div>
+</div>

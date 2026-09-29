@@ -1,0 +1,14 @@
+.vs/
+.agents/
+.hallmark/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.log
+*.db
+.env
+.env.*
+secrets.json
+appsettings.Production.json
+skills-lock.json

@@ -1,0 +1,13 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionViewModel
+@{ ViewData["Title"] = "Question Details"; }
+
+<div class="page-heading"><div><span class="page-kicker">Question #@Model.Id</span><h1>Question details</h1><p>Review the complete assessment setup.</p></div><div class="d-flex gap-2"><a asp-action="Index" class="btn btn-light">← Back</a><a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit question</a></div></div>
+<div class="panel">
+    <div class="panel-header"><h2>Question prompt</h2><span class="status-badge @(Model.IsActive ? "active" : "inactive")">@(Model.IsActive ? "● Active" : "○ Inactive")</span></div>
+    <div class="panel-body">
+        <div class="content-quote mb-4">@Model.Content</div>
+        <div class="detail-grid mb-4"><div class="detail-item"><small>Bloom taxonomy</small><span class="badge-soft">@Model.BloomLevelName</span></div><div class="detail-item"><small>Scoring rubric</small><strong>@Model.RubricName</strong></div><div class="detail-item"><small>Subject / context</small><strong>@(string.IsNullOrWhiteSpace(Model.Context) ? "Not specified" : Model.Context)</strong></div><div class="detail-item"><small>Display order</small><strong>@Model.DisplayOrder</strong></div></div>
+        @if (!string.IsNullOrWhiteSpace(Model.ExpectedAnswer)) { <div class="mb-4"><span class="page-kicker">Expected answer</span><div class="detail-item" style="white-space:pre-line">@Model.ExpectedAnswer</div></div> }
+        <div class="d-flex flex-wrap justify-content-between gap-3 text-muted small"><span>Created @Model.CreatedDate.ToString("dd MMM yyyy, HH:mm")</span><span>Updated @Model.ModifiedDate.ToString("dd MMM yyyy, HH:mm")</span></div>
+    </div>
+</div>
