@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1580" viewBox="0 0 2400 1580"><rect width="100%" height="100%" fill="#111111"/><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#eeeeef"/></marker></defs>
+<text x="1200" y="67" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#c5ccdb">AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP</text>
+<text x="1200" y="104" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="400" fill="#a6adbd">Theo codebase hiện tại · ASP.NET Core MVC / .NET 10 · DTO phụ trợ</text>
+<rect x="380" y="140" width="1580" height="300" rx="26" fill="#14191f" stroke="#558dff" stroke-width="2"/>
+<path d="M380,205 H1960" stroke="#558dff"/>
+<text x="1170.0" y="186" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#558dff">1. PRESENTATION LAYER – AIVES.WebMVC</text>
+<rect x="425" y="245" width="460" height="150" rx="22" fill="#111111" stroke="#558dff" stroke-width="2"/>
+<text x="655.0" y="295.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Razor Views</text>
+<text x="655.0" y="327.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Home · Account · Question</text>
+<text x="655.0" y="359.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">AiExamRoom / QuestionGenerator</text>
+<rect x="940" y="245" width="460" height="150" rx="22" fill="#111111" stroke="#558dff" stroke-width="2"/>
+<text x="1170.0" y="295.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Controllers</text>
+<text x="1170.0" y="327.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Home · Account</text>
+<text x="1170.0" y="359.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Question · AiExamRoom</text>
+<rect x="1455" y="245" width="460" height="150" rx="22" fill="#111111" stroke="#558dff" stroke-width="2"/>
+<text x="1685.0" y="295.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">ViewModels / HTTP</text>
+<text x="1685.0" y="327.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Account · Question · Rubric · AI</text>
+<text x="1685.0" y="359.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">MVC · cookie · Google OAuth</text>
+<rect x="35" y="230" width="285" height="110" rx="22" fill="#242a34" stroke="#c6cedf" stroke-width="2"/>
+<text x="177.5" y="276.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Giảng viên / Người dùng</text>
+<text x="177.5" y="308.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Trình duyệt web</text>
+<polyline points="320,285 380,285" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="350" y="270" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">HTTP</text>
+<rect x="2040" y="235" width="315" height="115" rx="22" fill="#271f30" stroke="#a97fcb" stroke-width="2"/>
+<text x="2197.5" y="283.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Google OAuth</text>
+<text x="2197.5" y="315.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">/signin-google</text>
+<polyline points="1960,292 2040,292" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="2000" y="275" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">OAuth 2.0</text>
+<rect x="380" y="515" width="1580" height="330" rx="26" fill="#121b16" stroke="#4eaa87" stroke-width="2"/>
+<path d="M380,580 H1960" stroke="#4eaa87"/>
+<text x="1170.0" y="561" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#4eaa87">2. BUSINESS LOGIC LAYER – AIVES.BLL</text>
+<rect x="410" y="625" width="285" height="165" rx="22" fill="#111111" stroke="#4eaa87" stroke-width="2"/>
+<text x="552.5" y="683.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#eeeeef">QuestionService</text>
+<text x="552.5" y="713.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">BloomLevelService</text>
+<text x="552.5" y="743.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">Validation / lọc / CRUD</text>
+<rect x="715" y="625" width="285" height="165" rx="22" fill="#111111" stroke="#4eaa87" stroke-width="2"/>
+<text x="857.5" y="683.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#eeeeef">RubricService</text>
+<text x="857.5" y="713.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">Validation rubric</text>
+<text x="857.5" y="743.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">Tên / mô tả / tổng điểm</text>
+<rect x="1020" y="625" width="285" height="165" rx="22" fill="#111111" stroke="#4eaa87" stroke-width="2"/>
+<text x="1162.5" y="684.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#eeeeef">AccountService</text>
+<text x="1162.5" y="713.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">Đăng ký / xác minh</text>
+<text x="1162.5" y="742.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">Liên kết Google / chính sách</text>
+<rect x="1325" y="625" width="285" height="165" rx="22" fill="#111111" stroke="#4eaa87" stroke-width="2"/>
+<text x="1467.5" y="684.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#eeeeef">GeminiQuestionGenerator</text>
+<text x="1467.5" y="713.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">1–10 câu hỏi / Bloom</text>
+<text x="1467.5" y="742.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">Đáp án / 2 câu đào sâu</text>
+<rect x="1630" y="625" width="300" height="165" rx="22" fill="#111111" stroke="#4eaa87" stroke-width="2"/>
+<text x="1780.0" y="684.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#eeeeef">Email services</text>
+<text x="1780.0" y="713.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">EmailVerificationService</text>
+<text x="1780.0" y="742.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">GmailSmtpEmailSender</text>
+<polyline points="1170,440 1170,515" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="1170" y="485" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">Gọi service BLL · DTO</text>
+<rect x="2040" y="590" width="315" height="115" rx="22" fill="#271f30" stroke="#a97fcb" stroke-width="2"/>
+<text x="2197.5" y="638.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Google Gemini API</text>
+<text x="2197.5" y="670.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">HTTPS / JSON</text>
+<polyline points="1467,625 1467,590 1980,590 1980,647 2040,647" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="1830" y="625" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">HTTPS / JSON</text>
+<rect x="2040" y="755" width="315" height="115" rx="22" fill="#271f30" stroke="#a97fcb" stroke-width="2"/>
+<text x="2197.5" y="803.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">Gmail SMTP</text>
+<text x="2197.5" y="835.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">STARTTLS / port 587</text>
+<polyline points="1930,755 1995,755 1995,812 2040,812" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="2000" y="875" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">SMTP</text>
+<rect x="30" y="535" width="300" height="285" rx="22" fill="#211b29" stroke="#ad88d3" stroke-width="2"/>
+<text x="180.0" y="598.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#eeeeef">AIVES.DTO</text>
+<text x="180.0" y="626.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">QuestionDto · RubricDto</text>
+<text x="180.0" y="654.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">BloomLevelDto · UserDto</text>
+<text x="180.0" y="682.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">EmailVerificationCodeDto</text>
+<text x="180.0" y="710.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">RegisterRequest / AccountResult</text>
+<text x="180.0" y="738.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">ExternalLogin / SignInResult</text>
+<text x="180.0" y="766.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="400" fill="#a6adbd">GeneratedVivaQuestion</text>
+<text x="180" y="863" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="400" fill="#a6adbd">DTO dùng chung UI / BLL / DAL</text>
+<polyline points="330,675 380,675" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5" />
+<text x="354" y="665" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">DTO</text>
+<rect x="380" y="925" width="1580" height="315" rx="26" fill="#1b160e" stroke="#bf811f" stroke-width="2"/>
+<path d="M380,990 H1960" stroke="#bf811f"/>
+<text x="1170.0" y="971" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#bf811f">3. DATA ACCESS LAYER – AIVES.DAL</text>
+<rect x="425" y="1025" width="460" height="175" rx="22" fill="#111111" stroke="#bf811f" stroke-width="2"/>
+<text x="655.0" y="1088.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#eeeeef">Repositories / interfaces</text>
+<text x="655.0" y="1119.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="400" fill="#a6adbd">Question · Rubric · BloomLevel</text>
+<text x="655.0" y="1150.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="400" fill="#a6adbd">EmailVerification · DTO mapping</text>
+<rect x="940" y="1025" width="460" height="175" rx="22" fill="#111111" stroke="#bf811f" stroke-width="2"/>
+<text x="1170.0" y="1088.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#eeeeef">IdentityAccountStore / DbContext</text>
+<text x="1170.0" y="1118.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">ApplicationDbContext</text>
+<text x="1170.0" y="1148.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">EF Core · ASP.NET Core Identity</text>
+<rect x="1455" y="1025" width="460" height="175" rx="22" fill="#111111" stroke="#bf811f" stroke-width="2"/>
+<text x="1685.0" y="1089.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#eeeeef">Entities / Migrations</text>
+<text x="1685.0" y="1118.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">Question · Rubric · RubricCriterion</text>
+<text x="1685.0" y="1147.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#a6adbd">BloomLevel · ApplicationUser · OTP</text>
+<polyline points="1170,845 1170,925" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="1170" y="892" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">Repository / AccountStore · DTO</text>
+<rect x="940" y="1320" width="460" height="120" rx="22" fill="#271f30" stroke="#ad88d3" stroke-width="2"/>
+<text x="1170.0" y="1355.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#eeeeef">SQL Server 2022</text>
+<text x="1170.0" y="1387.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">Docker volume: aives-sql-data</text>
+<text x="1170.0" y="1419.0" text-anchor="middle" font-family="Arial,sans-serif" font-size="23" font-weight="400" fill="#a6adbd">LocalDB khi phát triển Windows</text>
+<polyline points="1170,1240 1170,1320" fill="none" stroke="#eeeeef" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)" />
+<text x="1170" y="1288" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="400" fill="#eeeeef">EF Core / SQL</text>
+<text x="1200" y="1492" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="400" fill="#a6adbd">DAL là tầng duy nhất truy cập database. Entity ở DAL; DTO vận chuyển dữ liệu giữa các lớp.</text>
+<text x="1200" y="1531" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="400" fill="#a6adbd">AIVES.Tests: unit / HTTP / Identity / SQL integration · Kỳ thi, STT/TTS, chấm điểm và báo cáo: roadmap.</text>
+</svg>

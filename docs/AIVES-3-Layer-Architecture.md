@@ -23,6 +23,15 @@ flowchart TB
     DTO -.-> DAL
 ```
 
+## Sơ đồ hệ thống
+
+![Kiến trúc AIVES theo codebase hiện tại](AIVES-3-Layer-Architecture.png)
+
+- [Bản SVG](AIVES-3-Layer-Architecture.svg): phóng to không mất nét.
+- [Bản draw.io](AIVES-3-Layer-Architecture.drawio): mở bằng diagrams.net để chỉnh sửa.
+- Sơ đồ phản ánh các thành phần đang có trong source; các module roadmap chỉ ghi chú, không biểu diễn như chức năng đã triển khai.
+- Mũi tên hai chiều biểu thị yêu cầu/kết quả, không phải hai project tham chiếu nhau. Tham chiếu mã nguồn vẫn theo chiều UI → BLL → DAL; DTO dùng chung.
+
 ## Ranh giới phụ thuộc
 
 - WebMVC tham chiếu trực tiếp BLL và DTO; controller không dùng repository, DbContext, EF Core hoặc entity lưu trữ.
