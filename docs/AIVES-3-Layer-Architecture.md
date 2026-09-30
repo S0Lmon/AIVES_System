@@ -1,64 +1,85 @@
-# AIVES – Kiến trúc 3 lớp
+# AIVES – Kiến trúc 3 Layer
+
+Ứng dụng chia thành ba lớp xử lý và một project DTO dùng chung. Đây là phân chia trách nhiệm trong code (layer), không yêu cầu ba máy chủ triển khai (tier).
+
+| Project | Vai trò | Thành phần |
+|---|---|---|
+| `AIVES.WebMVC` | Presentation / GUI | Controllers, Razor Views, ViewModels, wwwroot, HTTP pipeline, MVC/cookie/Google OAuth configuration |
+| `AIVES.BLL` | Business Logic / BLL | QuestionService, RubricService, BloomLevelService, AccountService, EmailVerificationService, Gemini và SMTP services |
+| `AIVES.DAL` | Data Access / DAL | Repositories, IdentityAccountStore, ApplicationDbContext, Entities, Migrations, database initialization |
+| `AIVES.DTO` | Dữ liệu trao đổi, không phải lớp xử lý thứ tư | QuestionDto, RubricDto, BloomLevelDto, EmailVerificationCodeDto, UserDto, RegisterRequest, AccountResult, ExternalLoginDto, GeneratedVivaQuestion |
+| `AIVES.Tests` | Kiểm thử | Ranh giới assembly, CRUD, validation, OTP, tài khoản và SQL Server integration |
 
 ```mermaid
 flowchart TB
-    User([Giảng viên / Người dùng])
-
-    subgraph P["1. Presentation Layer – AIVES.WebMVC"]
-        Views["Razor Views<br/>Home · Account · Question · AI Exam Room"]
-        Controllers["Controllers<br/>AccountController<br/>QuestionController<br/>AiExamRoomController"]
-        ViewModels["ViewModels<br/>Account · Question · Rubric · AI Generator"]
-        Views <--> Controllers
-        Controllers <--> ViewModels
-    end
-
-    subgraph B["2. Business Logic Layer – Services"]
-        QuestionService["QuestionService<br/>Kiểm tra và xử lý nghiệp vụ câu hỏi"]
-        RubricService["RubricService<br/>Xử lý rubric và tiêu chí chấm"]
-        GeminiService["GeminiQuestionGenerator<br/>Sinh câu hỏi vấn đáp bằng AI"]
-        EmailService["EmailVerificationService<br/>GmailSmtpEmailSender"]
-    end
-
-    subgraph D["3. Data Access Layer – Data / Repositories"]
-        Repositories["Repository&lt;T&gt;<br/>QuestionRepository"]
-        DbContext["ApplicationDbContext<br/>EF Core · ASP.NET Identity"]
-        Entities["Entities<br/>Question · Rubric · BloomLevel<br/>ApplicationUser · VerificationCode"]
-        Repositories --> DbContext
-        DbContext <--> Entities
-    end
-
-    Sql[("SQL Server 2022<br/>Docker Volume")]
-    Gemini[["Google Gemini API"]]
-    Gmail[["Gmail SMTP"]]
-    Google[["Google OAuth"]]
-
-    User <--> Views
-    Controllers --> QuestionService
-    Controllers --> RubricService
-    Controllers --> GeminiService
-    Controllers --> EmailService
-    QuestionService --> Repositories
-    RubricService --> Repositories
-    EmailService --> DbContext
-    DbContext <--> Sql
-    GeminiService <--> Gemini
-    EmailService <--> Gmail
-    Controllers <--> Google
+    User([Người dùng]) <--> GUI["Presentation · AIVES.WebMVC<br/>Controller / View / ViewModel"]
+    GUI <-->|"DTO / kết quả nghiệp vụ"| BLL["Business Logic · AIVES.BLL<br/>Question / Rubric / Bloom / Account / Email / AI"]
+    BLL <-->|"Repository hoặc AccountStore · DTO"| DAL["Data Access · AIVES.DAL<br/>Repositories / IdentityAccountStore<br/>EF Core / Entities / Migrations"]
+    DAL <--> SQL[(SQL Server)]
+    BLL <--> External["Gemini API / Gmail SMTP"]
+    GUI <--> Google["Google OAuth · HTTP authentication protocol"]
+    DTO["AIVES.DTO · POCO dữ liệu dùng chung"] -.-> GUI
+    DTO -.-> BLL
+    DTO -.-> DAL
 ```
 
-## Luồng chính minh họa
+## Ranh giới phụ thuộc
 
-1. Giảng viên nhập câu hỏi tại Razor View.
-2. `QuestionController` nhận request và chuyển dữ liệu cho `QuestionService`.
-3. `QuestionService` kiểm tra nội dung, Bloom level và rubric.
-4. `QuestionRepository` thao tác qua `ApplicationDbContext`.
-5. EF Core lưu câu hỏi vào SQL Server và kết quả được trả ngược lên giao diện.
+- WebMVC tham chiếu trực tiếp BLL và DTO; controller không dùng repository, DbContext, EF Core hoặc entity lưu trữ.
+- BLL tham chiếu DAL và DTO, kiểm tra quy tắc và điều phối use case; không viết truy vấn EF Core hay sử dụng entity của DAL.
+- DAL tham chiếu DTO, ánh xạ DTO với entity nội bộ rồi thực hiện lưu/truy xuất dữ liệu. DAL không phụ thuộc BLL hoặc WebMVC.
+- DTO không tham chiếu project ứng dụng, ASP.NET Identity hay EF Core. DTO không có navigation property đến entity.
+- `AuthenticationProperties` chỉ là thông tin giao thức xác thực HTTP. Dữ liệu tài khoản và kết quả đăng nhập giữa các lớp dùng DTO.
+- `AddPresentation` đăng ký MVC, cookie và Google OAuth tại WebMVC. `AddAives` đăng ký BLL và truyền chính sách Identity (mật khẩu, email xác minh, lockout) cho DAL. DAL chỉ đăng ký Identity store/EF và thực thi lưu trữ. `Program.cs` ghép các thành phần và thiết lập middleware.
 
-## Trách nhiệm các lớp
+## Luồng xử lý
 
-| Lớp | Thành phần chính | Trách nhiệm |
-|---|---|---|
-| Presentation | Views, Controllers, ViewModels | Hiển thị UI, nhận request, binding và validation đầu vào |
-| Business Logic | Question, Rubric, Gemini, Email services | Thực thi quy tắc nghiệp vụ và điều phối use case |
-| Data Access | Repositories, ApplicationDbContext, Entities | Truy xuất dữ liệu bằng EF Core và ánh xạ SQL Server |
+1. GUI nhận request, kiểm tra `ModelState`, chuyển ViewModel thành DTO.
+2. BLL kiểm tra nội dung, độ dài, thứ tự hiển thị và sự tồn tại của Bloom/rubric trước khi gọi DAL.
+3. DAL truy vấn/lưu entity qua EF Core, trả DTO có tên Bloom/rubric cho BLL.
+4. BLL trả DTO cho controller; controller ánh xạ sang ViewModel và hiển thị.
 
+Đăng ký, xác minh email, gửi lại mã và liên kết Google được điều phối bởi `AccountService`. Mã xác minh được băm, có thời hạn 10 phút, giới hạn 5 lần thử và khoảng chờ gửi lại 1 phút. `EmailVerificationRepository` xử lý toàn bộ việc đọc/ghi mã; SMTP và Gemini được gọi qua interface service.
+
+Lỗi DAL không bị nuốt tại repository mà truyền lên BLL rồi GUI. Lỗi nghiệp vụ dự kiến dùng exception hoặc `AccountResult`; controller hiển thị lỗi phù hợp và ghi log lỗi hệ thống. Cập nhật câu hỏi/rubric giữ ngày tạo ban đầu; repository cập nhật entity đã tracking thay vì attach một instance thứ hai cùng ID.
+
+## Chạy và kiểm tra
+
+Từ thư mục gốc, với .NET SDK 10 và SQL Server được cấu hình:
+
+```powershell
+dotnet build AIVES_System.slnx -c Release
+dotnet test AIVES_System.slnx -c Release
+dotnet run --project AIVES.WebMVC
+```
+
+User Secrets vẫn thuộc project WebMVC với ID cũ. Các khóa ConnectionStrings, Gemini, GmailSmtp, Authentication và DemoAccount được giữ nguyên. Dockerfile restore đầy đủ các project trước khi publish WebMVC.
+
+SQL integration test chỉ chạy khi có biến môi trường `AIVES_TEST_SQL_CONNECTION`. Test tạo database riêng có tiền tố `AIVES_LayerTest_`, chạy migration và CRUD, sau đó xóa chính database đó. Không đặt connection string thật vào source. Các test OTP dùng email sender giả, không gửi email ra ngoài; EF InMemory không thay thế kiểm thử ràng buộc quan hệ trên SQL Server.
+
+## EF Core migrations
+
+Entities, DbContext và toàn bộ migration nằm trong DAL. Giữ nguyên ba migration ID và cấu trúc bảng; chỉ chuyển namespace/assembly. `ApplicationDbContextFactory` cho phép tooling đọc model mà không chạy web startup hay seed dữ liệu.
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebMVC
+dotnet ef migrations add TenMigration --project AIVES.DAL --startup-project AIVES.WebMVC --output-dir Migrations
+dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebMVC
+```
+
+Không cần tạo migration riêng cho việc tách layer. Ứng dụng tiếp tục tự áp dụng migration khi khởi động như trước.
+
+## Sơ đồ
+
+![AIVES 3 Layer](AIVES-3-Layer-Architecture.png)
+
+File `AIVES-3-Layer-Architecture.drawio` là bản có thể chỉnh sửa.
+
+## Kiểm tra lại theo yêu cầu ngày 01/10/2026
+
+- Presentation chỉ xử lý HTTP/form, binding, phản hồi và ánh xạ ViewModel ↔ DTO; không gọi DAL hay SQL.
+- BLL giữ quy tắc câu hỏi, rubric, chính sách tài khoản, xác minh OTP và điều phối dịch vụ AI/email. Rubric kiểm tra tên ≤ 200 ký tự, mô tả ≤ 1000 ký tự và tổng điểm không âm trước khi lưu.
+- DAL là nơi duy nhất chứa EF Core, DbContext, entity, migration, SQL và Identity persistence. Kiểm tra an toàn trước phát hành cookie được adapter Identity thực thi bằng chính sách do BLL cấu hình.
+- DTO là các đối tượng trao đổi thuần, không có truy vấn hay phụ thuộc framework. Entity lưu trữ ở DAL; DTO biểu diễn dữ liệu bảng hoặc dữ liệu yêu cầu/kết quả, không bắt buộc mọi DTO tương ứng một bảng (ví dụ RegisterRequest/AccountResult).
+- Startup seed/migration là khởi tạo hạ tầng dữ liệu; không phải luồng request GUI truy cập database.
+- Kiểm thử ranh giới assembly kiểm tra WebMVC không tham chiếu DAL/EF, BLL không tham chiếu EF/MVC/Google authentication, DAL không tham chiếu UI/BLL và DTO không tham chiếu các tầng.

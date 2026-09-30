@@ -9,9 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../AIVES.BLL/AIVES.BLL.csproj" />
+    <ProjectReference Include="../AIVES.DTO/AIVES.DTO.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

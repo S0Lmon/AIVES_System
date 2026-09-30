@@ -1,3 +1,7 @@
 <Solution>
+  <Project Path="AIVES.Tests/AIVES.Tests.csproj" />
   <Project Path="AIVES.WebMVC/AIVES.WebMVC.csproj" />
+  <Project Path="AIVES.BLL/AIVES.BLL.csproj" />
+  <Project Path="AIVES.DAL/AIVES.DAL.csproj" />
+  <Project Path="AIVES.DTO/AIVES.DTO.csproj" />
 </Solution>

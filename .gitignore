@@ -3,6 +3,7 @@
 .hallmark/
 **/bin/
 **/obj/
+**/TestResults/
 *.user
 *.suo
 *.log

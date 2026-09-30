@@ -36,7 +36,7 @@
                 {
                     var question = Model.Questions[index];
                     <li class="generated-question">
-                        <div class="generated-index">Q@(index + 1).ToString("D2")</div>
+                        <div class="generated-index">Q@((index + 1).ToString("D2"))</div>
                         <div class="generated-copy"><div class="generated-meta"><span class="badge-soft">@question.BloomLevel</span><span>Bản nháp AI · cần giảng viên duyệt</span></div><h3>@question.Content</h3><div class="answer-block"><strong>Ý chính mong đợi</strong><p>@question.ExpectedAnswer</p></div><div class="follow-up-block"><strong>Câu hỏi đào sâu</strong><ul>@foreach (var followUp in question.FollowUpQuestions) { <li>@followUp</li> }</ul></div></div>
                     </li>
                 }
