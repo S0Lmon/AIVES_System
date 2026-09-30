@@ -105,6 +105,65 @@ using (var scope = app.Services.CreateScope())
             }
         }
     }
+
+    if (builder.Configuration.GetValue<bool>("DemoAccount:Enabled"))
+    {
+        var demoEmail = builder.Configuration["DemoAccount:Email"];
+        var demoPassword = builder.Configuration["DemoAccount:Password"];
+        var demoDisplayName = builder.Configuration["DemoAccount:DisplayName"] ?? "AIVES Demo";
+
+        if (string.IsNullOrWhiteSpace(demoEmail) || string.IsNullOrWhiteSpace(demoPassword))
+        {
+            throw new InvalidOperationException(
+                "DemoAccount is enabled, but DemoAccount:Email or DemoAccount:Password is missing.");
+        }
+
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var demoUser = await userManager.FindByEmailAsync(demoEmail);
+        if (demoUser is null)
+        {
+            demoUser = new ApplicationUser
+            {
+                UserName = demoEmail,
+                Email = demoEmail,
+                DisplayName = demoDisplayName,
+                EmailConfirmed = true
+            };
+
+            var createResult = await userManager.CreateAsync(demoUser, demoPassword);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join("; ", createResult.Errors.Select(error => error.Description));
+                throw new InvalidOperationException($"Could not create the demo account: {errors}");
+            }
+        }
+        else
+        {
+            if (!demoUser.EmailConfirmed || demoUser.DisplayName != demoDisplayName)
+            {
+                demoUser.EmailConfirmed = true;
+                demoUser.DisplayName = demoDisplayName;
+                var updateResult = await userManager.UpdateAsync(demoUser);
+                if (!updateResult.Succeeded)
+                {
+                    var errors = string.Join("; ", updateResult.Errors.Select(error => error.Description));
+                    throw new InvalidOperationException($"Could not update the demo account: {errors}");
+                }
+            }
+
+            if (builder.Configuration.GetValue<bool>("DemoAccount:ResetPasswordOnStartup")
+                && !await userManager.CheckPasswordAsync(demoUser, demoPassword))
+            {
+                var resetToken = await userManager.GeneratePasswordResetTokenAsync(demoUser);
+                var resetResult = await userManager.ResetPasswordAsync(demoUser, resetToken, demoPassword);
+                if (!resetResult.Succeeded)
+                {
+                    var errors = string.Join("; ", resetResult.Errors.Select(error => error.Description));
+                    throw new InvalidOperationException($"Could not reset the demo account password: {errors}");
+                }
+            }
+        }
+    }
 }
 if (!app.Environment.IsDevelopment())
 {

@@ -1,0 +1,66 @@
+name: aives
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aives-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "${MSSQL_PID:-Express}"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}"
+    volumes:
+      - aives-sql-data:/var/opt/mssql
+    networks:
+      - aives-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  web:
+    container_name: aives-web
+    build:
+      context: .
+      dockerfile: AIVES.WebMVC/Dockerfile
+    image: aives-web:latest
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=AIVES;User Id=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Gemini__ApiKey: "${GEMINI_API_KEY:-}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-3.8-flash}"
+      Authentication__Google__ClientId: "${GOOGLE_CLIENT_ID:-}"
+      Authentication__Google__ClientSecret: "${GOOGLE_CLIENT_SECRET:-}"
+      GmailSmtp__Host: "${GMAIL_SMTP_HOST:-smtp.gmail.com}"
+      GmailSmtp__Port: "${GMAIL_SMTP_PORT:-587}"
+      GmailSmtp__Username: "${GMAIL_USERNAME:-}"
+      GmailSmtp__AppPassword: "${GMAIL_APP_PASSWORD:-}"
+      GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
+      DemoAccount__Enabled: "${DEMO_ACCOUNT_ENABLED:-false}"
+      DemoAccount__Email: "${DEMO_ACCOUNT_EMAIL:-}"
+      DemoAccount__Password: "${DEMO_ACCOUNT_PASSWORD:-}"
+      DemoAccount__DisplayName: "${DEMO_ACCOUNT_DISPLAY_NAME:-AIVES Demo}"
+      DemoAccount__ResetPasswordOnStartup: "${DEMO_ACCOUNT_RESET_PASSWORD:-false}"
+    ports:
+      - "${AIVES_PORT:-5201}:8080"
+    networks:
+      - aives-network
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  aives-sql-data:
+    name: aives-sql-data
+
+networks:
+  aives-network:
+    name: aives-network
+    driver: bridge
