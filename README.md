@@ -1,0 +1,146 @@
+# AIVES System
+
+AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Project sử dụng ASP.NET Core MVC, SQL Server và Gemini để tạo bản nháp câu hỏi bằng tiếng Việt. Định hướng phát triển là hỗ trợ quy trình thi vấn đáp có AI, trong đó giảng viên duyệt câu hỏi và quyết định điểm.
+
+Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, tài khoản và tạo câu hỏi bằng AI**. Phỏng vấn bằng giọng nói, tổ chức kỳ thi và chấm điểm chưa được triển khai đầy đủ.
+
+## Chức năng hiện có
+
+- **Tài khoản:** đăng ký bằng Gmail, gửi mã xác minh qua SMTP, xác minh email, gửi lại mã, đăng nhập bằng mật khẩu, đăng xuất và đăng nhập Google khi được cấu hình.
+- **Ngân hàng câu hỏi:** thêm, xem danh sách/chi tiết, sửa, xóa và lọc theo mức Bloom; lưu ngữ cảnh, đáp án mong đợi, rubric, thứ tự hiển thị và trạng thái hoạt động.
+- **Danh mục:** mức Bloom và rubric được truy xuất qua service/repository để chọn khi tạo câu hỏi. Rubric có nghiệp vụ CRUD ở BLL/DAL; chưa có màn hình quản lý rubric riêng.
+- **Gemini:** tạo từ 1 đến 10 câu hỏi theo môn học, chủ đề, chuẩn đầu ra và độ khó. Mỗi câu có đáp án mong đợi, mức Bloom và 2 câu hỏi đào sâu. Kết quả là bản nháp hiển thị để giảng viên duyệt, chưa tự động lưu vào ngân hàng.
+- **Giao diện:** trang tổng quan và menu responsive cho desktop/mobile.
+
+Các module kỳ thi/lịch thi, STT/TTS, phỏng vấn thích ứng, hỗ trợ chấm điểm, giám sát, báo cáo và quản trị nâng cao hiện là **roadmap**. Các phần giới thiệu trên dashboard không đồng nghĩa với chức năng đã hoàn thành.
+
+## Công nghệ
+
+| Thành phần | Công nghệ |
+|---|---|
+| Runtime | .NET 10, C# |
+| Presentation | ASP.NET Core MVC, Razor, Bootstrap, JavaScript |
+| Dữ liệu | EF Core 10, SQL Server, EF migrations |
+| Xác thực | ASP.NET Core Identity, cookie, Google OAuth |
+| Tích hợp | Gemini API, Gmail SMTP |
+| Kiểm thử | xUnit, ASP.NET Core TestServer, EF InMemory và SQL Server thật |
+| Đóng gói | Dockerfile nhiều giai đoạn, Docker Compose |
+
+## Kiến trúc 3 Layer + DTO
+
+![Sơ đồ kiến trúc hệ thống AIVES](docs/AIVES-3-Layer-Architecture.png)
+
+```text
+AIVES_System/
+├── AIVES.WebMVC/    # Presentation: Controllers, Views, ViewModels, wwwroot, HTTP
+├── AIVES.BLL/       # Business: service, validation, quy tắc và điều phối nghiệp vụ
+├── AIVES.DAL/       # Data Access: EF Core, repository, Identity store, migrations
+├── AIVES.DTO/       # Đối tượng truyền dữ liệu dùng chung
+├── AIVES.Tests/     # Kiểm thử unit, HTTP, Identity và SQL integration
+├── docs/            # Tài liệu kiến trúc, báo cáo và bằng chứng kiểm thử
+├── scripts/         # Công cụ kiểm tra SMTP
+├── AIVES_System.slnx
+├── compose.yaml
+└── DEPLOY.md
+```
+
+Luồng xử lý: **Người dùng → WebMVC → BLL → DAL → SQL Server**, kết quả đi ngược lại qua DTO. WebMVC tham chiếu BLL và DTO; BLL tham chiếu DAL và DTO; DAL là nơi duy nhất truy cập database. DTO không chứa truy vấn hay logic xử lý nghiệp vụ.
+
+WebMVC xử lý form/HTTP và cấu hình MVC, cookie, Google OAuth. BLL kiểm tra dữ liệu, chính sách tài khoản, OTP và điều phối AI/email. DAL ánh xạ DTO với entity, thực hiện truy vấn/lưu trữ và chứa toàn bộ migrations. Ba layer là phân chia trách nhiệm trong mã nguồn, không yêu cầu ba máy chủ triển khai.
+
+Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md).
+
+## Chạy bằng .NET
+
+### Điều kiện
+
+- .NET SDK 10.
+- SQL Server có thể kết nối; cấu hình mặc định dùng SQL Server LocalDB trên Windows.
+- Visual Studio hỗ trợ .NET 10 và solution `.slnx`, hoặc dùng CLI.
+
+Mở `AIVES_System.slnx` tại thư mục gốc; chọn `AIVES.WebMVC` làm startup project nếu dùng Visual Studio.
+
+```powershell
+dotnet restore AIVES_System.slnx
+dotnet build AIVES_System.slnx -c Release
+
+# Chỉ cần thay connection nếu không dùng LocalDB mặc định.
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<SQL_SERVER_CONNECTION_STRING>" --project AIVES.WebMVC
+
+dotnet run --project AIVES.WebMVC --launch-profile https
+```
+
+Profile HTTPS mở ứng dụng tại `https://localhost:7195` (HTTP: `http://localhost:5201`). Có thể chạy `dotnet dev-certs https --trust` trên máy phát triển nếu cần tin cậy chứng chỉ HTTPS local.
+
+Ứng dụng áp dụng migrations khi khởi động; tài khoản database cần quyền phù hợp. Môi trường Development có seed dữ liệu mẫu. Không đặt connection string chứa mật khẩu vào Git.
+
+### Cấu hình dịch vụ ngoài
+
+Lưu các giá trị thật bằng User Secrets khi phát triển; dùng biến môi trường khi triển khai. Các giá trị `<...>` dưới đây là placeholder, phải thay trước khi chạy.
+
+```powershell
+# Tạo câu hỏi AI
+dotnet user-secrets set "Gemini:ApiKey" "<GEMINI_API_KEY>" --project AIVES.WebMVC
+dotnet user-secrets set "Gemini:Model" "<MODEL_AVAILABLE_TO_YOUR_ACCOUNT>" --project AIVES.WebMVC
+
+# Gửi mã xác minh email
+dotnet user-secrets set "GmailSmtp:Username" "<GMAIL_ADDRESS>" --project AIVES.WebMVC
+dotnet user-secrets set "GmailSmtp:AppPassword" "<GMAIL_APP_PASSWORD>" --project AIVES.WebMVC
+
+# Đăng nhập Google (tùy chọn)
+dotnet user-secrets set "Authentication:Google:ClientId" "<GOOGLE_CLIENT_ID>" --project AIVES.WebMVC
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<GOOGLE_CLIENT_SECRET>" --project AIVES.WebMVC
+```
+
+SMTP mặc định là `smtp.gmail.com:587`. Google callback dùng đường dẫn `/signin-google`; đăng ký URI tương ứng với địa chỉ ứng dụng, ví dụ `https://localhost:7195/signin-google` khi dùng profile HTTPS.
+
+Nếu chưa có Gemini key, giao diện AI báo chưa cấu hình. Nếu SMTP chưa cấu hình, đăng ký không thể gửi mã xác minh. Có thể cấu hình tài khoản phát triển qua `Development:TestAccount:Email`, `Password`, `DisplayName` trong User Secrets; tài khoản này chỉ được tạo khi chạy Development.
+
+Model mặc định trong repository là `gemini-3.8-flash`; cần kiểm tra model và quyền truy cập thực tế của tài khoản trước khi sử dụng.
+
+## Chạy bằng Docker Compose
+
+Từ thư mục gốc:
+
+```powershell
+Copy-Item .env.example .env
+# Điền cấu hình SQL và dịch vụ cần sử dụng trong .env.
+docker compose up -d --build
+docker compose ps
+```
+
+Ứng dụng mặc định ở `http://localhost:5201`. Compose chạy web cùng SQL Server và lưu database trong volume `aives-sql-data`. Không đưa `.env` vào Git. Cấu hình tài khoản demo và triển khai HTTPS/domain được mô tả trong [DEPLOY.md](DEPLOY.md).
+
+## Kiểm thử
+
+```powershell
+# Kiểm thử nội bộ; không gọi Gemini thật.
+dotnet test AIVES_System.slnx -c Release --filter "FullyQualifiedName!~LiveGeminiTests"
+```
+
+Để chạy đầy đủ các test HTTP/SQL, đặt biến môi trường `AIVES_TEST_SQL_CONNECTION` trỏ tới SQL Server kiểm thử trước khi chạy. Tài khoản SQL cần quyền tạo/xóa database. Test tạo database riêng với tên GUID và xóa chính database đó sau khi hoàn tất. Nếu thiếu biến này, các ca SQL/HTTP tương ứng sẽ được **skip**.
+
+Test Gemini thật là opt-in: đặt `AIVES_TEST_GEMINI_API_KEY`, tùy chọn `AIVES_TEST_GEMINI_MODEL`, rồi chạy filter `FullyQualifiedName~LiveGeminiTests`. Ca này gọi nhà cung cấp thật và có thể phát sinh chi phí/quota.
+
+Lần kiểm tra ngày **01/10/2026**: **83/83 test nội bộ pass, không skip** trên môi trường có SQL Server; build Release 0 lỗi/0 cảnh báo; Docker build thành công. Đây là kết quả tại thời điểm kiểm tra, không phải trạng thái CI tự cập nhật.
+
+Xem [báo cáo kiểm thử và review](docs/Functional-Test-Report.md).
+
+## Migration
+
+Migrations nằm trong DAL; WebMVC là startup project:
+
+```powershell
+dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebMVC
+dotnet ef migrations add TenMigration --project AIVES.DAL --startup-project AIVES.WebMVC --output-dir Migrations
+```
+
+Các lệnh yêu cầu công cụ `dotnet-ef` tương thích EF Core 10. Database được migrate khi ứng dụng khởi động.
+
+## Giới hạn hiện tại
+
+- Kiểm tra tích hợp thật gần nhất: Gemini trả HTTP 503, Gmail SMTP từ chối xác thực với mã 534. Google OAuth chưa được kiểm thử đầy đủ qua consent/token exchange thật.
+- Resend OTP còn rủi ro khi nhiều yêu cầu đồng thời; nếu SMTP lỗi sau khi thay mã, mã cũ đã mất hiệu lực. Chi tiết và hướng xử lý nằm trong báo cáo review.
+- Các module roadmap và chuyển ngôn ngữ VI chưa hoàn chỉnh.
+
+Cần giải quyết các điểm trên và kiểm tra cấu hình dịch vụ ngoài trước khi triển khai production.
