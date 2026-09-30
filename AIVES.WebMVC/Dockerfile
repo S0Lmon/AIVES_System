@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY AIVES.WebMVC/AIVES.WebMVC.csproj AIVES.WebMVC/
+COPY AIVES.BLL/AIVES.BLL.csproj AIVES.BLL/
+COPY AIVES.DAL/AIVES.DAL.csproj AIVES.DAL/
+COPY AIVES.DTO/AIVES.DTO.csproj AIVES.DTO/
 RUN dotnet restore AIVES.WebMVC/AIVES.WebMVC.csproj
 
 COPY . .

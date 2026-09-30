@@ -1,7 +1,6 @@
-using AIVES.WebMVC.Models.Entities;
+using AIVES.DTO;
 using AIVES.WebMVC.Models.ViewModels;
-using AIVES.WebMVC.Services;
-using AIVES.WebMVC.Data.Repositories;
+using AIVES.BLL.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Authorization;
@@ -13,18 +12,18 @@ namespace AIVES.WebMVC.Controllers
     {
         private readonly IQuestionService _questionService;
         private readonly IRubricService _rubricService;
-        private readonly IRepository<BloomLevel> _bloomLevelRepository;
+        private readonly IBloomLevelService _bloomLevelService;
         private readonly ILogger<QuestionController> _logger;
 
         public QuestionController(
             IQuestionService questionService,
             IRubricService rubricService,
-            IRepository<BloomLevel> bloomLevelRepository,
+            IBloomLevelService bloomLevelService,
             ILogger<QuestionController> logger)
         {
             _questionService = questionService;
             _rubricService = rubricService;
-            _bloomLevelRepository = bloomLevelRepository;
+            _bloomLevelService = bloomLevelService;
             _logger = logger;
         }
         public async Task<IActionResult> Index()
@@ -67,7 +66,7 @@ namespace AIVES.WebMVC.Controllers
             try
             {
                 await PopulateDropdowns();
-                return View();
+                return View(new QuestionViewModel());
             }
             catch (Exception ex)
             {
@@ -88,13 +87,13 @@ namespace AIVES.WebMVC.Controllers
                     return View(model);
                 }
 
-                var question = new Question
+                var question = new QuestionDto
                 {
                     Content = model.Content,
-                    Context = model.Context,
+                    Context = model.Context ?? string.Empty,
                     BloomLevelId = model.BloomLevelId,
                     RubricId = model.RubricId,
-                    ExpectedAnswer = model.ExpectedAnswer,
+                    ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
                 };
@@ -154,14 +153,14 @@ namespace AIVES.WebMVC.Controllers
                     return View(model);
                 }
 
-                var question = new Question
+                var question = new QuestionDto
                 {
                     Id = model.Id,
                     Content = model.Content,
-                    Context = model.Context,
+                    Context = model.Context ?? string.Empty,
                     BloomLevelId = model.BloomLevelId,
                     RubricId = model.RubricId,
-                    ExpectedAnswer = model.ExpectedAnswer,
+                    ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
                 };
@@ -250,14 +249,14 @@ namespace AIVES.WebMVC.Controllers
 
         private async Task PopulateDropdowns()
         {
-            var bloomLevels = await _bloomLevelRepository.GetAllAsync();
+            var bloomLevels = await _bloomLevelService.GetAllAsync();
             ViewBag.BloomLevels = new SelectList(bloomLevels, "Id", "Name");
 
             var rubrics = await _rubricService.GetAllRubricsAsync();
             ViewBag.Rubrics = new SelectList(rubrics, "Id", "Name");
         }
 
-        private QuestionViewModel MapToViewModel(Question question)
+        private QuestionViewModel MapToViewModel(QuestionDto question)
         {
             return new QuestionViewModel
             {
@@ -265,9 +264,9 @@ namespace AIVES.WebMVC.Controllers
                 Content = question.Content,
                 Context = question.Context,
                 BloomLevelId = question.BloomLevelId,
-                BloomLevelName = question.BloomLevel?.Name,
+                BloomLevelName = question.BloomLevelName,
                 RubricId = question.RubricId,
-                RubricName = question.Rubric?.Name,
+                RubricName = question.RubricName,
                 ExpectedAnswer = question.ExpectedAnswer,
                 DisplayOrder = question.DisplayOrder,
                 IsActive = question.IsActive,

@@ -35,6 +35,10 @@ nano .env
 
 Đặt mật khẩu SQL mạnh, không dùng dấu chấm phẩy hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
 
+## Cấu trúc solution
+
+WebMVC là Presentation; BLL xử lý nghiệp vụ; DAL chứa EF Core, repository và migrations; DTO chứa dữ liệu trao đổi. Dockerfile restore cả bốn project trước khi publish. Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md) và lệnh EF Core với `--project AIVES.DAL --startup-project AIVES.WebMVC`. Các biến cấu hình triển khai giữ nguyên.
+
 ## Build và chạy
 
 ```bash

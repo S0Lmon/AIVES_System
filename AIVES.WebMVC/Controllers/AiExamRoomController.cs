@@ -1,5 +1,5 @@
 using AIVES.WebMVC.Models.ViewModels;
-using AIVES.WebMVC.Services.Gemini;
+using AIVES.BLL.Services.Gemini;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
