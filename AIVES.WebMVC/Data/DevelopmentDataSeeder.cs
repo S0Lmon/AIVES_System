@@ -100,6 +100,18 @@ public static class DevelopmentDataSeeder
             if (existingForContext.Count > definitionsForContext.Count)
                 dbContext.Questions.RemoveRange(existingForContext.Skip(definitionsForContext.Count));
 
+            for (var index = 0; index < Math.Min(existingForContext.Count, definitionsForContext.Count); index++)
+            {
+                var existing = existingForContext[index];
+                var definition = definitionsForContext[index];
+                existing.Content = definition.Content;
+                existing.ExpectedAnswer = definition.ExpectedAnswer;
+                existing.BloomLevelId = definition.BloomLevelId;
+                existing.RubricId = rubrics[definition.RubricName].Id;
+                existing.IsActive = true;
+                existing.ModifiedDate = DateTime.UtcNow;
+            }
+
             foreach (var definition in definitionsForContext.Skip(existingForContext.Count))
             {
                 dbContext.Questions.Add(new Question

@@ -63,9 +63,9 @@ namespace AIVES.WebMVC.Data
             modelBuilder.Entity<Question>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Content).IsRequired().HasColumnType("TEXT");
+                entity.Property(e => e.Content).IsRequired().HasColumnType("nvarchar(max)");
                 entity.Property(e => e.Context).HasMaxLength(300);
-                entity.Property(e => e.ExpectedAnswer).HasColumnType("TEXT");
+                entity.Property(e => e.ExpectedAnswer).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.ModifiedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
