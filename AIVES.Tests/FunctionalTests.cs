@@ -167,7 +167,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Password"] = Password
         });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        Assert.Contains("chưa được xác minh", await Html(login));
+        Assert.Contains("has not been verified", await Html(login));
         var duplicate = await Post(browser, "/Account/Register", "/Account/Register", Registration(email));
         Assert.Equal(HttpStatusCode.OK, duplicate.StatusCode);
         using var scope = app.Services.CreateScope();
@@ -192,7 +192,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Password"] = Password
         });
         Assert.Equal(HttpStatusCode.OK, locked.StatusCode);
-        Assert.Contains("tạm khóa", await Html(locked));
+        Assert.Contains("temporarily locked", await Html(locked));
     }
 
     [SqlFact]
@@ -207,12 +207,12 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Email"] = email,
             ["Code"] = "000000"
         });
-        Assert.Contains("Mã không đúng", await Html(wrong));
+        Assert.Contains("code is incorrect", await Html(wrong));
         await Post(browser, page, "/Account/ResendCode", new()
         {
             ["email"] = email
         });
-        Assert.Contains("chờ một phút", await Html(await browser.GetAsync(page)));
+        Assert.Contains("wait a minute", await Html(await browser.GetAsync(page)));
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -350,9 +350,52 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Q1.ToString", html);
         Assert.Contains("generated-index\">Q01", html);
         Assert.Contains("generated-index\">Q02", html);
-        fields["Topic"] = "simulate-failure";
-        Assert.Contains("Gemini test failure", await Html(await Post(browser, page, page, fields)));
-    }
+fields["Topic"] = "simulate-failure";
+var failureHtml = await Html(await Post(browser, page, page, fields));
+Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
+Assert.DoesNotContain("Gemini test failure", failureHtml);
+}
+
+[SqlFact]
+public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
+{
+    using var browser = app.Browser();
+    var english = await Html(await browser.GetAsync("/Account/Login?culture=en"));
+    Assert.Contains("Resume your academic workspace", english);
+    Assert.Contains("Sign in", english);
+    Assert.DoesNotContain("Tiếp tục phiên làm việc học thuật", english);
+
+    var vietnamese = await Html(await browser.GetAsync("/Account/Login?culture=vi"));
+    Assert.Contains("Tiếp tục phiên làm việc học thuật", vietnamese);
+    Assert.Contains("Đăng nhập", vietnamese);
+    Assert.DoesNotContain("Resume your academic workspace", vietnamese);
+}
+
+[SqlFact]
+public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
+{
+    using var browser = app.Browser();
+    await SignIn(browser);
+
+    var before = await Html(await browser.GetAsync("/"));
+    Assert.Contains("Question bank", before);
+    Assert.DoesNotContain("Ngân hàng câu hỏi", before);
+
+    var form = await browser.GetAsync("/");
+    var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+    var response = await browser.PostAsync("/Home/SetLanguage", new FormUrlEncodedContent(new Dictionary<string, string>
+    {
+        ["language"] = "Vi",
+        ["returnUrl"] = "/",
+        ["__RequestVerificationToken"] = token
+    }));
+
+    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+    var after = await Html(await browser.GetAsync("/"));
+    Assert.Contains("Ngân hàng câu hỏi", after);
+    Assert.DoesNotContain("Question bank", after);
+}
 
     [SqlFact]
     public async Task InvalidAiCountDoesNotCallGenerator()
@@ -372,8 +415,41 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(calls, app.Generator.Calls);
     }
 
-    [SqlFact]
-    public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
+[SqlFact]
+public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
+{
+    using var browser = app.Browser();
+    var email = await SignIn(browser);
+
+    var profile = await Html(await browser.GetAsync("/Profile"));
+    Assert.Contains(email, profile);
+    Assert.Contains("Sign out", profile);
+
+    var form = await browser.GetAsync("/Profile");
+    var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+    var signedOut = await browser.PostAsync("/Profile/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
+    {
+        ["__RequestVerificationToken"] = token
+    }));
+
+    Assert.Equal(HttpStatusCode.Redirect, signedOut.StatusCode);
+    Assert.Equal("/Account/Login", signedOut.Headers.Location!.ToString());
+
+    var after = await browser.GetAsync("/Profile");
+    Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
+}
+
+[SqlFact]
+public async Task AnonymousUsersAreSentToLoginFromProfile()
+{
+    using var browser = app.Browser();
+    var response = await browser.GetAsync("/Profile");
+    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+    Assert.Contains("Login", response.Headers.Location!.ToString());
+}
+
+[SqlFact]
+public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
     {
         using var browser = app.Browser();
         var response = await Post(browser, "/Account/Login", "/Account/ExternalLogin", new());

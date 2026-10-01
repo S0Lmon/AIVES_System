@@ -48,6 +48,7 @@ services:
       DemoAccount__Password: "${DEMO_ACCOUNT_PASSWORD:-}"
       DemoAccount__DisplayName: "${DEMO_ACCOUNT_DISPLAY_NAME:-AIVES Demo}"
       DemoAccount__ResetPasswordOnStartup: "${DEMO_ACCOUNT_RESET_PASSWORD:-false}"
+      AdminAccess__Emails__0: "${ADMIN_EMAIL:-}"
     ports:
       - "${AIVES_PORT:-5201}:8080"
     networks:

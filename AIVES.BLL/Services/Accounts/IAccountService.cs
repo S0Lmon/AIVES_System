@@ -13,6 +13,7 @@ public interface IAccountService
         get;
     }
     Task<AccountResult> LoginAsync(string email, string password, bool rememberMe);
+    Task<UserProfileDto?> GetProfileAsync(string userId);
     Task<AccountResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
     Task<AccountResult> VerifyEmailAsync(string email, string code, CancellationToken cancellationToken = default);
     Task ResendCodeAsync(string email, CancellationToken cancellationToken = default);

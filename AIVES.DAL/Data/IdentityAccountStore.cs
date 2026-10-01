@@ -1,5 +1,6 @@
 using AIVES.DAL.Entities;
 using AIVES.DTO;
+using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ namespace AIVES.DAL.Data;
 public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : IAccountStore
 {
     private static UserDto ToDto(ApplicationUser user) => new(user.Id, user.Email!, user.DisplayName, user.EmailConfirmed);
-    private async Task<ApplicationUser> GetAsync(string id) => await users.FindByIdAsync(id) ?? throw new InvalidOperationException("Không tìm thấy tài khoản.");
+    private async Task<ApplicationUser> GetAsync(string id) => await users.FindByIdAsync(id) ?? throw new InvalidOperationException(L10n.T("The account was not found."));
     private static void EnsureSuccess(IdentityResult result)
     {
         if (!result.Succeeded)
@@ -18,6 +19,14 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
     {
         var user = await users.FindByEmailAsync(email);
         return user is null ? null : ToDto(user);
+    }
+    public async Task<UserProfileDto?> GetProfileAsync(string userId)
+    {
+        var user = await users.FindByIdAsync(userId);
+        if (user is null || user.Email is null)
+            return null;
+
+        return new UserProfileDto(user.Id, user.Email, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc, [.. await users.GetRolesAsync(user)]);
     }
     public async Task<AccountResult> CreateAsync(RegisterRequest request, bool confirmed = false)
     {
@@ -36,15 +45,15 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
     {
         var user = await users.FindByEmailAsync(email);
         if (user is null || !user.EmailConfirmed)
-            return AccountResult.Failure("Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được xác minh.");
+            return AccountResult.Failure(L10n.T("The email or password is incorrect, or the account has not been verified."));
         var result = await signIn.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: true);
-        return result.Succeeded ? AccountResult.Success(ToDto(user)) : AccountResult.Failure(result.IsLockedOut ? "Tài khoản tạm khóa do đăng nhập sai nhiều lần." : "Email hoặc mật khẩu không đúng.");
+        return result.Succeeded ? AccountResult.Success(ToDto(user)) : AccountResult.Failure(result.IsLockedOut ? L10n.T("The account is temporarily locked after too many failed sign in attempts.") : L10n.T("The email or password is incorrect."));
     }
     public async Task SignInAsync(string userId)
     {
         var user = await GetAsync(userId);
         if (!await signIn.CanSignInAsync(user) || await users.IsLockedOutAsync(user) || await users.GetTwoFactorEnabledAsync(user))
-            throw new InvalidOperationException("Tài khoản chưa được phép đăng nhập hoặc cần xác thực bổ sung.");
+            throw new InvalidOperationException(L10n.T("This account is not allowed to sign in or requires additional verification."));
         await signIn.SignInAsync(user, isPersistent: false);
     }
     public Task SignOutAsync() => signIn.SignOutAsync();
