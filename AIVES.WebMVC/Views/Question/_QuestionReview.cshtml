@@ -15,7 +15,7 @@
             }));
 }
 
-<form method="post" asp-action="InsertReviewed" class="panel form-panel">
+<form method="post" asp-action="InsertReviewed" class="panel form-panel mb-3">
     @Html.AntiForgeryToken()
     <input type="hidden" name="returnTab" value="@returnTab" />
     <input type="hidden" name="resultJson" id="resultJson" value="@payload" />
