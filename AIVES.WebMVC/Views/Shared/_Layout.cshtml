@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="@L10n.Current.ToCultureCode()">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,26 +20,30 @@
                 <span><strong>AIVES</strong><small>AI-powered Viva Exam</small></span>
             </a>
             <nav class="side-nav" aria-label="Main navigation">
-                <span class="nav-label">Không gian làm việc</span>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index"><span class="nav-icon">OV</span> Tổng quan</a>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index"><span class="nav-icon">QB</span> Câu hỏi & rubric</a>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">EX</span> Kỳ thi <small>Đang xây dựng</small></span>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AiExamRoom" ? "active" : "")" asp-controller="AiExamRoom" asp-action="QuestionGenerator"><span class="nav-icon">AI</span> Phòng thi AI <small>Gemini</small></a>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">GR</span> Chấm điểm <small>Đang xây dựng</small></span>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">RP</span> Báo cáo <small>Đang xây dựng</small></span>
-                <span class="nav-label nav-label-spaced">Hệ thống</span>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">US</span> Người dùng</span>
-                <a class="side-link" asp-controller="Home" asp-action="Privacy"><span class="nav-icon">ST</span> Chính sách dữ liệu</a>
+                <span class="nav-label">@L10n.T("Work space")</span>
+                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index"><span class="nav-icon">OV</span> @L10n.T("Overview")</a>
+                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index"><span class="nav-icon">QB</span> @L10n.T("Questions & rubric")</a>
+                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">EX</span> @L10n.T("Exams") <small>@L10n.T("Under construction")</small></span>
+                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AiExamRoom" ? "active" : "")" asp-controller="AiExamRoom" asp-action="QuestionGenerator"><span class="nav-icon">AI</span> @L10n.T("AI exam room") <small>Gemini</small></a>
+                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">GR</span> @L10n.T("Grading") <small>@L10n.T("Under construction")</small></span>
+                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">RP</span> @L10n.T("Reports") <small>@L10n.T("Under construction")</small></span>
+                <span class="nav-label nav-label-spaced">@L10n.T("System")</span>
+                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">US</span> @L10n.T("Users")</span>
+                @if (User.IsInRole(AIVES.DTO.AdminRoles.RoleName))
+                {
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "active" : "")" asp-controller="Admin" asp-action="Index"><span class="nav-icon">AD</span> @L10n.T("System check") <small>@L10n.T("Admin")</small></a>
+                }
+                <a class="side-link" asp-controller="Home" asp-action="Privacy"><span class="nav-icon">ST</span> @L10n.T("Data policy")</a>
             </nav>
         </aside>
         <div class="app-main">
             <header class="topbar">
                 <button class="menu-toggle" type="button" id="menuToggle" aria-label="Toggle navigation">☰</button>
-                <div class="topbar-copy"><span class="eyebrow">AI-powered Viva Exam System</span><strong>@ViewData["Title"]</strong></div>
-                <div class="topbar-actions"><button class="language-pill" type="button">VI <span>⌄</span></button><span class="database-pill"><span></span> Trực tuyến</span>@if (User.Identity?.IsAuthenticated == true) { <form asp-controller="Account" asp-action="Logout" method="post" class="account-menu"><button class="avatar" type="submit" title="Đăng xuất">@((User.Identity.Name ?? "GV")[..Math.Min(2, (User.Identity.Name ?? "GV").Length)].ToUpperInvariant())</button></form> } else { <a asp-controller="Account" asp-action="Login" class="btn btn-light btn-sm">Đăng nhập</a> }</div>
+                <div class="topbar-copy"><span class="eyebrow">@L10n.T("AI-powered Viva Exam System")</span><strong>@ViewData["Title"]</strong></div>
+                <div class="topbar-actions">@await Html.PartialAsync("_LanguageSwitcher")@if (User.Identity?.IsAuthenticated == true) { <a class="avatar" asp-controller="Profile" asp-action="Index" title="@L10n.T("Your profile")">@((User.Identity.Name ?? "GV")[..Math.Min(2, (User.Identity.Name ?? "GV").Length)].ToUpperInvariant())</a> } else { <a asp-controller="Account" asp-action="Login" class="btn btn-light btn-sm">@L10n.T("Sign in")</a> }</div>
             </header>
             <main class="content-area">@RenderBody()</main>
-            <footer class="app-footer">AIVES · Hệ thống thi vấn đáp thông minh có sử dụng AI · 2026</footer>
+            <footer class="app-footer">AIVES · @L10n.T("AI-powered viva exam system") · 2026</footer>
         </div>
     </div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>

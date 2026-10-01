@@ -1,5 +1,6 @@
 using AIVES.WebMVC.Models.ViewModels;
 using AIVES.BLL.Services.Gemini;
+using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -18,16 +19,12 @@ public sealed class AiExamRoomController : Controller
     }
 
     [HttpGet]
-    public IActionResult QuestionGenerator()
-    {
-        return View(new AiQuestionGeneratorViewModel { IsGeminiConfigured = _generator.IsConfigured });
-    }
+    public IActionResult QuestionGenerator() => View(new AiQuestionGeneratorViewModel());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> QuestionGenerator(AiQuestionGeneratorViewModel model, CancellationToken cancellationToken)
     {
-        model.IsGeminiConfigured = _generator.IsConfigured;
         if (!ModelState.IsValid)
             return View(model);
 
@@ -44,12 +41,15 @@ public sealed class AiExamRoomController : Controller
         }
         catch (InvalidOperationException ex)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
+            _logger.LogWarning(ex, "Gemini question generation was rejected");
+            ModelState.AddModelError(string.Empty, _generator.IsConfigured
+                ? L10n.T("Could not generate questions right now. Please try again later.")
+                : L10n.T("The AI question generator is temporarily unavailable. Please try again later."));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while generating viva questions");
-            ModelState.AddModelError(string.Empty, "Đã có lỗi khi tạo câu hỏi. Vui lòng thử lại.");
+            ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while generating questions. Please try again."));
         }
 
         return View(model);

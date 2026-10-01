@@ -1,4 +1,5 @@
 using AIVES.DTO;
+            using AIVES.DTO.Localization;
 using AIVES.WebMVC.Models.ViewModels;
 using AIVES.BLL.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +38,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting questions");
-                TempData["Error"] = "An error occurred while retrieving questions";
+                TempData["Error"] = L10n.T("An error occurred while retrieving questions");
                 return RedirectToAction("Index", "Home");
             }
         }
@@ -71,7 +72,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading create form");
-                TempData["Error"] = "An error occurred while loading the form";
+                TempData["Error"] = L10n.T("An error occurred while loading the form");
                 return RedirectToAction("Index");
             }
         }
@@ -99,7 +100,7 @@ namespace AIVES.WebMVC.Controllers
                 };
 
                 var createdQuestion = await _questionService.CreateQuestionAsync(question);
-                TempData["Success"] = $"Question '{model.Content.Substring(0, Math.Min(50, model.Content.Length))}...' created successfully";
+                TempData["Success"] = L10n.Format("Question '{0}...' created successfully", model.Content[..Math.Min(50, model.Content.Length)]);
                 return RedirectToAction(nameof(Index));
             }
             catch (InvalidOperationException ex)
@@ -112,7 +113,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating question");
-                ModelState.AddModelError("", "An error occurred while creating the question");
+                ModelState.AddModelError("", L10n.T("An error occurred while creating the question"));
                 await PopulateDropdowns();
                 return View(model);
             }
@@ -166,7 +167,7 @@ namespace AIVES.WebMVC.Controllers
                 };
 
                 await _questionService.UpdateQuestionAsync(question);
-                TempData["Success"] = "Question updated successfully";
+                TempData["Success"] = L10n.T("Question updated successfully");
                 return RedirectToAction(nameof(Index));
             }
             catch (InvalidOperationException ex)
@@ -179,7 +180,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating question");
-                ModelState.AddModelError("", "An error occurred while updating the question");
+                ModelState.AddModelError("", L10n.T("An error occurred while updating the question"));
                 await PopulateDropdowns();
                 return View(model);
             }
@@ -211,7 +212,7 @@ namespace AIVES.WebMVC.Controllers
             try
             {
                 await _questionService.DeleteQuestionAsync(id);
-                TempData["Success"] = "Question deleted successfully";
+                TempData["Success"] = L10n.T("Question deleted successfully");
                 return RedirectToAction(nameof(Index));
             }
             catch (InvalidOperationException ex)
@@ -223,7 +224,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting question");
-                TempData["Error"] = "An error occurred while deleting the question";
+                TempData["Error"] = L10n.T("An error occurred while deleting the question");
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -242,7 +243,7 @@ namespace AIVES.WebMVC.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting questions by Bloom level");
-                TempData["Error"] = "An error occurred while retrieving questions";
+                TempData["Error"] = L10n.T("An error occurred while retrieving questions");
                 return RedirectToAction("Index");
             }
         }

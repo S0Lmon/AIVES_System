@@ -1,18 +1,17 @@
 @model AIVES.WebMVC.Models.ViewModels.RegisterViewModel
-@{ Layout = "_AuthLayout"; ViewData["Title"] = "Đăng ký"; }
+@{ Layout = "_AuthLayout"; ViewData["Title"] = @L10n.T("Register"); }
 <section class="auth-grid">
-    <div class="auth-context"><span class="page-kicker">Verified identity</span><h1>Tạo tài khoản AIVES</h1><p>Đăng ký bằng Gmail. AIVES gửi một mã gồm 6 chữ số để xác nhận địa chỉ email trước khi mở tài khoản.</p><dl><div><dt>10m</dt><dd>Mã xác minh tự hết hạn</dd></div><div><dt>05</dt><dd>Số lần nhập sai tối đa</dd></div><div><dt>—</dt><dd>Mã rõ không được lưu trong database</dd></div></dl></div>
+    <div class="auth-context"><span class="page-kicker">Verified identity</span><h1>@L10n.T("Create an AIVES account")</h1><p>@L10n.T("Register with Gmail. AIVES sends a 6 digit code to confirm your address before the account is opened.")</p><dl><div><dt>10m</dt><dd>@L10n.T("Verification code expires automatically")</dd></div><div><dt>05</dt><dd>@L10n.T("Maximum number of wrong entries")</dd></div><div><dt>—</dt><dd>@L10n.T("The code is never stored in plain text")</dd></div></dl></div>
     <form asp-action="Register" method="post" class="panel auth-form">
-        <div class="auth-form-head"><span class="page-kicker">New account</span><h2>Đăng ký</h2><p>Sử dụng địa chỉ Gmail bạn có quyền truy cập.</p></div>
+        <div class="auth-form-head"><span class="page-kicker">New account</span><h2>@L10n.T("Register")</h2><p>@L10n.T("Use a Gmail address you can access.")</p></div>
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-        <div class="mb-3"><label asp-for="DisplayName" class="form-label">Họ và tên</label><input asp-for="DisplayName" class="form-control" autocomplete="name" /><span asp-validation-for="DisplayName" class="text-danger small"></span></div>
-        <div class="mb-3"><label asp-for="Email" class="form-label">Gmail</label><input asp-for="Email" class="form-control" autocomplete="email" placeholder="tenban@gmail.com" /><span asp-validation-for="Email" class="text-danger small"></span></div>
-        <div class="auth-password-grid"><div><label asp-for="Password" class="form-label">Mật khẩu</label><input asp-for="Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger small"></span></div><div><label asp-for="ConfirmPassword" class="form-label">Xác nhận mật khẩu</label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger small"></span></div></div>
-        <button type="submit" class="btn btn-primary auth-submit" disabled="@(!Model.IsEmailConfigured)">Đăng ký và gửi mã</button>
-        @if (!Model.IsEmailConfigured) { <p class="auth-config-note">Gmail SMTP chưa được cấu hình nên việc gửi mã đang tạm khóa.</p> }
-        <div class="auth-divider"><span>hoặc</span></div>
-        <button type="submit" asp-action="ExternalLogin" class="btn btn-light auth-submit" disabled="@(!Model.IsGoogleConfigured)">Tiếp tục với Google</button>
-        <p class="auth-switch">Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+        <div class="mb-3"><label asp-for="DisplayName" class="form-label">@L10n.T("Full name")</label><input asp-for="DisplayName" class="form-control" autocomplete="name" /><span asp-validation-for="DisplayName" class="text-danger small"></span></div>
+        <div class="mb-3"><label asp-for="Email" class="form-label">Gmail</label><input asp-for="Email" class="form-control" autocomplete="email" placeholder="you@gmail.com" /><span asp-validation-for="Email" class="text-danger small"></span></div>
+        <div class="auth-password-grid"><div><label asp-for="Password" class="form-label">@L10n.T("Password")</label><input asp-for="Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger small"></span></div><div><label asp-for="ConfirmPassword" class="form-label">@L10n.T("Confirm password")</label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger small"></span></div></div>
+        <button type="submit" class="btn btn-primary auth-submit">@L10n.T("Register and send code")</button>
+        <div class="auth-divider"><span>@L10n.T("or")</span></div>
+        <button type="submit" asp-action="ExternalLogin" class="btn btn-light auth-submit">@L10n.T("Continue with Google")</button>
+        <p class="auth-switch">@L10n.T("Already have an account?") <a asp-action="Login">@L10n.T("Sign in")</a></p>
     </form>
 </section>
 @section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }
