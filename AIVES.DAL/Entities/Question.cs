@@ -30,6 +30,7 @@ namespace AIVES.DAL.Entities
         /// Optional generation hint, one of the values in <see cref="DTO.QuestionDifficulties"/>.
         /// Null means nobody set one, which is different from a question recorded as Basic.
         /// </summary>
+        [MaxLength(32)]
         public string? Difficulty
         {
             get; set;
