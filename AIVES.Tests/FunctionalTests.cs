@@ -470,13 +470,16 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(">8<", bank);
 
         // Deleting has to actually remove the row, columns and cells, not just report success.
-        // Scope the id to this rubric's own row so a shared fixture is left alone.
-        var id = Regex.Match(bank, "(?s)Oral defence matrix(.*?)name=\"id\" value=\"(\\d+)\"").Groups[2].Value;
+        // Scope to this rubric's own row: the same name also appears in the success alert
+        // above the table, and the first delete form on the page belongs to another rubric.
+        var row = Regex.Match(bank, "(?s)<tr[^>]*>((?:(?!</tr>).)*?Oral defence matrix(?:(?!</tr>).)*?)</tr>").Groups[1].Value;
+        var id = Regex.Match(row, "name=\"id\" value=\"(\\d+)\"").Groups[1].Value;
         Assert.NotEmpty(id);
         var deleted = await Post(browser, "/Rubric?tab=bank", "/Rubric/Delete", new() { ["id"] = id });
         Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
-
-        Assert.DoesNotContain("Oral defence matrix", await Html(await browser.GetAsync("/Rubric?tab=bank")));
+        var after = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.False(after.Contains("Oral defence matrix"),
+            $"Rubric {id} survived the delete. Page said: {Regex.Match(after, "alert-(?:success|danger)[^>]*>([^<]*)").Groups[1].Value}");
     }
 
     [SqlFact]

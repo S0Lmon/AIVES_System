@@ -81,19 +81,17 @@ namespace AIVES.DAL.Migrations
             migrationBuilder.Sql("""
                 INSERT INTO [RubricLevels] ([RubricId], [Name], [Points], [Description], [Order])
                 SELECT r.[Id], s.[Name],
-                       ISNULL((SELECT MAX(c.[MaxPoints]) FROM [RubricCriteria] c WHERE c.[RubricId] = r.[Id]), 0),
+                       CAST(FLOOR(ISNULL((SELECT MAX(c.[MaxPoints]) FROM [RubricCriteria] c WHERE c.[RubricId] = r.[Id]), 0) * s.[Scale] / 4.0) AS int),
                        N'', s.[Scale]
                 FROM [Rubrics] r
-                CROSS JOIN (VALUES (1, N'Below', 0.25), (2, N'Approaching', 0.50), (3, N'Meets', 0.75), (4, N'Exceeds', 1.00)) AS s([Scale], [Name], [Factor]);
+                CROSS JOIN (VALUES (1, N'Below'), (2, N'Approaching'), (3, N'Meets'), (4, N'Exceeds')) AS s([Scale], [Name]);
                 """);
 
             migrationBuilder.Sql("""
                 INSERT INTO [RubricCriterionLevels] ([RubricCriterionId], [RubricLevelId], [Descriptor], [Points])
-                SELECT c.[Id], l.[Id], N'', CAST(ROUND(c.[MaxPoints] * s.[Factor], 0) AS int)
+                SELECT c.[Id], l.[Id], N'', l.[Points]
                 FROM [RubricCriteria] c
-                INNER JOIN [RubricLevels] l ON l.[RubricId] = c.[RubricId]
-                CROSS JOIN (VALUES (1, 0.25), (2, 0.50), (3, 0.75), (4, 1.00)) AS s([Scale], [Factor])
-                WHERE l.[Order] = s.[Scale];
+                INNER JOIN [RubricLevels] l ON l.[RubricId] = c.[RubricId];
                 """);
         }
 

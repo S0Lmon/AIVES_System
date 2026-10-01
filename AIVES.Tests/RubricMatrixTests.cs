@@ -34,7 +34,7 @@ public sealed class RubricMatrixTests
         var criterion = stored.Criteria.OrderBy(row => row.Order).First();
         Assert.Equal(2, criterion.Levels.Count);
         Assert.All(criterion.Levels, cell => Assert.False(string.IsNullOrWhiteSpace(cell.Descriptor)));
-        Assert.All(criterion.Levels, cell => Assert.True(stored.Levels.Any(level => level.Id == cell.RubricLevelId)));
+        Assert.All(criterion.Levels, cell => Assert.Contains(stored.Levels, level => level.Id == cell.RubricLevelId));
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public sealed class RubricMatrixTests
         await service.UpdateRubricAsync(replacement);
 
         var stored = await service.GetRubricByIdAsync(saved.Id);
-        Assert.Equal(1, stored!.Criteria.Count);
+        Assert.Single(stored!.Criteria);
         Assert.Single(stored.Levels);
         Assert.Single(stored.Criteria[0].Levels);
         // Four cells become one, and nothing is orphaned in the database.
