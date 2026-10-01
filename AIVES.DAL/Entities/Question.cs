@@ -12,11 +12,15 @@ namespace AIVES.DAL.Entities
         {
             get; set;
         }
-        public int RubricId
+        public int? RubricId
         {
             get; set;
         }
         public int? TopicId
+        {
+            get; set;
+        }
+        public int? SubjectId
         {
             get; set;
         }
@@ -26,7 +30,8 @@ namespace AIVES.DAL.Entities
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime ModifiedDate { get; set; } = DateTime.UtcNow;
         public virtual BloomLevel BloomLevel { get; set; } = null!;
-        public virtual Rubric Rubric { get; set; } = null!;
+        public virtual Rubric? Rubric { get; set; }
         public virtual Topic? Topic { get; set; }
+        public virtual Subject? Subject { get; set; }
     }
 }

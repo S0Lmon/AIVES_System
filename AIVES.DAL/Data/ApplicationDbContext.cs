@@ -141,16 +141,22 @@ namespace AIVES.DAL.Data
                 entity.HasOne(e => e.Rubric)
                     .WithMany(e => e.Questions)
                     .HasForeignKey(e => e.RubricId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(e => e.Topic)
                     .WithMany()
                     .HasForeignKey(e => e.TopicId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                entity.HasOne(e => e.Subject)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(e => e.BloomLevelId);
                 entity.HasIndex(e => e.RubricId);
                 entity.HasIndex(e => e.TopicId);
+                entity.HasIndex(e => e.SubjectId);
                 entity.HasIndex(e => e.IsActive);
             });
             SeedBloomLevels(modelBuilder);
