@@ -148,27 +148,39 @@ namespace AIVES.WebMVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateQuestions(AiQuestionGeneratorViewModel model, CancellationToken cancellationToken)
         {
-            if (!ModelState.IsValid)
+            var target = await ResolveTargetAsync(model.SubjectId, model.TopicId);
+            if (target is null || !ModelState.IsValid)
                 return PartialView("_AiGenerateResults", BuildFailure(model));
+
+            model.Subject = target.Subject;
+            model.Topic = target.Topic ?? string.Empty;
 
             try
             {
                 var context = model.UseMaterials
-                    ? await _catalog.BuildRagContextAsync(model.TopicId,
-                        model.TopicId is null ? model.SubjectId : null,
-                        $"{model.Subject} {model.Topic} {model.LearningOutcomes}", cancellationToken)
+                    ? await _catalog.BuildRagContextAsync(target.TopicId,
+                        target.TopicId is null ? target.SubjectId : null,
+                        $"{target.Subject} {target.Topic} {model.LearningOutcomes}", cancellationToken)
                     : RagContext.Empty;
 
+                var levels = (await _bloomLevelService.GetAllAsync()).ToList();
+                var pinnedBloom = levels.FirstOrDefault(level => level.Id == model.BloomLevelId)?.Name;
+
                 var questions = await _generator.GenerateAsync(
-                    new QuestionGenerationRequest(model.Subject.Trim(), model.Topic.Trim(),
-                        model.LearningOutcomes?.Trim(), model.Difficulty, model.QuestionCount,
-                        context.Text, context.Sources), model.Provider, cancellationToken);
+                    new QuestionGenerationRequest(target.Subject, target.Topic!,
+                        model.LearningOutcomes?.Trim(), 1,
+                        context.Text, context.Sources,
+                        BloomLevel: pinnedBloom,
+                        Difficulty: QuestionDifficulties.Normalize(model.Difficulty)),
+                    model.Provider, cancellationToken);
 
                 model.Questions = questions.Select(question => new GeneratedQuestionViewModel
                 {
                     Content = question.Content,
                     ExpectedAnswer = question.ExpectedAnswer,
-                    BloomLevel = question.BloomLevel,
+                    // A pinned level wins over the model's choice so what was asked for is what arrives.
+                    BloomLevel = pinnedBloom ?? question.BloomLevel,
+                    Difficulty = QuestionDifficulties.Normalize(model.Difficulty) ?? question.Difficulty,
                     FollowUpQuestions = question.FollowUpQuestions
                 }).ToList();
                 model.Sources = context.Sources.Select(source => new MaterialExcerptViewModel(source.MaterialId, source.Title)).ToList();
@@ -200,6 +212,39 @@ namespace AIVES.WebMVC.Controllers
             return model;
         }
 
+        /// <summary>The catalogue subject and topic a generation request runs against.</summary>
+        private sealed record GenerationTarget(string Subject, string? Topic, int SubjectId, int? TopicId);
+
+        /// <summary>
+        /// Turns the chosen catalogue ids into the subject and topic names the prompt needs. Subject
+        /// is required and topic is optional; returning null means the ids did not resolve and the
+        /// caller has already been given a message.
+        /// </summary>
+        private async Task<GenerationTarget?> ResolveTargetAsync(int subjectId, int? topicId)
+        {
+            var subjects = await _catalog.GetSubjectsAsync();
+            var subjectName = subjects.FirstOrDefault(subject => subject.Id == subjectId)?.Name;
+            if (string.IsNullOrWhiteSpace(subjectName))
+            {
+                ModelState.AddModelError(string.Empty, L10n.T("Pick a subject from the catalogue before generating."));
+                return null;
+            }
+
+            string? topicName = null;
+            if (topicId is not null)
+            {
+                var topics = await _catalog.GetTopicsAsync();
+                topicName = topics.FirstOrDefault(topic => topic.Id == topicId)?.Name;
+                if (string.IsNullOrWhiteSpace(topicName))
+                {
+                    ModelState.AddModelError(string.Empty, L10n.T("That topic is no longer in the catalogue."));
+                    return null;
+                }
+            }
+
+            return new GenerationTarget(subjectName, topicName, subjectId, topicId);
+        }
+
         /// <summary>Supplies the compact AI panel: catalog pickers and which engines are live.</summary>
         private async Task PopulateAiPanel(QuestionBankViewModel view)
         {
@@ -213,6 +258,7 @@ namespace AIVES.WebMVC.Controllers
             view.Ai.OllamaAvailable = _generator.IsProviderAvailable(AiProvider.Ollama);
             view.Ai.ActiveProvider = _generator.ActiveProvider ?? AiProvider.Gemini;
             view.Ai.RubricOptions = view.Rubrics;
+            view.Ai.BloomLevels = view.BloomLevels;
 
             // The compact slide reads the same data from ViewBag.
             ViewBag.AiSubjects = view.Ai.Subjects;
@@ -220,6 +266,7 @@ namespace AIVES.WebMVC.Controllers
             ViewBag.AiGeminiAvailable = view.Ai.GeminiAvailable;
             ViewBag.AiOllamaAvailable = view.Ai.OllamaAvailable;
             ViewBag.AiProvider = view.Ai.ActiveProvider;
+            ViewBag.AiBloomLevels = view.Ai.BloomLevels;
 
             view.Bulk.Request.Subjects = view.Ai.Subjects;
             view.Bulk.Request.Topics = view.Ai.Topics;
@@ -228,6 +275,7 @@ namespace AIVES.WebMVC.Controllers
             view.Bulk.Request.OllamaAvailable = view.Ai.OllamaAvailable;
             view.Bulk.Request.ActiveProvider = view.Ai.ActiveProvider;
             view.Bulk.Request.RubricOptions = view.Rubrics;
+            view.Bulk.Request.BloomLevels = view.BloomLevels;
             if (view.Bulk.Plan.Count == 0)
                 view.Bulk.Plan = BulkGenerationViewModel.DefaultPlan(view.BloomLevels);
         }
@@ -436,57 +484,67 @@ namespace AIVES.WebMVC.Controllers
             }
         }
 
-        /// <summary>Generates one reviewable batch for the AI tab.</summary>
+        /// <summary>
+        /// Generates exactly one question for the AI tab. Bloom and difficulty are optional: when
+        /// the lecturer pins one it wins, otherwise the model assigns it and the review shows it.
+        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateReview(AiReviewViewModel model, CancellationToken cancellationToken)
         {
             var view = new QuestionBankViewModel { ActiveTab = QuestionTabs.Ai, Ai = model };
+            var target = await ResolveTargetAsync(model.SubjectId, model.TopicId);
 
-            if (!ModelState.IsValid)
+            if (target is not null && ModelState.IsValid)
             {
-                await PopulateDropdowns(view);
-                await PopulateAiPanel(view);
-                return View(nameof(Index), view);
-            }
+                model.Subject = target.Subject;
+                model.Topic = target.Topic ?? string.Empty;
 
-            try
-            {
-                var context = model.UseMaterials
-                    ? await _catalog.BuildRagContextAsync(model.TopicId,
-                        model.TopicId is null ? model.SubjectId : null,
-                        $"{model.Subject} {model.Topic} {model.LearningOutcomes}", cancellationToken)
-                    : RagContext.Empty;
-
-                var questions = await _generator.GenerateAsync(
-                    new QuestionGenerationRequest(model.Subject.Trim(), model.Topic.Trim(),
-                        model.LearningOutcomes?.Trim(), model.Difficulty, model.QuestionCount,
-                        context.Text, context.Sources), model.Provider, cancellationToken);
-
-                model.Results = questions.Select(question => new GeneratedQuestionViewModel
+                try
                 {
-                    Content = question.Content,
-                    ExpectedAnswer = question.ExpectedAnswer,
-                    BloomLevel = question.BloomLevel,
-                    FollowUpQuestions = question.FollowUpQuestions
-                }).ToList();
-                model.Sources = context.Sources.Select(source => new MaterialExcerptViewModel(source.MaterialId, source.Title)).ToList();
-                model.HasResult = true;
-                model.ActiveProvider = _generator.ActiveProvider ?? AiProvider.Gemini;
-                view.Ai = model;
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "AI generation was rejected");
-                ModelState.AddModelError(string.Empty,
-                    _generator.ActiveProvider is null
-                        ? L10n.T("The AI question generator is temporarily unavailable. Please try again later.")
-                        : L10n.T("Could not generate questions right now. Please try again later."));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "AI generation failed");
-                ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while generating questions. Please try again."));
+                    var context = model.UseMaterials
+                        ? await _catalog.BuildRagContextAsync(target.TopicId,
+                            target.TopicId is null ? target.SubjectId : null,
+                            $"{model.Subject} {model.Topic} {model.LearningOutcomes}", cancellationToken)
+                        : RagContext.Empty;
+
+                    var levels = (await _bloomLevelService.GetAllAsync()).ToList();
+                    var pinnedBloom = levels.FirstOrDefault(level => level.Id == model.BloomLevelId)?.Name;
+                    var pinnedDifficulty = QuestionDifficulties.Normalize(model.Difficulty);
+
+                    var questions = await _generator.GenerateAsync(
+                        new QuestionGenerationRequest(model.Subject, model.Topic,
+                            model.LearningOutcomes?.Trim(), 1,
+                            context.Text, context.Sources,
+                            BloomLevel: pinnedBloom,
+                            Difficulty: pinnedDifficulty),
+                        model.Provider, cancellationToken);
+
+                    model.Results = questions.Select(question => new GeneratedQuestionViewModel
+                    {
+                        Content = question.Content,
+                        ExpectedAnswer = question.ExpectedAnswer,
+                        BloomLevel = pinnedBloom ?? question.BloomLevel,
+                        Difficulty = pinnedDifficulty ?? QuestionDifficulties.Normalize(question.Difficulty) ?? question.Difficulty,
+                        FollowUpQuestions = question.FollowUpQuestions
+                    }).ToList();
+                    model.Sources = context.Sources.Select(source => new MaterialExcerptViewModel(source.MaterialId, source.Title)).ToList();
+                    model.HasResult = true;
+                    model.ActiveProvider = _generator.ActiveProvider ?? AiProvider.Gemini;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogWarning(ex, "AI generation was rejected");
+                    ModelState.AddModelError(string.Empty,
+                        _generator.ActiveProvider is null
+                            ? L10n.T("The AI question generator is temporarily unavailable. Please try again later.")
+                            : L10n.T("Could not generate questions right now. Please try again later."));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "AI generation failed");
+                    ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while generating questions. Please try again."));
+                }
             }
 
             await PopulateDropdowns(view);
@@ -495,8 +553,9 @@ namespace AIVES.WebMVC.Controllers
         }
 
         /// <summary>
-        /// Builds the batch described by the bulk plan: one generation request per Bloom level,
-        /// each honouring the count the lecturer asked for.
+        /// Generates the bulk batch. The lecturer gives a total and a per Bloom range; the total is
+        /// split across the levels without breaking any range, then one request per level asks the
+        /// model for that many questions.
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -504,47 +563,87 @@ namespace AIVES.WebMVC.Controllers
         {
             var request = model.Request;
             var view = new QuestionBankViewModel { ActiveTab = QuestionTabs.Bulk, Bulk = model };
-            var blooms = (await _bloomLevelService.GetAllAsync()).ToList();
+            var target = await ResolveTargetAsync(request.SubjectId, request.TopicId);
 
-            var planned = model.Plan.Where(row => row.Count > 0).ToList();
-            var total = planned.Sum(row => row.Count);
-            if (total is < 1 or > 30)
-                ModelState.AddModelError(string.Empty, L10n.T("A bulk plan must ask for between 1 and 30 questions."));
+            // Ranges and total are the whole plan, so check them before spending a generation call.
+            if (!model.TryAllocate(out var counts, out var planProblem))
+                ModelState.AddModelError(string.Empty, planProblem ?? L10n.T("The bulk plan could not be split."));
 
-            if (ModelState.IsValid && planned.Count > 0)
+            if (target is not null && ModelState.IsValid)
             {
+                request.Subject = target.Subject;
+                request.Topic = target.Topic ?? string.Empty;
+
                 try
                 {
                     var context = request.UseMaterials
-                        ? await _catalog.BuildRagContextAsync(request.TopicId,
-                            request.TopicId is null ? request.SubjectId : null,
+                        ? await _catalog.BuildRagContextAsync(target.TopicId,
+                            target.TopicId is null ? target.SubjectId : null,
                             $"{request.Subject} {request.Topic} {request.LearningOutcomes}", cancellationToken)
                         : RagContext.Empty;
 
+                    var blooms = (await _bloomLevelService.GetAllAsync()).ToList();
+                    var difficultyFrom = QuestionDifficulties.Normalize(model.DifficultyFrom);
+                    var difficultyTo = QuestionDifficulties.Normalize(model.DifficultyTo);
+
                     var generated = new List<GeneratedQuestionViewModel>();
-                    foreach (var row in planned)
+                    var skipped = new List<string>();
+                    foreach (var row in model.Plan)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var levelName = blooms.FirstOrDefault(bloom => bloom.Id == row.BloomLevelId)?.Name ?? row.BloomLevelName;
-                        var batch = await _generator.GenerateAsync(
-                            new QuestionGenerationRequest(request.Subject.Trim(), request.Topic.Trim(),
-                                request.LearningOutcomes?.Trim(), request.Difficulty, row.Count,
-                                context.Text, context.Sources), request.Provider, cancellationToken);
+                        var wanted = counts.GetValueOrDefault(row.BloomLevelId);
+                        if (wanted <= 0)
+                            continue;
 
-                        generated.AddRange(batch.Select(question => new GeneratedQuestionViewModel
+                        var levelName = blooms.FirstOrDefault(bloom => bloom.Id == row.BloomLevelId)?.Name ?? row.BloomLevelName;
+                        try
                         {
-                            Content = question.Content,
-                            ExpectedAnswer = question.ExpectedAnswer,
-                            // The plan asked for this level explicitly, so trust the plan over the model.
-                            BloomLevel = levelName,
-                            FollowUpQuestions = question.FollowUpQuestions
-                        }));
+                            var batch = await _generator.GenerateAsync(
+                                new QuestionGenerationRequest(request.Subject, request.Topic,
+                                    request.LearningOutcomes?.Trim(), wanted,
+                                    context.Text, context.Sources,
+                                    BloomLevel: levelName,
+                                    DifficultyFrom: difficultyFrom,
+                                    DifficultyTo: difficultyTo),
+                                request.Provider, cancellationToken);
+
+                            generated.AddRange(batch.Select(question => new GeneratedQuestionViewModel
+                            {
+                                Content = question.Content,
+                                ExpectedAnswer = question.ExpectedAnswer,
+                                // The range asked for this level explicitly, so trust the plan over the model.
+                                BloomLevel = levelName,
+                                Difficulty = QuestionDifficulties.Normalize(question.Difficulty) ?? string.Empty,
+                                FollowUpQuestions = question.FollowUpQuestions
+                            }));
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            // A batch is several independent calls. Losing one Bloom level should not
+                            // throw away the levels that worked, so the shortfall is reported instead.
+                            _logger.LogWarning(ex, "Bulk generation skipped the {Level} level", levelName);
+                            skipped.Add(levelName);
+                        }
                     }
 
-                    request.Results = generated;
-                    request.Sources = context.Sources.Select(source => new MaterialExcerptViewModel(source.MaterialId, source.Title)).ToList();
-                    request.HasResult = true;
-                    request.ActiveProvider = _generator.ActiveProvider ?? AiProvider.Gemini;
+                    if (generated.Count == 0)
+                        ModelState.AddModelError(string.Empty,
+                            _generator.ActiveProvider is null
+                                ? L10n.T("The AI question generator is temporarily unavailable. Please try again later.")
+                                : L10n.T("Could not generate questions right now. Please try again later."));
+                    else
+                    {
+                        if (skipped.Count > 0)
+                            ModelState.AddModelError(string.Empty,
+                                L10n.Format("No questions came back for {0}. Everything else was generated.", string.Join(", ", skipped)));
+
+                        request.Results = generated;
+                        request.Sources = context.Sources.Select(source => new MaterialExcerptViewModel(source.MaterialId, source.Title)).ToList();
+                        request.HasResult = true;
+                        // The bulk tab gates its review on the wrapper, not the request.
+                        model.HasResult = true;
+                        request.ActiveProvider = _generator.ActiveProvider ?? AiProvider.Gemini;
+                    }
                 }
                 catch (InvalidOperationException ex)
                 {

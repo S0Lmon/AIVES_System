@@ -10,7 +10,7 @@ namespace AIVES.Tests;
 public sealed class AiProviderTests
 {
     private static QuestionGenerationRequest Request(string topic = "Layers", int count = 1) =>
-        new("Software", topic, null, "Balanced", count);
+        new("Software", topic, null, count, Difficulty: "Intermediate");
 
     [Fact]
     public void GeminiIsPreferredWhenBothProvidersAreConfigured()
@@ -84,7 +84,7 @@ public sealed class AiProviderTests
     public void RoutedRequestCarriesRetrievedContextAndSources()
     {
         var sources = new[] { new MaterialExcerpt(1, "Slide", "text") };
-        var request = new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1, "grounded text", sources);
+        var request = new QuestionGenerationRequest("Software", "Layers", null, 1, "grounded text", sources);
 
         Assert.Equal("grounded text", request.RetrievedContext);
         Assert.Single(request.RetrievedSources);
@@ -166,7 +166,7 @@ public sealed class AiProviderTests
         {
             Calls++;
             return Task.FromResult<IReadOnlyList<GeneratedVivaQuestion>>([
-                new GeneratedVivaQuestion { Content = request.Topic, ExpectedAnswer = "answer", BloomLevel = "Understand", FollowUpQuestions = ["a", "b"] }
+                new GeneratedVivaQuestion { Content = request.Topic, ExpectedAnswer = "answer", BloomLevel = "Understand", Difficulty = "Intermediate", FollowUpQuestions = ["a", "b"] }
             ]);
         }
     }

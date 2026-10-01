@@ -10,6 +10,7 @@
                 Content = result.Content,
                 ExpectedAnswer = result.ExpectedAnswer,
                 BloomLevel = result.BloomLevel,
+                Difficulty = result.Difficulty,
                 FollowUpQuestions = result.FollowUpQuestions
             }));
 }
@@ -52,7 +53,13 @@
                 </div>
             </div>
             <div class="review-meta">
+                @* Bloom is the level the question will be stored under. Difficulty is a generation
+                   hint only, shown so the lecturer can see what the AI decided when they left it blank. *@
                 <span><strong>@result.BloomLevel</strong></span>
+                @if (!string.IsNullOrWhiteSpace(result.Difficulty))
+                {
+                    <span class="badge-soft">@result.Difficulty</span>
+                }
             </div>
             @if (!string.IsNullOrWhiteSpace(result.ExpectedAnswer))
             {
@@ -80,6 +87,6 @@
             }
         </select>
         <a class="btn btn-light" asp-action="Index" asp-route-tab="@returnTab">@L10n.T("Start over")</a>
-        <button type="submit" class="btn btn-primary" disabled="@(Model.Results.Count == 0)">@L10n.T("Save to bank")</button>
+        <button type="submit" class="btn btn-primary" disabled="@(Model.Results.Count == 0)">@L10n.T("Save and insert")</button>
     </div>
 </form>

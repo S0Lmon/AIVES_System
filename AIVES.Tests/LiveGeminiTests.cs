@@ -24,7 +24,7 @@ public sealed class LiveGeminiTests
         try
         {
             var question = Assert.Single(await generator.GenerateAsync(
-                new QuestionGenerationRequest("Công nghệ phần mềm", "Mô hình kiến trúc ba lớp", null, "Cơ bản", 1)));
+                new QuestionGenerationRequest("Công nghệ phần mềm", "Mô hình kiến trúc ba lớp", null, 1)));
             Assert.False(string.IsNullOrWhiteSpace(question.Content));
             Assert.Equal(2, question.FollowUpQuestions.Count);
         }

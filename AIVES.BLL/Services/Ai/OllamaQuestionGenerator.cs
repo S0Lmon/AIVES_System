@@ -47,12 +47,15 @@ public sealed class OllamaQuestionGenerator : IQuestionGenerator
 
     private async Task<GeneratedVivaQuestion> GenerateOneAsync(QuestionGenerationRequest request, CancellationToken cancellationToken)
     {
+        var blooms = string.Join("|", BloomLevels.All);
+        var difficulties = string.Join("|", QuestionDifficulties.Ordered);
+
         var payload = new
         {
             model = _options.Model,
             prompt = GenerationPrompt.Build(request, L10n.Current == AppLanguage.Vi)
-                + "\n\nReturn ONLY one JSON object: {\"content\": string, \"expectedAnswer\": string, "
-                + "\"bloomLevel\": \"Remember\"|\"Understand\"|\"Apply\"|\"Analyze\", \"followUpQuestions\": [string, string]}.",
+                + $"\n\nReturn ONLY one JSON object: {{\"content\": string, \"expectedAnswer\": string, "
+                + $"\"bloomLevel\": \"{blooms}\", \"difficulty\": \"{difficulties}\", \"followUpQuestions\": [string, string]}}.",
             format = "json",
             stream = false,
             options = new { temperature = 0.4, num_ctx = 4096 }

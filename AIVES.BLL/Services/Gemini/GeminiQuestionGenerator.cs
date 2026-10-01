@@ -56,10 +56,11 @@ public sealed class GeminiQuestionGenerator : IQuestionGenerator
                         {
                             content = new { type = "STRING" },
                             expectedAnswer = new { type = "STRING" },
-                            bloomLevel = new { type = "STRING", @enum = new[] { "Remember", "Understand", "Apply", "Analyze" } },
+                            bloomLevel = new { type = "STRING", @enum = BloomLevels.All.ToArray() },
+                            difficulty = new { type = "STRING", @enum = QuestionDifficulties.Ordered.ToArray() },
                             followUpQuestions = new { type = "ARRAY", minItems = 2, maxItems = 2, items = new { type = "STRING" } }
                         },
-                        required = new[] { "content", "expectedAnswer", "bloomLevel", "followUpQuestions" }
+                        required = new[] { "content", "expectedAnswer", "bloomLevel", "difficulty", "followUpQuestions" }
                     }
                 }
             }

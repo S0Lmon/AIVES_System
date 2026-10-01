@@ -1,8 +1,8 @@
 @model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+@using AIVES.WebMVC.Models.ViewModels
 @{
     var bulk = Model.Bulk;
     var request = bulk.Request;
-    var total = bulk.PlannedCount;
 }
 
 <div class="panel form-panel mb-3">
@@ -11,55 +11,60 @@
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
         <section class="form-section">
-            <div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Plan the batch")</h2><p>@L10n.T("Say how many questions you need per Bloom level, then preview before saving.")</p></div></div>
+            <div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Describe the batch")</h2><p>@L10n.T("Pick a subject and topic, then say how many questions you want in total.")</p></div></div>
 
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label" for="bulkSubject">@L10n.T("Subject") <span class="text-danger">*</span></label>
-                    <input id="bulkSubject" name="Request.Subject" value="@request.Subject" class="form-control" maxlength="120" required />
+                    @* Catalogue dropdowns only; the model receives the names resolved from these ids. *@
+                    @await Html.PartialAsync("_CatalogPicker", CatalogPickers.Subject(request.Subjects, "Request.SubjectId", L10n.T("Subject"), L10n.T("Choose a subject"), request.SubjectId, required: true, id: "bulkPickerSubject"))
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="bulkTopic">@L10n.T("Topic") <span class="text-danger">*</span></label>
-                    <input id="bulkTopic" name="Request.Topic" value="@request.Topic" class="form-control" maxlength="200" required />
+                    @await Html.PartialAsync("_CatalogPicker", CatalogPickers.Topic(request.Topics, "Request.TopicId", L10n.T("Topic"), L10n.T("Any topic"), request.TopicId, filteredBy: "Request.SubjectId", id: "bulkPickerTopic", subjects: request.Subjects))
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label" for="bulkDifficulty">@L10n.T("Difficulty")</label>
-                    <select id="bulkDifficulty" name="Request.Difficulty" class="form-select">
-                        <option value="Balanced" selected="@(request.Difficulty == "Balanced")">@L10n.T("Balanced")</option>
-                        <option value="Basic" selected="@(request.Difficulty == "Basic")">@L10n.T("Basic")</option>
-                        <option value="Intermediate" selected="@(request.Difficulty == "Intermediate")">@L10n.T("Intermediate")</option>
-                        <option value="Advanced" selected="@(request.Difficulty == "Advanced")">@L10n.T("Advanced")</option>
+                    <label class="form-label" for="bulkTotal">@L10n.T("Total amount") <span class="text-danger">*</span></label>
+                    <input id="bulkTotal" name="TotalAmount" type="number" min="1" max="@BulkGenerationViewModel.MaxTotal" value="@bulk.TotalAmount" class="form-control" required />
+                    <div class="form-text" id="bulkRangeHint">@L10n.Format("Must sit between {0} and {1}.", bulk.MinTotal, bulk.MaxTotalForPlan)</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="bulkDifficultyFrom">@L10n.T("Difficulty from")</label>
+                    <select id="bulkDifficultyFrom" name="DifficultyFrom" class="form-select">
+                        <option value="">@L10n.T("Any")</option>
+                        @foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered)
+                        {
+                            <option value="@difficulty" selected="@(difficulty == bulk.DifficultyFrom)">@difficulty</option>
+                        }
                     </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="bulkDifficultyTo">@L10n.T("Difficulty to")</label>
+                    <select id="bulkDifficultyTo" name="DifficultyTo" class="form-select">
+                        <option value="">@L10n.T("Any")</option>
+                        @foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered)
+                        {
+                            <option value="@difficulty" selected="@(difficulty == bulk.DifficultyTo)">@difficulty</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="bulkOutcomes">@L10n.T("Learning outcomes")</label>
+                    <textarea id="bulkOutcomes" name="Request.LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("Coverage the batch should hit")">@request.LearningOutcomes</textarea>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" name="Request.UseMaterials" value="true" id="bulkUseMaterials" checked="@request.UseMaterials" />
                         <label class="form-check-label" for="bulkUseMaterials">@L10n.T("Ground in catalog material")</label>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label" for="bulkTotal">@L10n.T("Planned total")</label>
-                    <input id="bulkTotal" type="text" class="form-control" value="@L10n.Format("{0} of 30 questions", total)" readonly />
-                </div>
-                <div class="col-12">
-                    <label class="form-label" for="bulkOutcomes">@L10n.T("Learning outcomes")</label>
-                    <textarea id="bulkOutcomes" name="Request.LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("Coverage the batch should hit")">@request.LearningOutcomes</textarea>
-                </div>
                 <div class="col-12">
                     <input type="hidden" name="Request.Provider" value="@(request.Provider?.ToString())" />
-                </div>
-                <div class="col-12">
-                    <div class="picker-pair">
-                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(request.Subjects, "Request.SubjectId", L10n.T("Catalog subject"), L10n.T("All subjects"), request.SubjectId, id: "bulkPickerSubject"))
-                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(request.Topics, "Request.TopicId", L10n.T("Catalog topic"), L10n.T("All topics"), request.TopicId, filteredBy: "Request.SubjectId", id: "bulkPickerTopic", subjects: request.Subjects))
-                    </div>
-                    <div class="form-text">@L10n.T("Saved questions are linked to this subject and topic.")</div>
                 </div>
             </div>
         </section>
 
         <section class="form-section">
-            <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Questions per Bloom level")</h2><p>@L10n.T("Up to 10 per level and 30 in total.")</p></div></div>
+            <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Range per Bloom level") <span class="text-danger">*</span></h2><p>@L10n.T("Give a lowest and highest number per level. The total above is split inside these ranges.")</p></div></div>
+            <p class="text-muted small">@L10n.T("Set every level to 0 to 0 if you do not want it covered.")</p>
             @for (var index = 0; index < bulk.Plan.Count; index++)
             {
                 var position = index;
@@ -70,13 +75,20 @@
                         <input type="hidden" name="Plan[@position].BloomLevelId" value="@row.BloomLevelId" />
                         <input type="hidden" name="Plan[@position].BloomLevelName" value="@row.BloomLevelName" />
                     </div>
-                    <input name="Plan[@position].Count" type="number" min="0" max="10" value="@row.Count" class="form-control" data-plan-count aria-label="@L10n.T("Count")" />
+                    <label class="visually-hidden" for="planMin-@position">@L10n.Format("Lowest for {0}", row.BloomLevelName)</label>
+                    <input id="planMin-@position" name="Plan[@position].Min" type="number" min="0" max="10" value="@row.Min" class="form-control" data-plan-min aria-label="@L10n.Format("Lowest for {0}", row.BloomLevelName)" />
+                    <label class="visually-hidden" for="planMax-@position">@L10n.Format("Highest for {0}", row.BloomLevelName)</label>
+                    <input id="planMax-@position" name="Plan[@position].Max" type="number" min="0" max="10" value="@row.Max" class="form-control" data-plan-max aria-label="@L10n.Format("Highest for {0}", row.BloomLevelName)" />
                 </div>
             }
             @if (bulk.Plan.Count == 0)
             {
                 <p class="text-muted">@L10n.T("No Bloom levels are configured yet.")</p>
             }
+            <div class="plan-legend">
+                <span>@L10n.T("Lowest")</span>
+                <span>@L10n.T("Highest")</span>
+            </div>
         </section>
 
         <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -88,7 +100,7 @@
                 @if (request.OllamaAvailable) { <span class="badge text-bg-secondary me-1">Ollama</span> }
                 @L10n.T("Active provider") <strong>@request.ActiveProvider</strong>
             </span>
-            <a class="btn btn-light btn-sm ms-auto" asp-action="Index" asp-route-tab="ai">@L10n.T("Just a few? Use AI generation")</a>
+            <a class="btn btn-light btn-sm ms-auto" asp-action="Index" asp-route-tab="ai">@L10n.T("Just one? Use AI generation")</a>
         </div>
     </form>
 </div>
@@ -102,31 +114,33 @@
 @section Scripts {
     <script>
         (function () {
-            // Choosing from the catalogue fills the prompt's free text fields.
-            var mirror = function (name, targetId) {
-                var select = document.querySelector('[data-picker-select][name="' + name + '"]');
-                var target = document.getElementById(targetId);
-                if (!select || !target) return;
-                var apply = function () {
-                    var option = select.options[select.selectedIndex];
-                    if (option && option.value !== '') target.value = option.textContent.trim();
-                };
-                select.addEventListener('change', apply);
-                apply();
-            };
-            mirror('Request.SubjectId', 'bulkSubject');
-            mirror('Request.TopicId', 'bulkTopic');
-
+            // The total only works if it lands inside the summed ranges, so keep the field honest as
+            // the lecturer edits them rather than waiting for the server to complain.
             var total = document.getElementById('bulkTotal');
-            if (!total) return;
-            var counts = document.querySelectorAll('[data-plan-count]');
-            var refresh = function () {
-                var sum = 0;
-                counts.forEach(function (input) { sum += parseInt(input.value, 10) || 0; });
-                total.value = sum + ' / 30';
-                total.classList.toggle('is-over', sum > 30);
+            var hint = document.getElementById('bulkRangeHint');
+            var mins = Array.prototype.slice.call(document.querySelectorAll('[data-plan-min]'));
+            var maxs = Array.prototype.slice.call(document.querySelectorAll('[data-plan-max]'));
+            if (!total || !hint || mins.length === 0) return;
+
+            var template = hint.textContent;
+            var sum = function (values) {
+                return values.reduce(function (acc, input) { return acc + (parseInt(input.value, 10) || 0); }, 0);
             };
-            counts.forEach(function (input) { input.addEventListener('input', refresh); });
+
+            var refresh = function () {
+                var lowest = sum(mins);
+                var highest = sum(maxs);
+                var wanted = parseInt(total.value, 10) || 0;
+                var fits = wanted >= lowest && wanted <= highest;
+                total.classList.toggle('is-invalid', !fits);
+                hint.textContent = template
+                    .replace('{0}', lowest)
+                    .replace('{1}', highest);
+                hint.classList.toggle('text-danger', !fits);
+            };
+
+            mins.concat(maxs).forEach(function (input) { input.addEventListener('input', refresh); });
+            total.addEventListener('input', refresh);
             refresh();
         }());
     </script>

@@ -13,7 +13,7 @@ public sealed class GeminiTests
 {
     private static GeneratedVivaQuestion ValidQuestion => new()
     {
-        Content = "Explain the three layers", ExpectedAnswer = "Presentation, BLL, DAL", BloomLevel = "Understand",
+        Content = "Explain the three layers", ExpectedAnswer = "Presentation, BLL, DAL", BloomLevel = "Understand", Difficulty = "Intermediate",
         FollowUpQuestions = ["Why separate the layers?", "What does DAL do?"]
     };
     private static string Envelope(object questions) => JsonSerializer.Serialize(new
@@ -21,7 +21,7 @@ public sealed class GeminiTests
         candidates = new[] { new { content = new { parts = new[] { new { text = JsonSerializer.Serialize(questions) } } } } }
     });
     private static QuestionGenerationRequest Request(string subject, string topic, int count) =>
-        new(subject, topic, null, "Balanced", count);
+        new(subject, topic, null, count, Difficulty: "Intermediate");
 
     private static GeminiQuestionGenerator Generator(ResponseHandler handler, string key = "fake-test-key") => new(
         new HttpClient(handler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com/") },

@@ -200,10 +200,10 @@
     color: var(--muted, #5c6478);
 }
 
-/* Bulk plan rows: one per Bloom level. */
+/* Bulk plan rows: one per Bloom level, giving a lowest and highest count. */
 .plan-row {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) 120px;
+    grid-template-columns: minmax(160px, 1fr) 96px 96px;
     gap: .75rem;
     align-items: center;
     padding: .55rem 0;
@@ -214,8 +214,26 @@
     border-bottom: 0;
 }
 
+/* Column captions sitting under the two number inputs. */
+.plan-legend {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) 96px 96px;
+    gap: .75rem;
+    padding-top: .35rem;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted, #5c6478);
+}
+
+.plan-legend span:not(:first-child) {
+    text-align: center;
+}
+
 @media (max-width: 720px) {
-    .plan-row {
-        grid-template-columns: 1fr 96px;
+    .plan-row,
+    .plan-legend {
+        grid-template-columns: 1fr 80px 80px;
     }
 }

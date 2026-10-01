@@ -1,22 +1,6 @@
 @await Html.PartialAsync("_ValidationScriptsPartial")
 <script>
     (function () {
-        // Choosing from the catalogue fills the matching free text field, so the prompt still gets
-        // a subject and topic name even though the pickers post ids.
-        var mirror = function (selectName, targetId) {
-            var select = document.querySelector('[data-picker-select][name="' + selectName + '"]');
-            var target = document.getElementById(targetId);
-            if (!select || !target) return;
-            var apply = function () {
-                var option = select.options[select.selectedIndex];
-                if (option && option.value !== '') target.value = option.textContent.trim();
-            };
-            select.addEventListener('change', apply);
-            apply();
-        };
-        mirror('SubjectId', 'aiSubject');
-        mirror('TopicId', 'aiTopic');
-
         var form = document.getElementById('aiPanelForm');
         var results = document.getElementById('aiResults');
         var submit = document.getElementById('aiSubmit');
@@ -53,9 +37,9 @@
             };
             set('Content', card.dataset.content);
             if (applyAnswer) set('ExpectedAnswer', card.dataset.answer);
-            if (applyBloom) {
+            if (applyBloom && card.dataset.bloom) {
                 var bloom = document.getElementById('BloomLevelId');
-                if (bloom && card.dataset.bloom) {
+                if (bloom) {
                     var wanted = card.dataset.bloom.toLowerCase();
                     Array.prototype.some.call(bloom.options, function (option) {
                         if (option.text.toLowerCase().indexOf(wanted) === 0) { bloom.value = option.value; return true; }
@@ -63,6 +47,18 @@
                     });
                 }
             }
+
+            // Subject and topic are the same catalogue dropdowns on both sides, so copy the ids
+            // across and let the topic list filter itself.
+            var copy = function (name, target) {
+                var from = document.querySelector('[data-picker-select][name="' + name + '"]');
+                var to = document.querySelector('[data-picker-select][name="' + target + '"]');
+                if (from && to) {
+                    to.value = from.value;
+                    to.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            };
+            copy('SubjectId', 'createSubjectId');
         };
 
         results.addEventListener('click', function (event) {

@@ -26,6 +26,10 @@ else
                 <div class="ai-result-head">
                     <span class="ai-result-index">Q@((index + 1).ToString("D2"))</span>
                     <span class="badge-soft">@question.BloomLevel</span>
+                    @if (!string.IsNullOrWhiteSpace(question.Difficulty))
+                    {
+                        <span class="badge-soft">@question.Difficulty</span>
+                    }
                 </div>
                 <p class="ai-result-content">@question.Content</p>
                 @if (!string.IsNullOrWhiteSpace(question.ExpectedAnswer))

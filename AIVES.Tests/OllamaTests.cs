@@ -19,7 +19,7 @@ public sealed class OllamaTests
     {
         content = $"Question {index}",
         expectedAnswer = $"Answer {index}",
-        bloomLevel = "Understand",
+        bloomLevel = "Understand", difficulty = "Intermediate",
         followUpQuestions = new[] { $"First {index}", $"Second {index}" }
     });
 
@@ -32,7 +32,7 @@ public sealed class OllamaTests
         // make one request per question instead of trusting the model for the count.
         var handler = new CountingHandler(index => Envelope(Question(index)));
         var questions = await Generator(handler).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 3));
+            new QuestionGenerationRequest("Software", "Layers", null, 3));
 
         Assert.Equal(3, questions.Count);
         Assert.Equal(3, handler.Calls);
@@ -44,7 +44,7 @@ public sealed class OllamaTests
     {
         var handler = new CountingHandler(_ => Envelope(Question(1)));
         var questions = await Generator(handler).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1));
+            new QuestionGenerationRequest("Software", "Layers", null, 1));
 
         Assert.Single(questions);
         Assert.Equal(1, handler.Calls);
@@ -55,7 +55,7 @@ public sealed class OllamaTests
     {
         var handler = new CountingHandler(_ => Envelope(Question(1)));
         var question = Assert.Single(await Generator(handler).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1)));
+            new QuestionGenerationRequest("Software", "Layers", null, 1)));
 
         Assert.Equal("Question 1", question.Content);
         Assert.Equal(2, question.FollowUpQuestions.Count);
@@ -70,7 +70,7 @@ public sealed class OllamaTests
         })));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(handler).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1)));
+            new QuestionGenerationRequest("Software", "Layers", null, 1)));
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class OllamaTests
     {
         var handler = new CountingHandler(_ => "private-ollama-detail", HttpStatusCode.InternalServerError);
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(handler).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1)));
+            new QuestionGenerationRequest("Software", "Layers", null, 1)));
 
         Assert.DoesNotContain("private-ollama-detail", error.Message);
     }
@@ -88,7 +88,7 @@ public sealed class OllamaTests
     {
         var handler = new CountingHandler(_ => Envelope(Question(1)));
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(handler, enabled: false).GenerateAsync(
-            new QuestionGenerationRequest("Software", "Layers", null, "Balanced", 1)));
+            new QuestionGenerationRequest("Software", "Layers", null, 1)));
 
         Assert.Equal(0, handler.Calls);
     }
