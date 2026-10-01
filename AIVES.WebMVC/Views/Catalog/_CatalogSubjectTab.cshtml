@@ -125,7 +125,7 @@
                         var position = index;
                         var topic = open.Topics[position];
                         <tr>
-                            <td data-label="@("#")"><span class="matrix-row-number">@(position + 1)</span></td>
+                            <td data-label="@("#")"><span class="sheet-rownumber">@(position + 1)</span></td>
                             <td data-label="@L10n.T("Topic")">
                                 <strong>@topic.Name</strong>
                                 @if (!string.IsNullOrWhiteSpace(topic.Description))
