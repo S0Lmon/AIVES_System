@@ -1,0 +1,176 @@
+@model AIVES.WebMVC.Models.ViewModels.CatalogViewModel
+
+<div class="cat-toolbar">
+    <form method="get" asp-action="Index" class="cat-toolbar-form">
+        <input type="hidden" name="tab" value="subject" />
+        <label class="cat-search">
+            <span class="visually-hidden">@L10n.T("Search")</span>
+            <input type="search" name="subjectFilter" value="@Model.SubjectFilter" class="form-control form-control-sm"
+                   placeholder="@L10n.T("Search subjects or topics")" />
+        </label>
+        <button type="submit" class="btn btn-light btn-sm">@L10n.T("Search")</button>
+        @if (Model.SubjectFilter.Length > 0)
+        {
+            <a class="btn btn-light btn-sm" asp-action="Index" asp-route-tab="subject">@L10n.T("Clear")</a>
+        }
+        <div class="cat-toolbar-spacer"></div>
+        <button type="button" class="btn btn-light btn-sm" data-toggle-form="newSubjectForm">+ @L10n.T("Add subject")</button>
+    </form>
+</div>
+
+<form asp-action="CreateSubject" method="post" id="newSubjectForm" class="cat-inline-form mb-3" hidden>
+    @Html.AntiForgeryToken()
+    <div class="cat-inline-grid">
+        <input name="Name" class="form-control form-control-sm" maxlength="120" placeholder="@L10n.T("Subject name")" required />
+        <input name="Description" class="form-control form-control-sm" maxlength="500" placeholder="@L10n.T("Description")" />
+        <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Add subject")</button>
+        <button type="button" class="btn btn-light btn-sm" data-toggle-form="newSubjectForm">@L10n.T("Cancel")</button>
+    </div>
+</form>
+
+@if (Model.Subjects.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">SJ</div>
+        <h3>@(Model.SubjectFilter.Length > 0 ? L10n.T("Nothing matched your search") : L10n.T("No subjects yet"))</h3>
+        <p>@(Model.SubjectFilter.Length > 0
+            ? L10n.T("Try a different word, or clear the search to see everything.")
+            : L10n.T("Add the subject you teach to start building topics and material."))</p>
+        @if (Model.SubjectFilter.Length > 0)
+        {
+            <a class="btn btn-light" asp-action="Index" asp-route-tab="subject">@L10n.T("Clear")</a>
+        }
+    </div>
+}
+else
+{
+    <div class="cat-nodes" id="subjectNodes">
+        @foreach (var subject in Model.Subjects)
+        {
+            var collapseId = $"subject-body-{subject.Id}";
+            <article class="cat-node" data-node="subject" data-id="@subject.Id">
+                <header class="cat-node-head">
+                    <button type="button" class="cat-node-toggle" data-collapse="@collapseId" aria-expanded="false"
+                            aria-controls="@collapseId" aria-label="@L10n.T("Expand")">
+                        <span class="cat-chevron">›</span>
+                    </button>
+                    <div class="cat-node-title">
+                        <strong>@subject.Name</strong>
+                        @if (!string.IsNullOrWhiteSpace(subject.Description))
+                        {
+                            <small>@subject.Description</small>
+                        }
+                    </div>
+                    <div class="cat-node-meta">
+                        <span class="badge-soft">@L10n.Format("{0} topics", subject.Topics.Count)</span>
+                        <span class="badge-soft">@L10n.Format("{0} material", subject.MaterialCount)</span>
+                    </div>
+                    <div class="cat-node-actions">
+                        <button type="button" class="btn btn-sm btn-light" data-toggle-form="newTopicForm-@subject.Id">+ @L10n.T("Topic")</button>
+                        <button type="button" class="btn btn-sm btn-light" data-toggle-form="editSubjectForm-@subject.Id">@L10n.T("Edit")</button>
+                        <form asp-action="DeleteSubject" asp-route-id="@subject.Id" method="post" class="d-inline"
+                              onsubmit="return confirm('@L10n.T("Delete this subject and everything under it?")');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-light text-danger">@L10n.T("Delete")</button>
+                        </form>
+                    </div>
+                </header>
+
+                <div class="cat-node-body" id="@collapseId" hidden>
+                    <form asp-action="UpdateSubject" asp-route-id="@subject.Id" method="post" class="cat-inline-form" id="editSubjectForm-@subject.Id" hidden>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Id" value="@subject.Id" />
+                        <div class="cat-inline-grid">
+                            <input name="Name" value="@subject.Name" class="form-control form-control-sm" maxlength="120" required />
+                            <input name="Description" value="@subject.Description" class="form-control form-control-sm" maxlength="500" />
+                            <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Save")</button>
+                            <button type="button" class="btn btn-light btn-sm" data-toggle-form="editSubjectForm-@subject.Id">@L10n.T("Cancel")</button>
+                        </div>
+                    </form>
+
+                    <form asp-action="CreateTopic" method="post" class="cat-inline-form" id="newTopicForm-@subject.Id" hidden>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="SubjectId" value="@subject.Id" />
+                        <div class="cat-inline-grid">
+                            <input name="Name" class="form-control form-control-sm" maxlength="200" placeholder="@L10n.T("Topic name")" required />
+                            <input name="Description" class="form-control form-control-sm" maxlength="500" placeholder="@L10n.T("Description")" />
+                            <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Add topic")</button>
+                            <button type="button" class="btn btn-light btn-sm" data-toggle-form="newTopicForm-@subject.Id">@L10n.T("Cancel")</button>
+                        </div>
+                    </form>
+
+                    @if (subject.Topics.Count == 0)
+                    {
+                        <p class="cat-empty-row">@L10n.T("No topics under this subject yet. Add one to hold material.")</p>
+                    }
+                    else
+                    {
+                        <table class="table data-table compact cat-topics">
+                            <thead>
+                                <tr>
+                                    <th>@L10n.T("Topic")</th>
+                                    <th class="cat-col-count">@L10n.T("Material")</th>
+                                    <th class="text-end">@L10n.T("Actions")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var topic in subject.Topics)
+                                {
+                                    <tr>
+                                        <td data-label="@L10n.T("Topic")">
+                                            <strong>@topic.Name</strong>
+                                            @if (!string.IsNullOrWhiteSpace(topic.Description))
+                                            {
+                                                <small class="text-muted d-block">@topic.Description</small>
+                                            }
+                                        </td>
+                                        <td data-label="@L10n.T("Material")" class="cat-col-count">
+                                            @if (topic.MaterialCount > 0)
+                                            {
+                                                <a asp-action="Index" asp-route-tab="material" asp-route-subjectId="@subject.Id"
+                                                   asp-route-topicId="@topic.Id">@topic.MaterialCount</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">0</span>
+                                            }
+                                        </td>
+                                        <td data-label="@L10n.T("Actions")" class="text-end">
+                                            <div class="action-group">
+                                                <a class="btn btn-sm btn-light" asp-action="Index" asp-route-tab="material"
+                                                   asp-route-subjectId="@subject.Id" asp-route-topicId="@topic.Id">
+                                                    @L10n.T("Material")
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-light"
+                                                        data-toggle-form="editTopicForm-@topic.Id">@L10n.T("Edit")</button>
+                                                <form asp-action="DeleteTopic" asp-route-id="@topic.Id" method="post" class="d-inline"
+                                                      onsubmit="return confirm('@L10n.T("Delete this topic and its material?")');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-light text-danger">@L10n.T("Delete")</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="cat-edit-row" id="editTopicForm-@topic.Id" hidden>
+                                        <td colspan="3">
+                                            <form asp-action="UpdateTopic" asp-route-id="@topic.Id" method="post" class="cat-inline-form">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="SubjectId" value="@subject.Id" />
+                                                <div class="cat-inline-grid">
+                                                    <input name="Name" value="@topic.Name" class="form-control form-control-sm" maxlength="200" required />
+                                                    <input name="Description" value="@topic.Description" class="form-control form-control-sm" maxlength="500" />
+                                                    <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Save")</button>
+                                                    <button type="button" class="btn btn-light btn-sm" data-toggle-form="editTopicForm-@topic.Id">@L10n.T("Cancel")</button>
+                                                </div>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </article>
+        }
+    </div>
+}

@@ -1,7 +1,11 @@
 @model AIVES.WebMVC.Models.ViewModels.QuestionViewModel
 @{ ViewData["Title"] = @L10n.T("Create question"); }
 
-<div class="page-heading form-panel"><div><span class="page-kicker">@L10n.T("Question bank")</span><h1>@L10n.T("Create a viva question")</h1><p>@L10n.T("Write a clear question and attach its Bloom level and scoring rubric.")</p></div><span class="ai-assist-chip">✦ @L10n.T("Can be generated with AI")</span></div>
+<div class="page-heading form-panel">
+    <div><span class="page-kicker">@L10n.T("Question bank")</span><h1>@L10n.T("Create a viva question")</h1><p>@L10n.T("Write a clear question and attach its Bloom level and scoring rubric.")</p></div>
+    <button type="button" class="btn btn-light slide-trigger" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("Generate with AI")</button>
+</div>
+@if (TempData["Notice"] != null) { <div class="alert alert-warning alert-dismissible fade show">@TempData["Notice"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
 <form asp-action="Create" method="post" class="panel form-panel">
     <div asp-validation-summary="ModelOnly" class="alert alert-danger m-4 mb-0"></div>
     <section class="form-section">
@@ -20,4 +24,5 @@
     </section>
     <div class="form-actions"><a asp-action="Index" class="btn btn-light">@L10n.T("Cancel")</a><button type="submit" class="btn btn-primary">@L10n.T("Save question") →</button></div>
 </form>
-@section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }
+@await Html.PartialAsync("_AiGenerateSlide")
+@section Scripts { @await Html.PartialAsync("_AiSlideScripts") }

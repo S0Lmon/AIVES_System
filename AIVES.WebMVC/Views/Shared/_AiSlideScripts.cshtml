@@ -1,0 +1,85 @@
+@await Html.PartialAsync("_ValidationScriptsPartial")
+<script>
+    (function () {
+        // Catalog subject filters the topic list without a round trip.
+        var subjectPicker = document.getElementById('aiSubjectPicker');
+        var topicPicker = document.getElementById('aiTopicPicker');
+        if (subjectPicker && topicPicker) {
+            var applyFilter = function () {
+                var subjectId = subjectPicker.value;
+                topicPicker.querySelectorAll('option[data-subject-id]').forEach(function (option) {
+                    var matches = !subjectId || option.dataset.subjectId === subjectId;
+                    option.hidden = !matches;
+                    option.disabled = !matches;
+                    if (!matches && option.selected) topicPicker.value = '';
+                });
+            };
+            subjectPicker.addEventListener('change', applyFilter);
+            applyFilter();
+        }
+
+        var form = document.getElementById('aiPanelForm');
+        var results = document.getElementById('aiResults');
+        var submit = document.getElementById('aiSubmit');
+        if (!form || !results) return;
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var label = submit.querySelector('.ai-submit-label');
+            var original = label ? label.textContent : '';
+            submit.disabled = true;
+            if (label) label.textContent = submit.dataset.aiBusy || '...';
+
+            fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) {
+                    if (!response.ok) throw new Error(String(response.status));
+                    return response.text();
+                })
+                .then(function (html) { results.innerHTML = html; })
+                .catch(function () {
+                    results.innerHTML = '<div class="alert alert-danger py-2 px-3 small">' + (results.dataset.aiError || 'Generation failed.') + '</div>';
+                })
+                .finally(function () {
+                    submit.disabled = false;
+                    if (label) label.textContent = original;
+                });
+        });
+
+        // Applying a result fills the question form sitting behind the panel.
+        var fill = function (card, applyAnswer, applyBloom) {
+            var set = function (id, value) {
+                var field = document.getElementById(id);
+                if (field) field.value = value || '';
+                return field;
+            };
+            set('Content', card.dataset.content);
+            if (applyAnswer) set('ExpectedAnswer', card.dataset.answer);
+            if (applyBloom) {
+                var bloom = document.getElementById('BloomLevelId');
+                if (bloom && card.dataset.bloom) {
+                    var wanted = card.dataset.bloom.toLowerCase();
+                    Array.prototype.some.call(bloom.options, function (option) {
+                        if (option.text.toLowerCase().indexOf(wanted) === 0) { bloom.value = option.value; return true; }
+                        return false;
+                    });
+                }
+            }
+        };
+
+        results.addEventListener('click', function (event) {
+            var use = event.target.closest('.ai-use');
+            var copy = event.target.closest('.ai-copy');
+            if (!use && !copy) return;
+            var card = (use || copy).closest('.ai-result');
+            if (!card) return;
+
+            if (use) {
+                fill(card, true, true);
+                use.textContent = results.dataset.done || use.textContent;
+                use.classList.add('is-applied');
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(card.dataset.content).catch(function () { });
+            }
+        });
+    })();
+</script>

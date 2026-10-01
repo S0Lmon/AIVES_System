@@ -1,0 +1,195 @@
+@model AIVES.WebMVC.Models.ViewModels.CatalogViewModel
+
+<div class="cat-toolbar">
+    <form method="get" asp-action="Index" class="cat-toolbar-form">
+        <input type="hidden" name="tab" value="material" />
+        <select name="subjectId" class="form-select form-select-sm" aria-label="@L10n.T("Subject")">
+            <option value="">@L10n.T("All subjects")</option>
+            @foreach (var subject in Model.SubjectOptions)
+            {
+                <option value="@subject.Id" selected="@(Model.FilterSubjectId == subject.Id)">@subject.Name</option>
+            }
+        </select>
+        <select name="topicId" class="form-select form-select-sm" aria-label="@L10n.T("Topic")">
+            <option value="">@L10n.T("All topics")</option>
+            @foreach (var topic in Model.TopicOptions)
+            {
+                <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
+            }
+        </select>
+        <input type="search" name="materialFilter" value="@Model.MaterialFilter" class="form-control form-control-sm cat-search"
+               placeholder="@L10n.T("Search title or content")" />
+        <button type="submit" class="btn btn-light btn-sm">@L10n.T("Filter")</button>
+        @if (Model.FilterSubjectId != null || Model.FilterTopicId != null || Model.MaterialFilter.Length > 0)
+        {
+            <a class="btn btn-light btn-sm" asp-action="Index" asp-route-tab="material">@L10n.T("Clear")</a>
+        }
+        <div class="cat-toolbar-spacer"></div>
+        @if (Model.TopicOptions.Count > 0)
+        {
+            <button type="button" class="btn btn-light btn-sm" data-toggle-form="newMaterialForm">+ @L10n.T("Add material")</button>
+            <button type="button" class="btn btn-light btn-sm" data-toggle-form="importMaterialForm">@L10n.T("Import file")</button>
+        }
+    </form>
+</div>
+
+@if (Model.TopicOptions.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">MT</div>
+        <h3>@(Model.SubjectCount == 0 ? L10n.T("No subjects yet") : L10n.T("No topics yet"))</h3>
+        <p>@L10n.T("Material always belongs to a topic. Create a subject and topic first.")</p>
+        <a class="btn btn-primary" asp-action="Index" asp-route-tab="subject">@L10n.T("Go to Subject tab")</a>
+    </div>
+}
+else
+{
+    <form asp-action="CreateMaterial" method="post" id="newMaterialForm" class="cat-inline-form mb-3" hidden>
+        @Html.AntiForgeryToken()
+        <div class="cat-material-form">
+            <select name="TopicId" class="form-select form-select-sm" required>
+                <option value="">@L10n.T("Store under topic")</option>
+                @foreach (var topic in Model.TopicOptions)
+                {
+                    <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
+                }
+            </select>
+            <input name="Title" class="form-control form-control-sm" maxlength="300" placeholder="@L10n.T("Title")" required />
+            <textarea name="Content" class="form-control form-control-sm" rows="3" placeholder="@L10n.T("Content")" required></textarea>
+            <div class="cat-inline-actions">
+                <label class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" name="IsActive" value="true" checked />
+                    <span class="form-check-label small">@L10n.T("Active")</span>
+                </label>
+                <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Add material")</button>
+                <button type="button" class="btn btn-light btn-sm" data-toggle-form="newMaterialForm">@L10n.T("Cancel")</button>
+            </div>
+        </div>
+    </form>
+
+    <form asp-action="ImportMaterial" method="post" enctype="multipart/form-data" id="importMaterialForm" class="cat-inline-form mb-3" hidden>
+        @Html.AntiForgeryToken()
+        <div class="cat-inline-grid">
+            <select name="topicId" class="form-select form-select-sm" required>
+                <option value="">@L10n.T("Store under topic")</option>
+                @foreach (var topic in Model.TopicOptions)
+                {
+                    <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
+                }
+            </select>
+            <input type="file" name="file" class="form-control form-control-sm" accept=".txt,.md,.markdown,.csv,.json" required />
+            <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Import")</button>
+            <button type="button" class="btn btn-light btn-sm" data-toggle-form="importMaterialForm">@L10n.T("Cancel")</button>
+        </div>
+        <small class="text-muted">@L10n.T("Supported formats: .txt, .md, .csv, .json") — @L10n.T("max 2 MB")</small>
+    </form>
+
+    <div class="panel overflow-hidden">
+        <div class="panel-header">
+            <div>
+                <h2>@L10n.T("Material list")</h2>
+                <small class="text-muted">@L10n.Format("{0} items", Model.Materials.Count)</small>
+            </div>
+        </div>
+        @if (Model.Materials.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">0</div>
+                <h3>@L10n.T("No material for this selection")</h3>
+                <p>@L10n.T("Add material manually or import a .txt, .md, .csv or .json file.")</p>
+                <button type="button" class="btn btn-primary" data-toggle-form="newMaterialForm">@L10n.T("Add material")</button>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th>@L10n.T("Title")</th>
+                            <th>@L10n.T("Topic")</th>
+                            <th>@L10n.T("Source")</th>
+                            <th>@L10n.T("Characters")</th>
+                            <th>@L10n.T("Status")</th>
+                            <th class="text-end">@L10n.T("Actions")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Materials)
+                        {
+                            <tr>
+                                <td data-label="@L10n.T("Title")">
+                                    <div class="question-title" title="@item.Title">@item.Title</div>
+                                    <small class="text-muted">@L10n.Format("Added {0}", item.CreatedDate.ToString("dd/MM/yyyy"))</small>
+                                </td>
+                                <td data-label="@L10n.T("Topic")">
+                                    @item.TopicName
+                                    <small class="text-muted d-block">@item.SubjectName</small>
+                                </td>
+                                <td data-label="@L10n.T("Source")">
+                                    @if (item.IsImported)
+                                    {
+                                        <span class="badge-soft">@L10n.T("Imported")</span>
+                                        <small class="text-muted d-block">@item.SourceFileName</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-soft">@L10n.T("Manual")</span>
+                                    }
+                                </td>
+                                <td data-label="@L10n.T("Characters")">@item.ContentLength</td>
+                                <td data-label="@L10n.T("Status")">
+                                    <span class="status-badge @(item.IsActive ? "active" : "inactive")">
+                                        @(item.IsActive ? L10n.T("Active") : L10n.T("Hidden"))
+                                    </span>
+                                </td>
+                                <td data-label="@L10n.T("Actions")">
+                                    <div class="action-group">
+                                        <button type="button" class="btn btn-sm btn-light" data-toggle-form="editMaterialForm-@item.Id">@L10n.T("Edit")</button>
+                                        <form asp-action="DeleteMaterial" method="post" class="d-inline"
+                                              asp-route-id="@item.Id" asp-route-subjectId="@item.SubjectId" asp-route-topicId="@item.TopicId"
+                                              onsubmit="return confirm('@L10n.T("Delete this material?")');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-light text-danger">@L10n.T("Delete")</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="cat-edit-row" id="editMaterialForm-@item.Id" hidden>
+                                <td colspan="6">
+                                    <form asp-action="UpdateMaterial" asp-route-id="@item.Id" method="post" class="cat-inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="Id" value="@item.Id" />
+                                        @if (item.IsImported)
+                                        {
+                                            <input type="hidden" name="SourceFileName" value="@item.SourceFileName" />
+                                            <input type="hidden" name="IsImportedFile" value="true" />
+                                        }
+                                        <div class="cat-material-form">
+                                            <select name="TopicId" class="form-select form-select-sm" required>
+                                                @foreach (var topic in Model.TopicOptions)
+                                                {
+                                                    <option value="@topic.Id" selected="@(topic.Id == item.TopicId)">@topic.Name</option>
+                                                }
+                                            </select>
+                                            <input name="Title" value="@item.Title" class="form-control form-control-sm" maxlength="300" required />
+                                            <textarea name="Content" class="form-control form-control-sm" rows="6">@item.Content</textarea>
+                                            <div class="cat-inline-actions">
+                                                <label class="form-check form-switch m-0">
+                                                    <input class="form-check-input" type="checkbox" name="IsActive" value="true" checked="@item.IsActive" />
+                                                    <span class="form-check-label small">@L10n.T("Active")</span>
+                                                </label>
+                                                <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Save changes")</button>
+                                                <button type="button" class="btn btn-light btn-sm" data-toggle-form="editMaterialForm-@item.Id">@L10n.T("Cancel")</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
