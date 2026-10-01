@@ -1,0 +1,82 @@
+@model AIVES.WebMVC.Models.ViewModels.AiReviewViewModel
+@{
+    // Shared by the AI tab and the Bulk tab: tick the rows worth keeping, then save them.
+    var returnTab = ViewData["ReviewReturnTab"] as string ?? "ai";
+    var payload = Model.HasResult && Model.ResultJson is not null
+        ? Model.ResultJson
+        : AIVES.WebMVC.Models.ViewModels.GeneratedQuestionJson.Serialize(
+            Model.Results.Select(result => new AIVES.WebMVC.Models.ViewModels.GeneratedQuestionInput
+            {
+                Content = result.Content,
+                ExpectedAnswer = result.ExpectedAnswer,
+                BloomLevel = result.BloomLevel,
+                FollowUpQuestions = result.FollowUpQuestions
+            }));
+}
+
+<form method="post" asp-action="InsertReviewed" class="panel form-panel">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="returnTab" value="@returnTab" />
+    <input type="hidden" name="resultJson" id="resultJson" value="@payload" />
+
+    <div class="panel-header mb-3">
+        <div>
+            <h2>@L10n.T("Review before saving")</h2>
+            <small class="text-muted">@L10n.Format("{0} questions generated. Untick anything you do not want in the bank.", Model.Results.Count)</small>
+        </div>
+        @if (Model.Sources.Count > 0)
+        {
+            <span class="badge text-bg-light">@L10n.Format("Grounded in {0} material items", Model.Sources.Count)</span>
+        }
+    </div>
+
+    @if (Model.Results.Count == 0)
+    {
+        <p class="text-muted">@L10n.T("Nothing was generated yet.")</p>
+    }
+
+    @for (var index = 0; index < Model.Results.Count; index++)
+    {
+        var position = index;
+        var result = Model.Results[position];
+        <div class="review-row" data-review-row>
+            <div class="review-head">
+                <p class="review-content">@result.Content</p>
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" name="pick" value="@position" id="pick-@position" checked
+                           data-review-toggle />
+                    <label class="form-check-label small" for="pick-@position">@L10n.T("Keep")</label>
+                </div>
+            </div>
+            <div class="review-meta">
+                <span><strong>@result.BloomLevel</strong></span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(result.ExpectedAnswer))
+            {
+                <p class="review-answer">@result.ExpectedAnswer</p>
+            }
+            @if (result.FollowUpQuestions.Count > 0)
+            {
+                <ul class="review-followups">
+                    @foreach (var followUp in result.FollowUpQuestions)
+                    {
+                        <li>@followUp</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-end mt-3">
+        <label class="form-label mb-0 me-2" for="reviewRubric">@L10n.T("Attach rubric")</label>
+        <select id="reviewRubric" name="rubricId" class="form-select form-select-sm" style="max-width: 260px">
+            <option value="">@L10n.T("No rubric")</option>
+            @foreach (var rubric in Model.RubricOptions)
+            {
+                <option value="@rubric.Id">@rubric.Name</option>
+            }
+        </select>
+        <a class="btn btn-light" asp-action="Index" asp-route-tab="@returnTab">@L10n.T("Start over")</a>
+        <button type="submit" class="btn btn-primary" disabled="@(Model.Results.Count == 0)">@L10n.T("Save to bank")</button>
+    </div>
+</form>

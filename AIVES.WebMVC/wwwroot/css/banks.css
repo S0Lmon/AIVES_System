@@ -1,0 +1,197 @@
+/* Shared page furniture for the bank pages: tab strips, stat strips, rubric matrix and review lists. */
+
+.bank-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line, #e3e6ef);
+}
+
+.bank-tab {
+    padding: .6rem 1rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--muted, #5c6478);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bank-tab:hover {
+    color: var(--ink, #1d2333);
+}
+
+.bank-tab.is-active {
+    color: var(--accent, #2f5bd7);
+    border-bottom-color: var(--accent, #2f5bd7);
+}
+
+.stat-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+}
+
+.stat {
+    background: var(--panel, #fff);
+    border: 1px solid var(--line, #e3e6ef);
+    border-radius: 12px;
+    padding: .85rem 1rem;
+}
+
+.stat-value {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.stat-label {
+    display: block;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted, #5c6478);
+}
+
+/* Rubric matrix: rows are criteria, columns are levels. */
+.matrix-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line, #e3e6ef);
+    border-radius: 12px;
+    background: var(--panel, #fff);
+}
+
+.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+}
+
+.matrix th,
+.matrix td {
+    border: 1px solid var(--line, #e3e6ef);
+    padding: .5rem .6rem;
+    vertical-align: top;
+    text-align: left;
+}
+
+.matrix thead th {
+    background: var(--wash, #f5f7fb);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted, #5c6478);
+    white-space: nowrap;
+}
+
+.matrix-colhead {
+    min-width: 190px;
+}
+
+.matrix-rowhead {
+    min-width: 220px;
+    background: var(--wash, #f5f7fb);
+}
+
+.matrix textarea {
+    min-height: 84px;
+    resize: vertical;
+    font-size: .9rem;
+}
+
+.matrix-points {
+    width: 90px;
+}
+
+.matrix-col-toolbar,
+.matrix-row-toolbar {
+    display: flex;
+    gap: .5rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
+}
+
+/* Read only matrix used on the rubric details screen. */
+.matrix-readonly td,
+.matrix-readonly th {
+    font-size: .9rem;
+}
+
+.matrix-readonly .matrix-cell-points {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem;
+    color: var(--muted, #5c6478);
+    margin-top: .3rem;
+}
+
+/* Review list shared by AI generation and bulk generation. */
+.review-row {
+    border: 1px solid var(--line, #e3e6ef);
+    border-radius: 12px;
+    background: var(--panel, #fff);
+    padding: .9rem 1rem;
+    margin-bottom: .75rem;
+}
+
+.review-row.is-off {
+    opacity: .55;
+}
+
+.review-head {
+    display: flex;
+    gap: .75rem;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.review-content {
+    font-weight: 600;
+    margin: 0 0 .35rem;
+}
+
+.review-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem .9rem;
+    font-size: .82rem;
+    color: var(--muted, #5c6478);
+}
+
+.review-answer {
+    margin: .5rem 0 0;
+    font-size: .88rem;
+}
+
+.review-followups {
+    margin: .45rem 0 0;
+    padding-left: 1.1rem;
+    font-size: .84rem;
+    color: var(--muted, #5c6478);
+}
+
+/* Bulk plan rows: one per Bloom level. */
+.plan-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 120px;
+    gap: .75rem;
+    align-items: center;
+    padding: .55rem 0;
+    border-bottom: 1px solid var(--line, #e3e6ef);
+}
+
+.plan-row:last-child {
+    border-bottom: 0;
+}
+
+@media (max-width: 720px) {
+    .plan-row {
+        grid-template-columns: 1fr 96px;
+    }
+}

@@ -1,0 +1,117 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+
+<div class="stat-strip">
+    <div class="stat"><span class="stat-value">@Model.TotalCount</span><span class="stat-label">@L10n.T("Questions")</span></div>
+    <div class="stat"><span class="stat-value">@Model.ActiveCount</span><span class="stat-label">@L10n.T("Published")</span></div>
+    <div class="stat"><span class="stat-value">@Model.CoveredByRubric</span><span class="stat-label">@L10n.T("With rubric")</span></div>
+    <div class="stat"><span class="stat-value">@Model.BloomSpread</span><span class="stat-label">@L10n.T("Bloom levels used")</span></div>
+</div>
+
+<form method="get" asp-action="Index" class="cat-toolbar-form mb-3">
+    <input type="hidden" name="tab" value="bank" />
+    <label class="cat-search">
+        <span class="visually-hidden">@L10n.T("Search")</span>
+        <input type="search" name="search" value="@Model.Search" class="form-control form-control-sm" placeholder="@L10n.T("Search question text")" />
+    </label>
+    <select name="bloomLevelId" class="form-select form-select-sm" style="max-width: 200px">
+        <option value="">@L10n.T("All Bloom levels")</option>
+        @foreach (var level in Model.BloomLevels)
+        {
+            <option value="@level.Id" selected="@(Model.BloomLevelId == level.Id)">@level.Name</option>
+        }
+    </select>
+    <select name="rubricId" class="form-select form-select-sm" style="max-width: 220px">
+        <option value="">@L10n.T("All rubrics")</option>
+        @foreach (var rubric in Model.Rubrics)
+        {
+            <option value="@rubric.Id" selected="@(Model.RubricId == rubric.Id)">@rubric.Name</option>
+        }
+    </select>
+    <div class="form-check ms-1">
+        <input class="form-check-input" type="checkbox" name="activeOnly" value="true" id="activeOnly" checked="@Model.ActiveOnly" />
+        <label class="form-check-label small" for="activeOnly">@L10n.T("Published only")</label>
+    </div>
+    <button type="submit" class="btn btn-light btn-sm">@L10n.T("Filter")</button>
+    <span class="cat-toolbar-spacer"></span>
+    <a class="btn btn-primary btn-sm" asp-action="Index" asp-route-tab="create">@L10n.T("New question")</a>
+</form>
+
+<div class="panel overflow-hidden">
+    <div class="panel-header">
+        <div>
+            <h2>@L10n.T("All questions")</h2>
+            <small class="text-muted">@L10n.Format("{0} questions shown", Model.Questions.Count)</small>
+        </div>
+    </div>
+    @if (Model.Questions.Count == 0)
+    {
+        <div class="p-4 text-center">
+            <p class="mb-1 fw-semibold">@L10n.T("Nothing matched your search")</p>
+            <p class="text-muted mb-3">@L10n.T("Write one by hand, generate a set with AI, or plan a batch.")</p>
+            <a class="btn btn-primary" asp-action="Index" asp-route-tab="create">@L10n.T("Create a question")</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th>@L10n.T("Question")</th>
+                        <th>@L10n.T("Bloom level")</th>
+                        <th>@L10n.T("Rubric")</th>
+                        <th>@L10n.T("Status")</th>
+                        <th class="text-end">@L10n.T("Actions")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var question in Model.Questions)
+                    {
+                        <tr>
+                            <td>
+                                <span class="d-block">@question.Content</span>
+                                @if (!string.IsNullOrWhiteSpace(question.Context))
+                                {
+                                    <small class="text-muted">@question.Context</small>
+                                }
+                            </td>
+                            <td>@question.BloomLevelName</td>
+                            <td>
+                                @if (question.RubricId is > 0)
+                                {
+                                    <span>@question.RubricName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (question.IsActive)
+                                {
+                                    <span class="badge text-bg-success">@L10n.T("Published")</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-light">@L10n.T("Draft")</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@question.Id">@L10n.T("Open")</a>
+                                    <a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@question.Id">@L10n.T("Edit")</a>
+                                    <form method="post" asp-action="Delete" class="d-inline"
+                                          onsubmit="return confirm('@L10n.T("Delete this question?")');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@question.Id" />
+                                        <button type="submit" class="btn btn-light btn-sm text-danger">@L10n.T("Delete")</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

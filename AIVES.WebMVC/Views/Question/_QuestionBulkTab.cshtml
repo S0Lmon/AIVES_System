@@ -1,0 +1,113 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+@{
+    var bulk = Model.Bulk;
+    var request = bulk.Request;
+    var total = bulk.PlannedCount;
+}
+
+<div class="panel form-panel mb-3">
+    <form method="post" asp-action="GenerateBulk">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Plan the batch")</h2><p>@L10n.T("Say how many questions you need per Bloom level, then preview before saving.")</p></div></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="bulkSubject">@L10n.T("Subject") <span class="text-danger">*</span></label>
+                    <input id="bulkSubject" name="Request.Subject" value="@request.Subject" class="form-control" maxlength="120" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="bulkTopic">@L10n.T("Topic") <span class="text-danger">*</span></label>
+                    <input id="bulkTopic" name="Request.Topic" value="@request.Topic" class="form-control" maxlength="200" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="bulkDifficulty">@L10n.T("Difficulty")</label>
+                    <select id="bulkDifficulty" name="Request.Difficulty" class="form-select">
+                        <option value="Balanced" selected="@(request.Difficulty == "Balanced")">@L10n.T("Balanced")</option>
+                        <option value="Basic" selected="@(request.Difficulty == "Basic")">@L10n.T("Basic")</option>
+                        <option value="Intermediate" selected="@(request.Difficulty == "Intermediate")">@L10n.T("Intermediate")</option>
+                        <option value="Advanced" selected="@(request.Difficulty == "Advanced")">@L10n.T("Advanced")</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="Request.UseMaterials" value="true" id="bulkUseMaterials" checked="@request.UseMaterials" />
+                        <label class="form-check-label" for="bulkUseMaterials">@L10n.T("Ground in catalog material")</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="bulkTotal">@L10n.T("Planned total")</label>
+                    <input id="bulkTotal" type="text" class="form-control" value="@L10n.Format("{0} of 30 questions", total)" readonly />
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="bulkOutcomes">@L10n.T("Learning outcomes")</label>
+                    <textarea id="bulkOutcomes" name="Request.LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("Coverage the batch should hit")">@request.LearningOutcomes</textarea>
+                </div>
+                <div class="col-12">
+                    <input type="hidden" name="Request.SubjectId" value="@request.SubjectId" />
+                    <input type="hidden" name="Request.TopicId" value="@request.TopicId" />
+                    <input type="hidden" name="Request.Provider" value="@(request.Provider?.ToString())" />
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Questions per Bloom level")</h2><p>@L10n.T("Up to 10 per level and 30 in total.")</p></div></div>
+            @for (var index = 0; index < bulk.Plan.Count; index++)
+            {
+                var position = index;
+                var row = bulk.Plan[position];
+                <div class="plan-row">
+                    <div>
+                        <span class="fw-semibold">@row.BloomLevelName</span>
+                        <input type="hidden" name="Plan[@position].BloomLevelId" value="@row.BloomLevelId" />
+                        <input type="hidden" name="Plan[@position].BloomLevelName" value="@row.BloomLevelName" />
+                    </div>
+                    <input name="Plan[@position].Count" type="number" min="0" max="10" value="@row.Count" class="form-control" data-plan-count aria-label="@L10n.T("Count")" />
+                </div>
+            }
+            @if (bulk.Plan.Count == 0)
+            {
+                <p class="text-muted">@L10n.T("No Bloom levels are configured yet.")</p>
+            }
+        </section>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <button type="submit" class="btn btn-primary" disabled="@(!(request.GeminiAvailable || request.OllamaAvailable) || bulk.Plan.Count == 0)">
+                @(request.GeminiAvailable || request.OllamaAvailable ? L10n.T("Preview the batch") : L10n.T("No AI provider available"))
+            </button>
+            <span class="text-muted small">
+                @if (request.GeminiAvailable) { <span class="badge text-bg-success me-1">Gemini</span> }
+                @if (request.OllamaAvailable) { <span class="badge text-bg-secondary me-1">Ollama</span> }
+                @L10n.T("Active provider") <strong>@request.ActiveProvider</strong>
+            </span>
+            <a class="btn btn-light btn-sm ms-auto" asp-action="Index" asp-route-tab="ai">@L10n.T("Just a few? Use AI generation")</a>
+        </div>
+    </form>
+</div>
+
+@if (bulk.HasResult)
+{
+    ViewData["ReviewReturnTab"] = "bulk";
+    <partial name="_QuestionReview" model="bulk.Request" />
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var total = document.getElementById('bulkTotal');
+            if (!total) return;
+            var counts = document.querySelectorAll('[data-plan-count]');
+            var refresh = function () {
+                var sum = 0;
+                counts.forEach(function (input) { sum += parseInt(input.value, 10) || 0; });
+                total.value = sum + ' / 30';
+                total.classList.toggle('is-over', sum > 30);
+            };
+            counts.forEach(function (input) { input.addEventListener('input', refresh); });
+            refresh();
+        }());
+    </script>
+}

@@ -1,0 +1,111 @@
+@model AIVES.WebMVC.Models.ViewModels.RubricMatrixModel
+@{
+    // One editor serves the create tab, the edit screen and a proposed AI matrix, so the
+    // parent view decides which action receives the grid.
+    var formId = "rubricMatrixForm";
+    var action = (string?)ViewData["MatrixAction"] ?? "Create";
+    var routeId = (int?)ViewData["MatrixRouteId"];
+    var columns = Model.Columns.Count == 0
+        ? AIVES.WebMVC.Models.ViewModels.MatrixColumnInput.Defaults()
+        : Model.Columns;
+}
+
+<form id="@formId" method="post" class="panel form-panel" data-matrix-editor
+      asp-controller="Rubric" asp-action="@action" asp-route-id="@routeId">
+    @Html.AntiForgeryToken()
+    @Html.Hidden("Id", Model.Id)
+    @Html.Hidden("IsEdit", Model.IsEdit)
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Rubric details")</h2><p>@L10n.T("Name the matrix and say what it scores.")</p></div></div>
+        <div class="mb-4"><label class="form-label" for="rubricName">@L10n.T("Name") <span class="text-danger">*</span></label><input id="rubricName" name="Name" value="@Model.Name" class="form-control" maxlength="200" required /></div>
+        <div><label class="form-label" for="rubricDescription">@L10n.T("Description")</label><textarea id="rubricDescription" name="Description" class="form-control" rows="2" maxlength="1000">@Model.Description</textarea></div>
+    </section>
+
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Level columns")</h2><p>@L10n.T("Name the scale. Points should rise from the weakest column to the strongest.")</p></div></div>
+
+        <div class="matrix-col-toolbar">
+            <div>
+                <label class="form-label" for="newColumnName">@L10n.T("New column")</label>
+                <input id="newColumnName" class="form-control form-control-sm" placeholder="@L10n.T("Level name")" maxlength="120" />
+            </div>
+            <div>
+                <label class="form-label" for="newColumnPoints">@L10n.T("Points")</label>
+                <input id="newColumnPoints" type="number" min="0" max="100" value="0" class="form-control form-control-sm matrix-points" />
+            </div>
+            <button type="button" class="btn btn-light btn-sm" data-matrix-add-column>@L10n.T("Add column")</button>
+            <span class="text-muted small">@L10n.T("2 to 6 columns")</span>
+        </div>
+
+        <div class="matrix-scroll">
+            <table class="matrix" data-matrix>
+                <thead>
+                    <tr data-matrix-head>
+                        <th class="matrix-rowhead">@L10n.T("Criterion")</th>
+                        @for (var column = 0; column < columns.Count; column++)
+                        {
+                            var index = column;
+                            var columnModel = columns[index];
+                            <th class="matrix-colhead" data-matrix-column="@index">
+                                <input name="Columns[@index].Name" value="@columnModel.Name" class="form-control form-control-sm mb-1" placeholder="@L10n.T("Level name")" maxlength="120" required />
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input name="Columns[@index].Points" type="number" min="0" max="100" value="@columnModel.Points" class="form-control form-control-sm matrix-points" title="@L10n.T("Points")" />
+                                    <button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-column="@index" title="@L10n.T("Remove column")">&times;</button>
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody data-matrix-body>
+                    @{
+                        var rows = Model.Rows.Count == 0
+                            ? new List<AIVES.WebMVC.Models.ViewModels.MatrixRowInput> { new() { Cells = AIVES.WebMVC.Models.ViewModels.MatrixColumnInput.DefaultCells() } }
+                            : Model.Rows;
+                        for (var row = 0; row < rows.Count; row++)
+                        {
+                            var index = row;
+                            var rowModel = rows[index];
+                            var cells = rowModel.Cells ?? new List<AIVES.WebMVC.Models.ViewModels.MatrixCellInput>();
+                            <tr data-matrix-row="@index">
+                                <td class="matrix-rowhead">
+                                    <textarea name="Rows[@index].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="@L10n.T("Criterion")" required>@rowModel.Criterion</textarea>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <input name="Rows[@index].Description" value="@rowModel.Description" class="form-control form-control-sm" placeholder="@L10n.T("Note")" maxlength="1000" />
+                                        <button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-row="@index" title="@L10n.T("Remove row")">&times;</button>
+                                    </div>
+                                </td>
+                                @for (var cell = 0; cell < columns.Count; cell++)
+                                {
+                                    var rowIndex = index;
+                                    var cellIndex = cell;
+                                    var cellModel = cellIndex < cells.Count ? cells[cellIndex] : new AIVES.WebMVC.Models.ViewModels.MatrixCellInput();
+                                    <td data-matrix-cell>
+                                        <textarea name="Rows[@rowIndex].Cells[@cellIndex].Descriptor" class="form-control form-control-sm" placeholder="@L10n.T("What this level looks like")" maxlength="1000">@cellModel.Descriptor</textarea>
+                                        <input name="Rows[@rowIndex].Cells[@cellIndex].Points" type="number" min="0" max="100" value="@cellModel.Points" class="form-control form-control-sm matrix-points mt-1" title="@L10n.T("Points")" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="form-text mt-2" data-matrix-summary></p>
+    </section>
+
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Criterion rows")</h2><p>@L10n.T("Each row is scored independently and the row total is its best cell.")</p></div></div>
+        <div class="matrix-row-toolbar">
+            <button type="button" class="btn btn-light btn-sm" data-matrix-add-row>@L10n.T("Add row")</button>
+            <span class="text-muted small">@L10n.T("Up to 10 rows")</span>
+        </div>
+    </section>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <a class="btn btn-light" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank">@L10n.T("Cancel")</a>
+        <button type="submit" class="btn btn-primary">@(Model.IsEdit ? L10n.T("Save rubric") : L10n.T("Create rubric"))</button>
+    </div>
+</form>

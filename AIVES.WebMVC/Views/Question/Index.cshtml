@@ -1,21 +1,63 @@
-@model IEnumerable<AIVES.WebMVC.Models.ViewModels.QuestionViewModel>
-@{ ViewData["Title"] = L10n.T("Question bank"); var questions = Model.ToList(); }
-<div class="page-heading">
-    <div><span class="page-kicker">Assessment library</span><h1>@L10n.T("Question bank")</h1><p>@L10n.T("Manage viva questions, Bloom taxonomy levels and scoring rubrics.")</p></div>
-    <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-light slide-trigger" type="button" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("AI generation")</button>
-        <button class="btn btn-light slide-trigger" type="button" data-slide="rubricPanel" aria-controls="rubricPanel">@L10n.T("Rubrics")</button>
-        <a asp-action="Create" class="btn btn-primary">@L10n.T("Create question")</a>
+@model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+@{
+    ViewData["Title"] = L10n.T("Question bank");
+}
+
+<div class="page-heading form-panel">
+    <div>
+        <span class="page-kicker">@L10n.T("Assessment library")</span>
+        <h1>@L10n.T("Question bank")</h1>
+        <p>@L10n.T("Write questions by hand, generate them with AI, or plan a whole batch in bulk.")</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-light" asp-action="Index" asp-route-tab="ai">✦ @L10n.T("AI generation")</a>
+        <a class="btn btn-light" asp-action="Index" asp-route-tab="bulk">@L10n.T("Bulk generation")</a>
     </div>
 </div>
+
+<nav class="bank-tabs" aria-label="@L10n.T("Question sections")">
+    <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Bank ? "is-active" : "")" asp-action="Index" asp-route-tab="bank">@L10n.T("Question bank")</a>
+    <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Create ? "is-active" : "")" asp-action="Index" asp-route-tab="create">@L10n.T("Create")</a>
+    <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Ai ? "is-active" : "")" asp-action="Index" asp-route-tab="ai">@L10n.T("AI generation")</a>
+    <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Bulk ? "is-active" : "")" asp-action="Index" asp-route-tab="bulk">@L10n.T("Bulk generation")</a>
+</nav>
+
 @if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
 @if (TempData["Error"] != null) { <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
-<div class="panel overflow-hidden"><div class="panel-header"><div><h2>@L10n.T("All questions")</h2><small class="text-muted">@L10n.Format("{0} questions in the database", questions.Count)</small></div></div>
-@if (questions.Any()) { <div class="table-responsive"><table class="table data-table"><thead><tr><th>ID</th><th>@L10n.T("Question")</th><th>@L10n.T("Topic")</th><th>@L10n.T("Bloom level")</th><th>Rubric</th><th>@L10n.T("Status")</th><th class="text-end">@L10n.T("Actions")</th></tr></thead><tbody>
-@foreach (var item in questions) { <tr><td data-label="ID"><span class="question-id">#@item.Id.ToString("D3")</span></td><td data-label="@L10n.T("Question")"><div class="question-title" title="@item.Content">@(item.Content.Length > 80 ? item.Content[..80] + "…" : item.Content)</div><small class="text-muted">@L10n.Format("Created {0}", item.CreatedDate.ToString("dd/MM/yyyy"))</small></td><td data-label="@L10n.T("Topic")">@(string.IsNullOrWhiteSpace(item.Context) ? "—" : item.Context)</td><td data-label="@L10n.T("Bloom level")"><span class="badge-soft">@item.BloomLevelName</span></td><td data-label="Rubric">@item.RubricName</td><td data-label="@L10n.T("Status")"><span class="status-badge @(item.IsActive ? "active" : "inactive")">@(item.IsActive ? L10n.T("Active") : L10n.T("Hidden"))</span></td><td data-label="@L10n.T("Actions")"><div class="action-group"><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-light">@L10n.T("View")</a><a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-light">@L10n.T("Edit")</a><a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-light text-danger">@L10n.T("Delete")</a></div></td></tr> }
-</tbody></table></div> } else { <div class="empty-state"><div class="empty-icon">QB</div><h3>@L10n.T("The bank has no questions yet")</h3><p>@L10n.T("Create your first structured viva question to get started.")</p><a asp-action="Create" class="btn btn-primary">@L10n.T("Create the first question")</a></div> }</div>
 
-@await Html.PartialAsync("_RubricSlide")
-@await Html.PartialAsync("_AiGenerateSlide")
+@switch (Model.ActiveTab)
+{
+    case AIVES.WebMVC.Models.ViewModels.QuestionTabs.Create:
+        ViewData["BloomLevels"] = Model.BloomLevels;
+        ViewData["Rubrics"] = Model.Rubrics;
+        <partial name="_QuestionCreateTab" model="Model.Editor" />
+        break;
 
-@section Scripts { @await Html.PartialAsync("_AiSlideScripts") }
+    case AIVES.WebMVC.Models.ViewModels.QuestionTabs.Ai:
+        <partial name="_QuestionAiTab" model="Model" />
+        break;
+
+    case AIVES.WebMVC.Models.ViewModels.QuestionTabs.Bulk:
+        <partial name="_QuestionBulkTab" model="Model" />
+        break;
+
+    default:
+        <partial name="_QuestionBankTab" model="Model" />
+        break;
+}
+
+@section Scripts {
+    @await Html.PartialAsync("_AiSlideScripts")
+    <script>
+        // Untick a row in the review list and it fades back, so it is obvious what will be saved.
+        (function () {
+            document.querySelectorAll('[data-review-toggle]').forEach(function (toggle) {
+                var row = toggle.closest('[data-review-row]');
+                if (!row) return;
+                var apply = function () { row.classList.toggle('is-off', !toggle.checked); };
+                toggle.addEventListener('change', apply);
+                apply();
+            });
+        }());
+    </script>
+}

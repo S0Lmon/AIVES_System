@@ -1,0 +1,72 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+@{
+    var ai = Model.Ai;
+}
+
+<div class="panel form-panel mb-3">
+    <form method="post" asp-action="GenerateReview">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">✦</span><div><h2>@L10n.T("Describe the questions")</h2><p>@L10n.T("AI drafts a set you can review before anything reaches the bank.")</p></div></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="genSubject">@L10n.T("Subject") <span class="text-danger">*</span></label>
+                    <input id="genSubject" name="Subject" value="@ai.Subject" class="form-control" maxlength="120" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="genTopic">@L10n.T("Topic") <span class="text-danger">*</span></label>
+                    <input id="genTopic" name="Topic" value="@ai.Topic" class="form-control" maxlength="200" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="genCount">@L10n.T("How many")</label>
+                    <input id="genCount" name="QuestionCount" type="number" min="1" max="10" value="@ai.QuestionCount" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="genDifficulty">@L10n.T("Difficulty")</label>
+                    <select id="genDifficulty" name="Difficulty" class="form-select">
+                        <option value="Balanced" selected="@(ai.Difficulty == "Balanced")">@L10n.T("Balanced")</option>
+                        <option value="Basic" selected="@(ai.Difficulty == "Basic")">@L10n.T("Basic")</option>
+                        <option value="Intermediate" selected="@(ai.Difficulty == "Intermediate")">@L10n.T("Intermediate")</option>
+                        <option value="Advanced" selected="@(ai.Difficulty == "Advanced")">@L10n.T("Advanced")</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="UseMaterials" value="true" id="genUseMaterials" checked="@ai.UseMaterials" />
+                        <label class="form-check-label" for="genUseMaterials">@L10n.T("Ground in catalog material")</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="genOutcomes">@L10n.T("Learning outcomes")</label>
+                    <textarea id="genOutcomes" name="LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("What the candidates should be able to demonstrate")">@ai.LearningOutcomes</textarea>
+                </div>
+                <div class="col-12">
+                    <input type="hidden" name="SubjectId" value="@ai.SubjectId" />
+                    <input type="hidden" name="TopicId" value="@ai.TopicId" />
+                    <input type="hidden" name="Provider" value="@(ai.Provider?.ToString())" />
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                <button type="submit" class="btn btn-primary" disabled="@(!(ai.GeminiAvailable || ai.OllamaAvailable))">
+                    @(ai.GeminiAvailable || ai.OllamaAvailable ? L10n.T("Generate questions") : L10n.T("No AI provider available"))
+                </button>
+                <span class="text-muted small">
+                    @if (ai.GeminiAvailable) { <span class="badge text-bg-success me-1">Gemini</span> }
+                    @if (ai.OllamaAvailable) { <span class="badge text-bg-secondary me-1">Ollama</span> }
+                    @L10n.T("Active provider") <strong>@ai.ActiveProvider</strong>
+                </span>
+                <a class="btn btn-light btn-sm ms-auto" asp-action="Index" asp-route-tab="bulk">@L10n.T("Need a whole batch? Use bulk")</a>
+            </div>
+        </section>
+    </form>
+</div>
+
+@if (ai.HasResult)
+{
+    ViewData["ReviewReturnTab"] = "ai";
+    <partial name="_QuestionReview" model="ai" />
+}
