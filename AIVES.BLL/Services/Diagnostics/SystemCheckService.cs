@@ -5,11 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Gemini;
+using AIVES.BLL.Services.Ai;
 
 namespace AIVES.BLL.Services.Diagnostics;
 
 public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppEmailSender emailSender,
-    IOptions<GeminiOptions> gemini, IOptions<GmailSmtpOptions> smtp, IConfiguration configuration) : ISystemCheckService
+    IOptions<GeminiOptions> gemini, IOptions<OllamaOptions> ollama, IQuestionGeneratorRouter generator,
+    IOptions<GmailSmtpOptions> smtp, IConfiguration configuration) : ISystemCheckService
 {
     public async Task<SystemCheckReportDto> BuildReportAsync(CancellationToken cancellationToken = default)
     {
@@ -17,7 +19,7 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
         var checks = new List<SystemCheckItemDto>
         {
             CheckDatabase(database),
-            CheckGemini(gemini.Value),
+            CheckAiProviders(gemini.Value, ollama.Value, generator.ActiveProvider),
             CheckSmtp(smtp.Value, emailSender.IsConfigured),
             CheckGoogleOAuth(),
             CheckProductionSecrets()
@@ -51,18 +53,39 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
             SystemCheckStatus.Ok);
     }
 
-    private static SystemCheckItemDto CheckGemini(GeminiOptions options)
+    private static SystemCheckItemDto CheckAiProviders(GeminiOptions gemini, OllamaOptions ollama, AiProvider? active)
     {
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        var geminiReady = !string.IsNullOrWhiteSpace(gemini.ApiKey);
+        var ollamaReady = ollama.Enabled;
+
+        if (!geminiReady && !ollamaReady)
         {
-            return new SystemCheckItemDto("gemini", "Gemini API",
-                L10n.T("Gemini:ApiKey is not set, so AI question generation is blocked."),
+            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
+                L10n.T("Neither Gemini nor Ollama is configured, so AI question generation is blocked."),
                 SystemCheckStatus.Critical,
-                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebMVC");
+                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebMVC, or start Ollama and set Ollama:Enabled");
         }
 
-        var model = string.IsNullOrWhiteSpace(options.Model) ? L10n.T("(model not set)") : options.Model;
-        return new SystemCheckItemDto("gemini", "Gemini API", L10n.Format("API key present. Model in use: {0}.", model), SystemCheckStatus.Ok);
+        if (!geminiReady)
+        {
+            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
+                L10n.Format("Gemini has no API key, so the local Ollama model ({0}) serves every request.", ollama.Model),
+                SystemCheckStatus.Warning,
+                L10n.T("Optional. Set Gemini:ApiKey to use Gemini and keep Ollama as a fallback."));
+        }
+
+        var model = string.IsNullOrWhiteSpace(gemini.Model) ? L10n.T("(model not set)") : gemini.Model;
+        if (!ollamaReady)
+        {
+            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
+                L10n.Format("Gemini is active with model {0}. Ollama is disabled, so there is no fallback.", model),
+                SystemCheckStatus.Warning,
+                L10n.T("Optional. Set Ollama:Enabled to true so requests fall back to a local model when Gemini fails."));
+        }
+
+        return new SystemCheckItemDto("ai", L10n.T("AI providers"),
+            L10n.Format("Gemini (model {0}) is active and Ollama ({1}) is the fallback. Active now: {2}.", model, ollama.Model, active?.ToString() ?? "none"),
+            SystemCheckStatus.Ok);
     }
 
     private static SystemCheckItemDto CheckSmtp(GmailSmtpOptions options, bool isConfigured)

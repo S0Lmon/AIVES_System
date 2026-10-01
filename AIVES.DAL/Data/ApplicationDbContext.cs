@@ -27,6 +27,18 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<Subject> Subjects
+        {
+            get; set;
+        }
+        public DbSet<Topic> Topics
+        {
+            get; set;
+        }
+        public DbSet<Material> Materials
+        {
+            get; set;
+        }
         public DbSet<EmailVerificationCode> EmailVerificationCodes
         {
             get; set;
@@ -94,11 +106,55 @@ namespace AIVES.DAL.Data
                     .HasForeignKey(e => e.RubricId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(e => e.Topic)
+                    .WithMany()
+                    .HasForeignKey(e => e.TopicId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(e => e.BloomLevelId);
                 entity.HasIndex(e => e.RubricId);
+                entity.HasIndex(e => e.TopicId);
                 entity.HasIndex(e => e.IsActive);
             });
             SeedBloomLevels(modelBuilder);
+            ConfigureCatalog(modelBuilder);
+        }
+
+        private static void ConfigureCatalog(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Subject>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => e.Name).IsUnique();
+
+                entity.HasMany(e => e.Topics)
+                    .WithOne(e => e.Subject)
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Topic>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => new { e.SubjectId, e.Name }).IsUnique();
+
+                entity.HasMany(e => e.Materials)
+                    .WithOne(e => e.Topic)
+                    .HasForeignKey(e => e.TopicId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Material>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
+                entity.Property(e => e.Content).IsRequired().HasColumnType("nvarchar(max)");
+                entity.Property(e => e.SourceFileName).HasMaxLength(260);
+                entity.HasIndex(e => e.TopicId);
+                entity.HasIndex(e => e.IsActive);
+            });
         }
 
         private void SeedBloomLevels(ModelBuilder modelBuilder)

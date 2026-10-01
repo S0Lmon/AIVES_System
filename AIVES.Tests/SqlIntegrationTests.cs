@@ -54,7 +54,7 @@ public sealed class SqlIntegrationTests
         try
         {
             await db.Database.MigrateAsync();
-            Assert.Equal(3, (await db.Database.GetAppliedMigrationsAsync()).Count());
+            Assert.Equal(4, (await db.Database.GetAppliedMigrationsAsync()).Count());
             Assert.False(db.Database.HasPendingModelChanges());
             var rubrics = new RubricService(new RubricRepository(db));
             var rubric = await rubrics.CreateRubricAsync(new RubricDto { Name = "SQL integration rubric" });

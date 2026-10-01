@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Gemini;
 using AIVES.DAL.Data;
@@ -40,8 +41,10 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
             services.RemoveAll<IAppEmailSender>();
             services.AddSingleton<IAppEmailSender>(Mail);
-            services.RemoveAll<IGeminiQuestionGenerator>();
-            services.AddSingleton<IGeminiQuestionGenerator>(Generator);
+            services.RemoveAll<IQuestionGenerator>();
+            services.AddSingleton<IQuestionGenerator>(Generator);
+            services.RemoveAll<IQuestionGeneratorRouter>();
+            services.AddSingleton<IQuestionGeneratorRouter>(Generator);
         });
     }
 
@@ -85,17 +88,27 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
         }
     }
 
-    public sealed class TestQuestionGenerator : IGeminiQuestionGenerator
+    public sealed class TestQuestionGenerator : IQuestionGenerator, IQuestionGeneratorRouter
     {
+        public AiProvider Provider => AiProvider.Gemini;
         public bool IsConfigured => true;
         public int Calls { get; private set; }
-        public Task<IReadOnlyList<GeneratedVivaQuestion>> GenerateAsync(string subject, string topic, string? outcomes, string difficulty, int count, CancellationToken ct = default)
+
+        public AiProvider? ActiveProvider => AiProvider.Gemini;
+        public bool PreferOllama => false;
+        public bool IsProviderAvailable(AiProvider provider) => true;
+        public AiProvider ResolveProvider(AiProvider? requested) => requested ?? AiProvider.Gemini;
+
+        public Task<IReadOnlyList<GeneratedVivaQuestion>> GenerateAsync(QuestionGenerationRequest request, AiProvider? requestedProvider = null, CancellationToken ct = default) =>
+            GenerateAsync(request, ct);
+
+        public Task<IReadOnlyList<GeneratedVivaQuestion>> GenerateAsync(QuestionGenerationRequest request, CancellationToken ct = default)
         {
             Calls++;
-            if (topic == "simulate-failure") throw new InvalidOperationException("Gemini test failure");
-            return Task.FromResult<IReadOnlyList<GeneratedVivaQuestion>>(Enumerable.Range(1, count).Select(i => new GeneratedVivaQuestion
+            if (request.Topic == "simulate-failure") throw new InvalidOperationException("AI test failure");
+            return Task.FromResult<IReadOnlyList<GeneratedVivaQuestion>>(Enumerable.Range(1, request.Count).Select(i => new GeneratedVivaQuestion
             {
-                Content = $"Generated question {i} for {topic}", ExpectedAnswer = "Expected test answer", BloomLevel = "Understand",
+                Content = $"Generated question {i} for {request.Topic}", ExpectedAnswer = "Expected test answer", BloomLevel = "Understand",
                 FollowUpQuestions = ["First follow up", "Second follow up"]
             }).ToList());
         }

@@ -24,6 +24,9 @@ public static class DependencyInjection
         services.AddScoped<IBloomLevelRepository, BloomLevelRepository>();
         services.AddScoped<IEmailVerificationRepository, EmailVerificationRepository>();
         services.AddScoped<IDiagnosticsRepository, DiagnosticsRepository>();
+        services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<ITopicRepository, TopicRepository>();
+        services.AddScoped<IMaterialRepository, MaterialRepository>();
         services.AddScoped<IAccountStore, IdentityAccountStore>();
         return services;
     }

@@ -16,6 +16,10 @@ namespace AIVES.DAL.Entities
         {
             get; set;
         }
+        public int? TopicId
+        {
+            get; set;
+        }
         public string ExpectedAnswer { get; set; } = string.Empty;
         public int DisplayOrder { get; set; } = 0;
         public bool IsActive { get; set; } = true;
@@ -23,5 +27,6 @@ namespace AIVES.DAL.Entities
         public DateTime ModifiedDate { get; set; } = DateTime.UtcNow;
         public virtual BloomLevel BloomLevel { get; set; } = null!;
         public virtual Rubric Rubric { get; set; } = null!;
+        public virtual Topic? Topic { get; set; }
     }
 }

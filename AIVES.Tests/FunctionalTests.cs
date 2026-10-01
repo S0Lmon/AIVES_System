@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using AIVES.DAL.Data;
 using Microsoft.EntityFrameworkCore;
@@ -329,18 +331,18 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     {
         using var browser = app.Browser();
         await SignIn(browser);
-        foreach (var route in new[] { "/Question/Create", "/Question/Edit/1", "/Question/Delete/1", "/Account/Logout", "/AiExamRoom/QuestionGenerator" })
+        foreach (var route in new[] { "/Question/Create", "/Question/Edit/1", "/Question/Delete/1", "/Account/Logout", "/Question/GenerateQuestions" })
             Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync(route, new FormUrlEncodedContent([]))).StatusCode);
     }
 
     [SqlFact]
-    public async Task AiGenerationDisplaysStructuredQuestionsAndHandlesFailure()
+    public async Task AiPanelReturnsStructuredQuestionsAndHandlesFailure()
     {
         using var browser = app.Browser();
         await SignIn(browser);
-        var page = "/AiExamRoom/QuestionGenerator";
-        var fields = new Dictionary<string, string> { ["Subject"] = "Software engineering", ["Topic"] = "Three layers", ["QuestionCount"] = "2", ["Difficulty"] = "Cân bằng" };
-        var success = await Post(browser, page, page, fields);
+        var page = "/Question/GenerateQuestions";
+        var fields = new Dictionary<string, string> { ["Subject"] = "Software engineering", ["Topic"] = "Three layers", ["QuestionCount"] = "2", ["Difficulty"] = "Balanced" };
+        var success = await Post(browser, "/Question/Create", page, fields);
         Assert.Equal(HttpStatusCode.OK, success.StatusCode);
         var html = await Html(success);
         Assert.Contains("Generated question 1", html);
@@ -348,15 +350,71 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("First follow up", html);
         Assert.Contains("Expected test answer", html);
         Assert.DoesNotContain("Q1.ToString", html);
-        Assert.Contains("generated-index\">Q01", html);
-        Assert.Contains("generated-index\">Q02", html);
-fields["Topic"] = "simulate-failure";
-var failureHtml = await Html(await Post(browser, page, page, fields));
-Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
-Assert.DoesNotContain("Gemini test failure", failureHtml);
-}
+        Assert.Contains("ai-result-index\">Q01", html);
+        Assert.Contains("ai-result-index\">Q02", html);
+        // Each result carries the values the panel copies into the question form.
+        Assert.Contains("data-content=\"Generated question 1 for Three layers\"", html);
+        Assert.Contains("ai-result-actions", html);
+        Assert.Contains("ai-use", html);
+        fields["Topic"] = "simulate-failure";
+        var failureHtml = await Html(await Post(browser, "/Question/Create", page, fields));
+        Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
+        Assert.DoesNotContain("AI test failure", failureHtml);
+    }
 
-[SqlFact]
+    [SqlFact]
+    public async Task AiPanelIsDisabledOnTheExamRoomAndSendsUsersToTheQuestionPage()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var response = await browser.GetAsync("/AiExamRoom/QuestionGenerator");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Question/Create", response.Headers.Location!.OriginalString);
+    }
+
+    [SqlFact]
+    public async Task CreatePageCarriesTheCompactAiPanel()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var html = await Html(await browser.GetAsync("/Question/Create"));
+
+        Assert.Contains("data-slide=\"aiPanel\"", html);
+        Assert.Contains("slide-panel-compact", html);
+        Assert.Contains("id=\"aiPanelForm\"", html);
+        // The exam room nav entry is retired while its flow is reworked.
+        Assert.DoesNotContain("asp-controller=\"AiExamRoom\"", html);
+    }
+
+[Fact]
+    public void VietnameseTextTableBuildsWithoutDuplicateKeys()
+    {
+        // A repeated key throws inside the collection initializer, so the whole table
+        // fails to build and every page silently falls back to English. Touching the
+        // field here surfaces that failure directly.
+        var appText = typeof(AIVES.DTO.Localization.L10n).Assembly.GetType("AIVES.DTO.Localization.AppText")!;
+        var table = (IDictionary<string, string>)appText
+            .GetField("Vietnamese", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetValue(null)!;
+
+        Assert.NotEmpty(table);
+        Assert.Equal(table.Count, table.Keys.Distinct(StringComparer.Ordinal).Count());
+
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("vi");
+            Assert.Equal("Danh mục", AIVES.DTO.Localization.L10n.T("Catalog"));
+            Assert.Equal("Môn học", AIVES.DTO.Localization.L10n.T("Subject"));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [SqlFact]
 public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
 {
     using var browser = app.Browser();
@@ -403,13 +461,12 @@ public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
         using var browser = app.Browser();
         await SignIn(browser);
         var calls = app.Generator.Calls;
-        var page = "/AiExamRoom/QuestionGenerator";
-        var response = await Post(browser, page, page, new()
+        var response = await Post(browser, "/Question/Create", "/Question/GenerateQuestions", new()
         {
             ["Subject"] = "Test",
             ["Topic"] = "Test",
             ["QuestionCount"] = "11",
-            ["Difficulty"] = "Cân bằng"
+            ["Difficulty"] = "Balanced"
         });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(calls, app.Generator.Calls);

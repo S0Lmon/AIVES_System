@@ -1,3 +1,4 @@
+using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Gemini;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,8 @@ public sealed class LiveGeminiTests
         var generator = new GeminiQuestionGenerator(client, Options.Create(options), NullLogger<GeminiQuestionGenerator>.Instance);
         try
         {
-            var question = Assert.Single(await generator.GenerateAsync("Công nghệ phần mềm", "Mô hình kiến trúc ba lớp", null, "Cơ bản", 1));
+            var question = Assert.Single(await generator.GenerateAsync(
+                new QuestionGenerationRequest("Công nghệ phần mềm", "Mô hình kiến trúc ba lớp", null, "Cơ bản", 1)));
             Assert.False(string.IsNullOrWhiteSpace(question.Content));
             Assert.Equal(2, question.FollowUpQuestions.Count);
         }
