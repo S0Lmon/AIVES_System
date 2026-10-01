@@ -66,6 +66,12 @@ Array.Empty<AIVES.WebMVC.Models.ViewModels.TopicOption>());
                         <option value="@level.Id">@level.Name</option>
                     }
                 </select><span asp-validation-for="BloomLevelId" class="text-danger small"></span></div>
+                <div class="col-md-6"><label asp-for="Difficulty" class="form-label">@L10n.T("Difficulty")</label><select
+                    asp-for="Difficulty" class="form-select">
+                    <option value="">@L10n.T("Not set")</option>@foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered) {
+                    <option value="@difficulty">@difficulty</option>
+                }
+            </select><span class="form-text">@L10n.T("Optional. AI questions arrive with one already chosen.")</span></div>
                 <div class="col-md-6"><label asp-for="RubricId" class="form-label">@L10n.T("Scoring rubric")</label><select
                     asp-for="RubricId" class="form-select">
                     <option value="">@L10n.T("No rubric")</option>@foreach (var rubric in rubrics) {

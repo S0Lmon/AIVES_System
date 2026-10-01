@@ -282,7 +282,7 @@ namespace AIVES.WebMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Content,Context,BloomLevelId,RubricId,SubjectId,TopicId,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
+        public async Task<IActionResult> Create([Bind("Content,Context,BloomLevelId,RubricId,SubjectId,TopicId,Difficulty,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
         {
             try
             {
@@ -302,6 +302,7 @@ namespace AIVES.WebMVC.Controllers
                     RubricId = model.RubricId,
                     SubjectId = model.SubjectId,
                     TopicId = model.TopicId,
+                    Difficulty = QuestionDifficulties.Normalize(model.Difficulty),
                     ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
@@ -385,6 +386,7 @@ namespace AIVES.WebMVC.Controllers
                     RubricId = model.RubricId,
                     SubjectId = model.SubjectId,
                     TopicId = model.TopicId,
+                    Difficulty = QuestionDifficulties.Normalize(model.Difficulty),
                     ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
@@ -671,7 +673,7 @@ namespace AIVES.WebMVC.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, int? rubricId, int? subjectId, int? topicId, CancellationToken cancellationToken)
+        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, List<string>? difficulty, int? rubricId, int? subjectId, int? topicId, CancellationToken cancellationToken)
         {
             var tab = returnTab == QuestionTabs.Bulk ? QuestionTabs.Bulk : QuestionTabs.Ai;
             var generated = GeneratedQuestionJson.Deserialize(resultJson);
@@ -715,6 +717,11 @@ namespace AIVES.WebMVC.Controllers
                         RubricId = rubricId,
                         SubjectId = subjectId,
                         TopicId = topicId,
+                        // The review posts one difficulty select per row in row order, so the lecturer's
+                        // correction wins over whatever the model guessed. A shorter or absent list
+                        // falls back to the value carried in the payload.
+                        Difficulty = QuestionDifficulties.Normalize(
+                            difficulty is not null && index < difficulty.Count ? difficulty[index] : candidate.Difficulty),
                         Context = contextLabel,
                         IsActive = true
                     });

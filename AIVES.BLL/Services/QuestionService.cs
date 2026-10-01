@@ -144,6 +144,11 @@ namespace AIVES.BLL.Services
             if (question.SubjectId is <= 0)
                 return false;
 
+            // Difficulty is optional, but a value that is present has to be one the app knows, so a
+            // stale or hand-edited value cannot quietly enter the bank.
+            if (question.Difficulty is not null && !QuestionDifficulties.IsAllowed(question.Difficulty))
+                return false;
+
             if (question.TopicId is <= 0)
                 return false;
 

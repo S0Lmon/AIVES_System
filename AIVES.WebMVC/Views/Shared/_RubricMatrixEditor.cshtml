@@ -8,6 +8,11 @@
     var columns = Model.Columns.Count == 0
         ? AIVES.WebMVC.Models.ViewModels.MatrixColumnInput.Defaults()
         : Model.Columns;
+    var rows = Model.Rows.Count == 0
+        ? new List<AIVES.WebMVC.Models.ViewModels.MatrixRowInput> { new() { Cells = AIVES.WebMVC.Models.ViewModels.MatrixColumnInput.DefaultCells() } }
+        : Model.Rows;
+    // Spreadsheet column letters, capped at the six columns the model allows.
+    var letters = new[] { "A", "B", "C", "D", "E", "F" };
 }
 
 <form id="@formId" method="post" class="panel form-panel" data-matrix-editor
@@ -25,83 +30,99 @@
     </section>
 
     <section class="form-section">
-        <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Level columns")</h2><p>@L10n.T("Name the scale. Points should rise from the weakest column to the strongest.")</p></div></div>
+        <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Scoring grid")</h2><p>@L10n.T("Columns are the levels. Each row is scored independently against its best cell.")</p></div></div>
 
-        <div class="matrix-col-toolbar">
-            <div>
-                <label class="form-label" for="newColumnName">@L10n.T("New column")</label>
-                <input id="newColumnName" class="form-control form-control-sm" placeholder="@L10n.T("Level name")" maxlength="120" />
-            </div>
-            <div>
-                <label class="form-label" for="newColumnPoints">@L10n.T("Points")</label>
-                <input id="newColumnPoints" type="number" min="0" max="100" value="0" class="form-control form-control-sm matrix-points" />
-            </div>
-            <button type="button" class="btn btn-light btn-sm" data-matrix-add-column>@L10n.T("Add column")</button>
-            <span class="text-muted small">@L10n.T("2 to 6 columns")</span>
+        @* One toolbar for the whole sheet: the grid is the only thing to fill in, so adding a level
+           and adding a criterion are both offered here rather than in separate sections. *@
+        <div class="sheet-toolbar">
+            <button type="button" class="btn btn-light btn-sm" data-matrix-add-column>+ @L10n.T("Level")</button>
+            <button type="button" class="btn btn-light btn-sm" data-matrix-add-row>+ @L10n.T("Criterion")</button>
+            <span class="text-muted small">@L10n.T("2 to 6 levels, up to 10 criteria")</span>
+            <span class="sheet-toolbar-hint text-muted small">@L10n.T("Arrow keys move between cells")</span>
         </div>
 
         <div class="matrix-scroll">
-            <table class="matrix" data-matrix>
+            <table class="sheet" data-matrix>
                 <thead>
-                    <tr data-matrix-head>
-                        <th class="matrix-rowhead">@("#")</th>
+                    @* Spreadsheet letter row so a level can be named by its letter. *@
+                    <tr class="sheet-letters">
+                        <th class="sheet-corner"></th>
+                        @for (var column = 0; column < columns.Count; column++)
+                        {
+                            var index = column;
+                            <th class="sheet-letter" data-matrix-letter>@letters[index]</th>
+                        }
+                    </tr>
+                    <tr class="sheet-heads" data-matrix-head>
+                        <th class="sheet-rowlabel">@L10n.T("Criterion")</th>
                         @for (var column = 0; column < columns.Count; column++)
                         {
                             var index = column;
                             var columnModel = columns[index];
-                            <th class="matrix-colhead" data-matrix-column="@index">
-                                <input name="Columns[@index].Name" value="@columnModel.Name" class="form-control form-control-sm mb-1" placeholder="@L10n.T("Level name")" maxlength="120" required />
-                                <div class="d-flex gap-2 align-items-center">
-                                    <input name="Columns[@index].Points" type="number" min="0" max="100" value="@columnModel.Points" class="form-control form-control-sm matrix-points" title="@L10n.T("Points")" />
-                                    <button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-column="@index" title="@L10n.T("Remove column")">&times;</button>
+                            <th class="sheet-colhead" data-matrix-column="@index">
+                                <input name="Columns[@index].Name" value="@columnModel.Name" class="sheet-cell-input" placeholder="@L10n.T("Level name")" maxlength="120" required />
+                                <div class="sheet-cellfoot">
+                                    <input name="Columns[@index].Points" type="number" min="0" max="100" value="@columnModel.Points" class="sheet-points" title="@L10n.T("Points")" />
+                                    <button type="button" class="sheet-remove" data-matrix-remove-column="@index" title="@L10n.T("Remove level")" aria-label="@L10n.T("Remove level")">&times;</button>
                                 </div>
                             </th>
                         }
                     </tr>
                 </thead>
                 <tbody data-matrix-body>
-                    @{
-                        var rows = Model.Rows.Count == 0
-                            ? new List<AIVES.WebMVC.Models.ViewModels.MatrixRowInput> { new() { Cells = AIVES.WebMVC.Models.ViewModels.MatrixColumnInput.DefaultCells() } }
-                            : Model.Rows;
-                        for (var row = 0; row < rows.Count; row++)
-                        {
-                            var index = row;
-                            var rowModel = rows[index];
-                            var cells = rowModel.Cells ?? new List<AIVES.WebMVC.Models.ViewModels.MatrixCellInput>();
-                            <tr data-matrix-row="@index">
-                                <td class="matrix-rowhead">
-                                    <div class="matrix-rowhead-top">
-                                        <span class="matrix-row-number" data-matrix-row-number>@(index + 1)</span>
-                                        <button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-row="@index" title="@L10n.T("Remove row")">&times;</button>
+                    @for (var row = 0; row < rows.Count; row++)
+                    {
+                        var index = row;
+                        var rowModel = rows[index];
+                        var cells = rowModel.Cells ?? new List<AIVES.WebMVC.Models.ViewModels.MatrixCellInput>();
+                        <tr data-matrix-row="@index">
+                            <th class="sheet-rowhead" scope="row">
+                                <div class="sheet-rownum">
+                                    <span class="sheet-rownumber" data-matrix-row-number>@(index + 1)</span>
+                                    <button type="button" class="sheet-remove" data-matrix-remove-row="@index" title="@L10n.T("Remove criterion")" aria-label="@L10n.T("Remove criterion")">&times;</button>
+                                </div>
+                                <textarea name="Rows[@index].Criterion" class="sheet-cell-input" rows="2" maxlength="300" placeholder="@L10n.T("Criterion")" required>@rowModel.Criterion</textarea>
+                                <input name="Rows[@index].Description" value="@rowModel.Description" class="sheet-note" placeholder="@L10n.T("Note")" maxlength="1000" />
+                                <div class="sheet-rowtotal"><span>@L10n.T("Best")</span><b data-matrix-row-total>0</b></div>
+                            </th>
+                            @for (var cell = 0; cell < columns.Count; cell++)
+                            {
+                                var rowIndex = index;
+                                var cellIndex = cell;
+                                var cellModel = cellIndex < cells.Count ? cells[cellIndex] : new AIVES.WebMVC.Models.ViewModels.MatrixCellInput();
+                                <td data-matrix-cell>
+                                    <textarea name="Rows[@rowIndex].Cells[@cellIndex].Descriptor" class="sheet-cell-input" placeholder="@L10n.T("What this level looks like")" maxlength="1000">@cellModel.Descriptor</textarea>
+                                    <div class="sheet-cellfoot">
+                                        <input name="Rows[@rowIndex].Cells[@cellIndex].Points" type="number" min="0" max="100" value="@cellModel.Points" class="sheet-points" title="@L10n.T("Points")" />
                                     </div>
-                                    <textarea name="Rows[@index].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="@L10n.T("Criterion")" required>@rowModel.Criterion</textarea>
-                                    <input name="Rows[@index].Description" value="@rowModel.Description" class="form-control form-control-sm" placeholder="@L10n.T("Note")" maxlength="1000" />
                                 </td>
-                                @for (var cell = 0; cell < columns.Count; cell++)
-                                {
-                                    var rowIndex = index;
-                                    var cellIndex = cell;
-                                    var cellModel = cellIndex < cells.Count ? cells[cellIndex] : new AIVES.WebMVC.Models.ViewModels.MatrixCellInput();
-                                    <td data-matrix-cell>
-                                        <textarea name="Rows[@rowIndex].Cells[@cellIndex].Descriptor" class="form-control form-control-sm" placeholder="@L10n.T("What this level looks like")" maxlength="1000">@cellModel.Descriptor</textarea>
-                                        <input name="Rows[@rowIndex].Cells[@cellIndex].Points" type="number" min="0" max="100" value="@cellModel.Points" class="form-control form-control-sm matrix-points mt-1" title="@L10n.T("Points")" />
-                                    </td>
-                                }
-                            </tr>
-                        }
+                            }
+                        </tr>
                     }
+                    @* Spreadsheet style: the add button lives in the sheet, under the last row. *@
+                    <tr class="sheet-addrow">
+                        <th class="sheet-rowlabel"></th>
+                        @for (var column = 0; column < columns.Count; column++)
+                        {
+                            <td></td>
+                        }
+                    </tr>
                 </tbody>
+                <tfoot>
+                    <tr class="sheet-totals">
+                        <th class="sheet-rowlabel">@L10n.T("Level best")</th>
+                        @for (var column = 0; column < columns.Count; column++)
+                        {
+                            var index = column;
+                            <td class="sheet-total" data-matrix-column-total="@index">0</td>
+                        }
+                    </tr>
+                </tfoot>
             </table>
         </div>
-        <p class="form-text mt-2" data-matrix-summary></p>
-    </section>
-
-    <section class="form-section">
-        <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Criterion rows")</h2><p>@L10n.T("Each row is scored independently and the row total is its best cell.")</p></div></div>
-        <div class="matrix-row-toolbar">
-            <button type="button" class="btn btn-light btn-sm" data-matrix-add-row>@L10n.T("Add row")</button>
-            <span class="text-muted small">@L10n.T("Up to 10 rows")</span>
+        <div class="sheet-footer">
+            <span class="text-muted small" data-matrix-summary></span>
+            <span class="sheet-grandtotal">@L10n.T("Rubric total") <b data-matrix-grand-total>0</b></span>
         </div>
     </section>
 

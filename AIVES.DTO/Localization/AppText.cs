@@ -652,6 +652,8 @@ internal static class AppText
         ["Lowest for {0}"] = "Thấp nhất cho {0}",
         ["Highest for {0}"] = "Cao nhất cho {0}",
         ["No questions came back for {0}. Everything else was generated."] = "Không có câu hỏi nào được trả về cho {0}. Các phần còn lại đã được tạo.",
+        ["Not set"] = "Chưa đặt",
+        ["Optional. AI questions arrive with one already chosen."] = "Không bắt buộc. Câu hỏi do AI tạo đã có sẵn giá trị này.",
     };
 
     public static string Resolve(string english)

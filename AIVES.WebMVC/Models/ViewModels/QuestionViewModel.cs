@@ -60,6 +60,15 @@ namespace AIVES.WebMVC.Models.ViewModels
             get; set;
         }
 
+        /// <summary>
+        /// Optional. One of the difficulties in <c>QuestionDifficulties.Ordered</c>; null when unset.
+        /// </summary>
+        [StringLength(32)]
+        public string? Difficulty
+        {
+            get; set;
+        }
+
         [StringLength(5000)]
         public string? ExpectedAnswer { get; set; }
 

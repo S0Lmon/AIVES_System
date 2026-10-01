@@ -66,6 +66,7 @@
                         <th>@L10n.T("Question")</th>
                         <th>@L10n.T("Subject / topic")</th>
                         <th>@L10n.T("Bloom level")</th>
+                <th>@L10n.T("Difficulty")</th>
                         <th>@L10n.T("Rubric")</th>
                         <th>@L10n.T("Status")</th>
                         <th class="text-end">@L10n.T("Actions")</th>
@@ -97,6 +98,16 @@
                                 }
                             </td>
                             <td>@question.BloomLevelName</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(question.Difficulty))
+                                {
+                                    <span>@question.Difficulty</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
                             <td>
                                 @if (question.RubricId is > 0)
                                 {

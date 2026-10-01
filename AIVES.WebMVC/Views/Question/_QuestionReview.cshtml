@@ -53,13 +53,18 @@
                 </div>
             </div>
             <div class="review-meta">
-                @* Bloom is the level the question will be stored under. Difficulty is a generation
-                   hint only, shown so the lecturer can see what the AI decided when they left it blank. *@
+                @* Bloom is the level the question will be stored under. Difficulty is editable here
+                   because when it was left blank the model guessed it, and a wrong guess is cheaper to
+                   correct now than after it is in the bank. One select per row, in row order, so the
+                   save action can zip the values back onto the generated batch by index. *@
                 <span><strong>@result.BloomLevel</strong></span>
-                @if (!string.IsNullOrWhiteSpace(result.Difficulty))
-                {
-                    <span class="badge-soft">@result.Difficulty</span>
-                }
+                <select name="difficulty" class="form-select form-select-sm review-difficulty" aria-label="@L10n.T("Difficulty")">
+                    <option value="">@L10n.T("Not set")</option>
+                    @foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered)
+                    {
+                        <option value="@difficulty" selected="@(difficulty == result.Difficulty)">@difficulty</option>
+                    }
+                </select>
             </div>
             @if (!string.IsNullOrWhiteSpace(result.ExpectedAnswer))
             {
