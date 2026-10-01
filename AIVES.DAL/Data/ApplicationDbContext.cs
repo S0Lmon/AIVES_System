@@ -148,10 +148,13 @@ namespace AIVES.DAL.Data
                     .HasForeignKey(e => e.TopicId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                // SQL Server allows only one cascading path into a table, and Subjects already
+                // reaches Questions through Topics. So the direct link is NO ACTION and
+                // SubjectRepository clears it before deleting.
                 entity.HasOne(e => e.Subject)
                     .WithMany()
                     .HasForeignKey(e => e.SubjectId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasIndex(e => e.BloomLevelId);
                 entity.HasIndex(e => e.RubricId);

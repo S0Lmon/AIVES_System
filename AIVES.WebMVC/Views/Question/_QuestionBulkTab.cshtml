@@ -46,9 +46,14 @@
                     <textarea id="bulkOutcomes" name="Request.LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("Coverage the batch should hit")">@request.LearningOutcomes</textarea>
                 </div>
                 <div class="col-12">
-                    <input type="hidden" name="Request.SubjectId" value="@request.SubjectId" />
-                    <input type="hidden" name="Request.TopicId" value="@request.TopicId" />
                     <input type="hidden" name="Request.Provider" value="@(request.Provider?.ToString())" />
+                </div>
+                <div class="col-12">
+                    <div class="picker-pair">
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(request.Subjects, "Request.SubjectId", L10n.T("Catalog subject"), L10n.T("All subjects"), request.SubjectId, id: "bulkPickerSubject"))
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(request.Topics, "Request.TopicId", L10n.T("Catalog topic"), L10n.T("All topics"), request.TopicId, filteredBy: "Request.SubjectId", id: "bulkPickerTopic", subjects: request.Subjects))
+                    </div>
+                    <div class="form-text">@L10n.T("Saved questions are linked to this subject and topic.")</div>
                 </div>
             </div>
         </section>
@@ -97,6 +102,21 @@
 @section Scripts {
     <script>
         (function () {
+            // Choosing from the catalogue fills the prompt's free text fields.
+            var mirror = function (name, targetId) {
+                var select = document.querySelector('[data-picker-select][name="' + name + '"]');
+                var target = document.getElementById(targetId);
+                if (!select || !target) return;
+                var apply = function () {
+                    var option = select.options[select.selectedIndex];
+                    if (option && option.value !== '') target.value = option.textContent.trim();
+                };
+                select.addEventListener('change', apply);
+                apply();
+            };
+            mirror('Request.SubjectId', 'bulkSubject');
+            mirror('Request.TopicId', 'bulkTopic');
+
             var total = document.getElementById('bulkTotal');
             if (!total) return;
             var counts = document.querySelectorAll('[data-plan-count]');

@@ -175,8 +175,8 @@ public sealed class AiProviderTests
     {
         public Task<IReadOnlyList<SubjectDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<SubjectDto>>([]);
-        public Task<SubjectInput> AddAsync(SubjectInput input, CancellationToken cancellationToken = default) =>
-            Task.FromResult(input);
+        public Task<SubjectDto> AddAsync(SubjectInput input, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new SubjectDto(1, input.Name, input.Description, 0, 0));
         public Task<SubjectDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
             Task.FromResult<SubjectDto?>(null);
         public Task UpdateAsync(int id, SubjectInput input, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -187,8 +187,8 @@ public sealed class AiProviderTests
     {
         public Task<IReadOnlyList<TopicDto>> GetAllAsync(int? subjectId = null, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<TopicDto>>([]);
-        public Task<TopicInput> AddAsync(TopicInput input, CancellationToken cancellationToken = default) =>
-            Task.FromResult(input);
+        public Task<TopicDto> AddAsync(TopicInput input, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TopicDto(1, input.SubjectId, "subject", input.Name, input.Description, 0));
         public Task<TopicDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
             Task.FromResult<TopicDto?>(null);
         public Task UpdateAsync(int id, TopicInput input, CancellationToken cancellationToken = default) => Task.CompletedTask;

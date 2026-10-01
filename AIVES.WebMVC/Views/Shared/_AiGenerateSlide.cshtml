@@ -47,24 +47,10 @@
                         <label class="form-check-label small" for="aiUseMaterials">@L10n.T("Use catalog material as context")</label>
                     </div>
                     <div class="ai-brief-grid">
-                        <label class="ai-field"><span>@L10n.T("Catalog subject")</span>
-                            <select name="SubjectId" id="aiSubjectPicker" class="form-select form-select-sm">
-                                <option value="">@L10n.T("All subjects")</option>
-                                @foreach (var subject in subjects)
-                                {
-                                    <option value="@subject.Id">@subject.Name</option>
-                                }
-                            </select>
-                        </label>
-                        <label class="ai-field"><span>@L10n.T("Catalog topic")</span>
-                            <select name="TopicId" id="aiTopicPicker" class="form-select form-select-sm" data-all-label="@L10n.T("All topics")">
-                                <option value="">@L10n.T("All topics")</option>
-                                @foreach (var topic in topics)
-                                {
-                                    <option value="@topic.Id" data-subject-id="@topic.SubjectId">@topic.Name</option>
-                                }
-                            </select>
-                        </label>
+                        @* Ids are explicit because the question form behind this panel posts the
+                           same field names, and duplicate element ids are invalid. *@
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(subjects, "SubjectId", L10n.T("Catalog subject"), L10n.T("All subjects"), id: "aiSlideSubject"))
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(topics, "TopicId", L10n.T("Catalog topic"), L10n.T("All topics"), id: "aiSlideTopic", subjects: subjects))
                     </div>
                 </div>
             </details>

@@ -9,12 +9,12 @@ public sealed record RagContext(string Text, IReadOnlyList<MaterialExcerpt> Sour
 public interface ICatalogService
 {
     Task<IReadOnlyList<SubjectDto>> GetSubjectsAsync(CancellationToken cancellationToken = default);
-    Task<SubjectInput> CreateSubjectAsync(SubjectInput input, CancellationToken cancellationToken = default);
+    Task<SubjectDto> CreateSubjectAsync(SubjectInput input, CancellationToken cancellationToken = default);
     Task UpdateSubjectAsync(int id, SubjectInput input, CancellationToken cancellationToken = default);
     Task DeleteSubjectAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TopicDto>> GetTopicsAsync(int? subjectId = null, CancellationToken cancellationToken = default);
-    Task<TopicInput> CreateTopicAsync(TopicInput input, CancellationToken cancellationToken = default);
+    Task<TopicDto> CreateTopicAsync(TopicInput input, CancellationToken cancellationToken = default);
     Task UpdateTopicAsync(int id, TopicInput input, CancellationToken cancellationToken = default);
     Task DeleteTopicAsync(int id, CancellationToken cancellationToken = default);
 

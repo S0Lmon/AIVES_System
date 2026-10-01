@@ -22,12 +22,13 @@ public sealed class SubjectRepository(ApplicationDbContext context) : ISubjectRe
             .AsSplitQuery()
             .FirstOrDefaultAsync(subject => subject.Id == id, cancellationToken) is { } subject ? ToDto(subject) : null;
 
-    public async Task<SubjectInput> AddAsync(SubjectInput input, CancellationToken cancellationToken = default)
+    public async Task<SubjectDto> AddAsync(SubjectInput input, CancellationToken cancellationToken = default)
     {
         var entity = new Subject { Name = input.Name, Description = input.Description };
         context.Subjects.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
-        return input with { Name = entity.Name };
+        // Return the stored row so the caller can jump straight to the new subject's page.
+        return new SubjectDto(entity.Id, entity.Name, entity.Description, 0, 0);
     }
 
     public async Task UpdateAsync(int id, SubjectInput input, CancellationToken cancellationToken = default)
@@ -45,6 +46,13 @@ public sealed class SubjectRepository(ApplicationDbContext context) : ISubjectRe
         var entity = await context.Subjects.FindAsync([id], cancellationToken);
         if (entity is null)
             return;
+
+        // The question -> subject link is NO ACTION to avoid two cascade paths into Questions, so
+        // detach those questions here. Questions themselves survive; they just lose the subject.
+        await context.Questions
+            .Where(question => question.SubjectId == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(question => question.SubjectId, (int?)null), cancellationToken);
+
         context.Subjects.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);
     }

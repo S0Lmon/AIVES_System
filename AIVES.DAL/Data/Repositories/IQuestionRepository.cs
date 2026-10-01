@@ -7,6 +7,8 @@ public interface IQuestionRepository
     Task<IEnumerable<QuestionDto>> GetAllAsync();
     Task<IEnumerable<QuestionDto>> GetByBloomLevelAsync(int id);
     Task<IEnumerable<QuestionDto>> GetByRubricAsync(int id);
+    Task<IEnumerable<QuestionDto>> GetBySubjectAsync(int id);
+    Task<IEnumerable<QuestionDto>> GetByTopicAsync(int id);
     Task<IEnumerable<QuestionDto>> GetActiveQuestionsAsync();
     Task<IEnumerable<QuestionDto>> GetQuestionsByContextAsync(string context);
     Task AddAsync(QuestionDto question);

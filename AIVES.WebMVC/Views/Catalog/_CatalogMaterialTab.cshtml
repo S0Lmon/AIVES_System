@@ -3,20 +3,10 @@
 <div class="cat-toolbar">
     <form method="get" asp-action="Index" class="cat-toolbar-form">
         <input type="hidden" name="tab" value="material" />
-        <select name="subjectId" class="form-select form-select-sm" aria-label="@L10n.T("Subject")">
-            <option value="">@L10n.T("All subjects")</option>
-            @foreach (var subject in Model.SubjectOptions)
-            {
-                <option value="@subject.Id" selected="@(Model.FilterSubjectId == subject.Id)">@subject.Name</option>
-            }
-        </select>
-        <select name="topicId" class="form-select form-select-sm" aria-label="@L10n.T("Topic")">
-            <option value="">@L10n.T("All topics")</option>
-            @foreach (var topic in Model.TopicOptions)
-            {
-                <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
-            }
-        </select>
+        <div class="picker-pair">
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(Model.SubjectOptions, "subjectId", L10n.T("Subject"), L10n.T("All subjects"), Model.FilterSubjectId, id: "materialFilterSubject"))
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.TopicOptions, "topicId", L10n.T("Topic"), L10n.T("All topics"), Model.FilterTopicId, id: "materialFilterTopic", subjects: Model.SubjectOptions))
+        </div>
         <input type="search" name="materialFilter" value="@Model.MaterialFilter" class="form-control form-control-sm cat-search"
                placeholder="@L10n.T("Search title or content")" />
         <button type="submit" class="btn btn-light btn-sm">@L10n.T("Filter")</button>
@@ -47,13 +37,7 @@ else
     <form asp-action="CreateMaterial" method="post" id="newMaterialForm" class="cat-inline-form mb-3" hidden>
         @Html.AntiForgeryToken()
         <div class="cat-material-form">
-            <select name="TopicId" class="form-select form-select-sm" required>
-                <option value="">@L10n.T("Store under topic")</option>
-                @foreach (var topic in Model.TopicOptions)
-                {
-                    <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
-                }
-            </select>
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.TopicOptions, "TopicId", L10n.T("Store under topic"), L10n.T("Choose a topic"), Model.FilterTopicId, required: true, filteredBy: null, id: "materialTopic-new"))
             <input name="Title" class="form-control form-control-sm" maxlength="300" placeholder="@L10n.T("Title")" required />
             <textarea name="Content" class="form-control form-control-sm" rows="3" placeholder="@L10n.T("Content")" required></textarea>
             <div class="cat-inline-actions">
@@ -70,13 +54,7 @@ else
     <form asp-action="ImportMaterial" method="post" enctype="multipart/form-data" id="importMaterialForm" class="cat-inline-form mb-3" hidden>
         @Html.AntiForgeryToken()
         <div class="cat-inline-grid">
-            <select name="topicId" class="form-select form-select-sm" required>
-                <option value="">@L10n.T("Store under topic")</option>
-                @foreach (var topic in Model.TopicOptions)
-                {
-                    <option value="@topic.Id" selected="@(Model.FilterTopicId == topic.Id)">@topic.Name</option>
-                }
-            </select>
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.TopicOptions, "topicId", L10n.T("Store under topic"), L10n.T("Choose a topic"), Model.FilterTopicId, required: true, filteredBy: null, id: "materialTopic-import"))
             <input type="file" name="file" class="form-control form-control-sm" accept=".txt,.md,.markdown,.csv,.json" required />
             <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Import")</button>
             <button type="button" class="btn btn-light btn-sm" data-toggle-form="importMaterialForm">@L10n.T("Cancel")</button>
@@ -166,12 +144,7 @@ else
                                             <input type="hidden" name="IsImportedFile" value="true" />
                                         }
                                         <div class="cat-material-form">
-                                            <select name="TopicId" class="form-select form-select-sm" required>
-                                                @foreach (var topic in Model.TopicOptions)
-                                                {
-                                                    <option value="@topic.Id" selected="@(topic.Id == item.TopicId)">@topic.Name</option>
-                                                }
-                                            </select>
+                                            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.TopicOptions, "TopicId", L10n.T("Store under topic"), L10n.T("Choose a topic"), item.TopicId, required: true, filteredBy: null, id: "materialTopic-edit-" + item.Id))
                                             <input name="Title" value="@item.Title" class="form-control form-control-sm" maxlength="300" required />
                                             <textarea name="Content" class="form-control form-control-sm" rows="6">@item.Content</textarea>
                                             <div class="cat-inline-actions">

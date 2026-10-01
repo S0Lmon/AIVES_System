@@ -4,6 +4,8 @@
     <div class="stat"><span class="stat-value">@Model.TotalCount</span><span class="stat-label">@L10n.T("Questions")</span></div>
     <div class="stat"><span class="stat-value">@Model.ActiveCount</span><span class="stat-label">@L10n.T("Published")</span></div>
     <div class="stat"><span class="stat-value">@Model.CoveredByRubric</span><span class="stat-label">@L10n.T("With rubric")</span></div>
+    <div class="stat"><span class="stat-value">@Model.LinkedToSubject</span><span class="stat-label">@L10n.T("Linked to subject")</span></div>
+    <div class="stat"><span class="stat-value">@Model.LinkedToTopic</span><span class="stat-label">@L10n.T("Linked to topic")</span></div>
     <div class="stat"><span class="stat-value">@Model.BloomSpread</span><span class="stat-label">@L10n.T("Bloom levels used")</span></div>
 </div>
 
@@ -13,6 +15,10 @@
         <span class="visually-hidden">@L10n.T("Search")</span>
         <input type="search" name="search" value="@Model.Search" class="form-control form-control-sm" placeholder="@L10n.T("Search question text")" />
     </label>
+    <div class="picker-pair">
+        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(Model.Subjects, "subjectId", L10n.T("Subject"), L10n.T("All subjects"), Model.SubjectId, id: "bankFilterSubject"))
+        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.Topics, "topicId", L10n.T("Topic"), L10n.T("All topics"), Model.TopicId, id: "bankFilterTopic", subjects: Model.Subjects))
+    </div>
     <select name="bloomLevelId" class="form-select form-select-sm" style="max-width: 200px">
         <option value="">@L10n.T("All Bloom levels")</option>
         @foreach (var level in Model.BloomLevels)
@@ -58,6 +64,7 @@
                 <thead>
                     <tr>
                         <th>@L10n.T("Question")</th>
+                        <th>@L10n.T("Subject / topic")</th>
                         <th>@L10n.T("Bloom level")</th>
                         <th>@L10n.T("Rubric")</th>
                         <th>@L10n.T("Status")</th>
@@ -73,6 +80,20 @@
                                 @if (!string.IsNullOrWhiteSpace(question.Context))
                                 {
                                     <small class="text-muted">@question.Context</small>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(question.SubjectName) || !string.IsNullOrWhiteSpace(question.TopicName))
+                                {
+                                    <span class="d-block">@(question.SubjectName ?? "—")</span>
+                                    @if (!string.IsNullOrWhiteSpace(question.TopicName))
+                                    {
+                                        <small class="text-muted">@question.TopicName</small>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
                                 }
                             </td>
                             <td>@question.BloomLevelName</td>

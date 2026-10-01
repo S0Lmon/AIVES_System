@@ -2,16 +2,9 @@
 @{
     var bloomLevels = (IReadOnlyList<AIVES.WebMVC.Models.ViewModels.SelectListItemOption>)(ViewData["BloomLevels"] ?? Array.Empty<AIVES.WebMVC.Models.ViewModels.SelectListItemOption>());
     var rubrics = (IReadOnlyList<AIVES.WebMVC.Models.ViewModels.SelectListItemOption>)(ViewData["Rubrics"] ?? Array.Empty<AIVES.WebMVC.Models.ViewModels.SelectListItemOption>());
+    var subjects = (IReadOnlyList<AIVES.WebMVC.Models.ViewModels.SubjectOption>)(ViewData["Subjects"] ?? Array.Empty<AIVES.WebMVC.Models.ViewModels.SubjectOption>());
+    var topics = (IReadOnlyList<AIVES.WebMVC.Models.ViewModels.TopicOption>)(ViewData["Topics"] ?? Array.Empty<AIVES.WebMVC.Models.ViewModels.TopicOption>());
 }
-
-<div class="page-heading form-panel">
-    <div>
-        <span class="page-kicker">@L10n.T("Question bank")</span>
-        <h1>@L10n.T("Create a viva question")</h1>
-        <p>@L10n.T("Write a clear question and attach its Bloom level and scoring rubric.")</p>
-    </div>
-    <button type="button" class="btn btn-light slide-trigger" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("Quick generate")</button>
-</div>
 
 <form asp-action="Create" method="post" class="panel form-panel">
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
@@ -24,7 +17,16 @@
     </section>
 
     <section class="form-section">
-        <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Assessment setup")</h2><p>@L10n.T("Choose the Bloom level and how the answer will be scored.")</p></div></div>
+        <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Where it belongs")</h2><p>@L10n.T("Link the question to the catalogue so it can be found by subject and topic.")</p></div></div>
+        <div class="picker-pair">
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(subjects, "SubjectId", L10n.T("Subject"), L10n.T("No subject"), Model.SubjectId, id: "createSubject"))
+            @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(topics, "TopicId", L10n.T("Topic"), L10n.T("No topic"), Model.TopicId, id: "createTopic", subjects: subjects))
+        </div>
+        <div class="mt-3"><label asp-for="Context" class="form-label">@L10n.T("Note")</label><input asp-for="Context" class="form-control" maxlength="300" placeholder="@L10n.T("Optional free text for context")" /><span asp-validation-for="Context" class="text-danger small"></span></div>
+    </section>
+
+    <section class="form-section">
+        <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Assessment setup")</h2><p>@L10n.T("Choose the Bloom level and how the answer will be scored.")</p></div></div>
         <div class="row g-4">
             <div class="col-md-6"><label asp-for="BloomLevelId" class="form-label">@L10n.T("Bloom level") <span class="text-danger">*</span></label><select asp-for="BloomLevelId" class="form-select"><option value="">@L10n.T("Select a Bloom level")</option>@foreach (var level in bloomLevels) { <option value="@level.Id">@level.Name</option> }</select><span asp-validation-for="BloomLevelId" class="text-danger small"></span></div>
             <div class="col-md-6"><label asp-for="RubricId" class="form-label">@L10n.T("Scoring rubric")</label><select asp-for="RubricId" class="form-select"><option value="">@L10n.T("No rubric")</option>@foreach (var rubric in rubrics) { <option value="@rubric.Id">@rubric.Name</option> }</select><span asp-validation-for="RubricId" class="text-danger small"></span></div>
@@ -32,9 +34,8 @@
     </section>
 
     <section class="form-section">
-        <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Classification & status")</h2><p>@L10n.T("Attach a subject, topic and display order.")</p></div></div>
+        <div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Status")</h2><p>@L10n.T("Decide whether this question joins the official bank straight away.")</p></div></div>
         <div class="row g-4 mb-4">
-            <div class="col-md-8"><label asp-for="Context" class="form-label">@L10n.T("Subject / topic")</label><input asp-for="Context" class="form-control" placeholder="@L10n.T("Example: Object oriented programming")" /><span asp-validation-for="Context" class="text-danger small"></span></div>
             <div class="col-md-4"><label asp-for="DisplayOrder" class="form-label">@L10n.T("Display order")</label><input asp-for="DisplayOrder" type="number" class="form-control" min="0" /><span asp-validation-for="DisplayOrder" class="text-danger small"></span></div>
         </div>
         <div class="switch-row"><div><strong>@L10n.T("Publish to the official bank")</strong><small>@L10n.T("This question can be used in an examination")</small></div><div class="form-check form-switch m-0"><input asp-for="IsActive" class="form-check-input" type="checkbox" /></div></div>
@@ -42,5 +43,7 @@
 
     <div class="form-actions"><a asp-action="Index" asp-route-tab="bank" class="btn btn-light">@L10n.T("Cancel")</a><button type="submit" class="btn btn-primary">@L10n.T("Save question") →</button></div>
 </form>
+
+<button type="button" class="btn btn-light slide-trigger align-self-start" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("Quick generate")</button>
 
 @await Html.PartialAsync("_AiGenerateSlide")

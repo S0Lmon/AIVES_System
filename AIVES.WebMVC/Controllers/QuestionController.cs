@@ -40,7 +40,7 @@ namespace AIVES.WebMVC.Controllers
         /// The question bank is one page with four tabs: the stored list, the manual editor, AI
         /// generation and bulk generation. Each tab keeps its own state in the query string.
         /// </summary>
-        public async Task<IActionResult> Index(string? tab, string? search, int? bloomLevelId, int? rubricId, bool activeOnly)
+        public async Task<IActionResult> Index(string? tab, string? search, int? bloomLevelId, int? rubricId, bool activeOnly, int? subjectId, int? topicId)
         {
             var view = new QuestionBankViewModel
             {
@@ -48,6 +48,8 @@ namespace AIVES.WebMVC.Controllers
                 Search = search,
                 BloomLevelId = bloomLevelId,
                 RubricId = rubricId,
+                SubjectId = subjectId,
+                TopicId = topicId,
                 ActiveOnly = activeOnly
             };
 
@@ -69,6 +71,10 @@ namespace AIVES.WebMVC.Controllers
                     questions = questions.Where(question => question.BloomLevelId == bloomLevelId).ToList();
                 if (rubricId is > 0)
                     questions = questions.Where(question => question.RubricId == rubricId).ToList();
+                if (subjectId is > 0)
+                    questions = questions.Where(question => question.SubjectId == subjectId).ToList();
+                if (topicId is > 0)
+                    questions = questions.Where(question => question.TopicId == topicId).ToList();
                 if (activeOnly)
                     questions = questions.Where(question => question.IsActive).ToList();
 
@@ -77,6 +83,8 @@ namespace AIVES.WebMVC.Controllers
                 view.ActiveCount = view.Questions.Count(question => question.IsActive);
                 view.CoveredByRubric = view.Questions.Count(question => question.RubricId is > 0);
                 view.BloomSpread = view.Questions.Select(question => question.BloomLevelId).Distinct().Count();
+                view.LinkedToSubject = view.Questions.Count(question => question.SubjectId is > 0);
+                view.LinkedToTopic = view.Questions.Count(question => question.TopicId is > 0);
             }
             catch (Exception ex)
             {
@@ -195,9 +203,9 @@ namespace AIVES.WebMVC.Controllers
         /// <summary>Supplies the compact AI panel: catalog pickers and which engines are live.</summary>
         private async Task PopulateAiPanel(QuestionBankViewModel view)
         {
-            var subjects = await _catalog.GetSubjectsAsync();
-            var topics = await _catalog.GetTopicsAsync();
-
+            // PopulateDropdowns already read the catalog; reuse it so both never disagree.
+            var subjects = view.Subjects;
+            var topics = view.Topics;
             view.Ai.Subjects = subjects.Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList();
             view.Ai.Topics = topics.Select(topic => new TopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList();
             view.Ai.AllTopics = view.Ai.Topics;
@@ -226,7 +234,7 @@ namespace AIVES.WebMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Content,Context,BloomLevelId,RubricId,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
+        public async Task<IActionResult> Create([Bind("Content,Context,BloomLevelId,RubricId,SubjectId,TopicId,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
         {
             try
             {
@@ -244,6 +252,8 @@ namespace AIVES.WebMVC.Controllers
                     Context = model.Context ?? string.Empty,
                     BloomLevelId = model.BloomLevelId,
                     RubricId = model.RubricId,
+                    SubjectId = model.SubjectId,
+                    TopicId = model.TopicId,
                     ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
@@ -285,10 +295,7 @@ namespace AIVES.WebMVC.Controllers
                     return NotFound();
 
                 var viewModel = MapToViewModel(question);
-                var blooms = await _bloomLevelService.GetAllAsync();
-                ViewBag.BloomLevels = new SelectList(blooms, "Id", "Name");
-                var rubrics = await _rubricService.GetAllRubricsAsync();
-                ViewBag.Rubrics = new SelectList(rubrics, "Id", "Name");
+                await PopulateEditDropdowns();
                 return View(viewModel);
             }
             catch (Exception ex)
@@ -298,9 +305,20 @@ namespace AIVES.WebMVC.Controllers
             }
         }
 
+        /// <summary>Fills the ViewBag the standalone edit view reads for its dropdowns.</summary>
+        private async Task PopulateEditDropdowns()
+        {
+            ViewBag.BloomLevels = new SelectList(await _bloomLevelService.GetAllAsync(), "Id", "Name");
+            ViewBag.Rubrics = new SelectList(await _rubricService.GetAllRubricsAsync(), "Id", "Name");
+            ViewBag.Subjects = (await _catalog.GetSubjectsAsync())
+                .Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList();
+            ViewBag.Topics = (await _catalog.GetTopicsAsync())
+                .Select(topic => new TopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Content,Context,BloomLevelId,RubricId,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Content,Context,BloomLevelId,RubricId,SubjectId,TopicId,ExpectedAnswer,DisplayOrder,IsActive")] QuestionViewModel model)
         {
             if (id != model.Id)
                 return NotFound();
@@ -308,13 +326,7 @@ namespace AIVES.WebMVC.Controllers
             try
             {
                 if (!ModelState.IsValid)
-                {
-                    var blooms = await _bloomLevelService.GetAllAsync();
-                    ViewBag.BloomLevels = new SelectList(blooms, "Id", "Name");
-                    var rubricList = await _rubricService.GetAllRubricsAsync();
-                    ViewBag.Rubrics = new SelectList(rubricList, "Id", "Name");
-                    return View(model);
-                }
+                    return await EditViewAsync(model);
 
                 var question = new QuestionDto
                 {
@@ -323,6 +335,8 @@ namespace AIVES.WebMVC.Controllers
                     Context = model.Context ?? string.Empty,
                     BloomLevelId = model.BloomLevelId,
                     RubricId = model.RubricId,
+                    SubjectId = model.SubjectId,
+                    TopicId = model.TopicId,
                     ExpectedAnswer = model.ExpectedAnswer ?? string.Empty,
                     DisplayOrder = model.DisplayOrder,
                     IsActive = model.IsActive
@@ -336,22 +350,21 @@ namespace AIVES.WebMVC.Controllers
             {
                 _logger.LogError(ex, "Validation error updating question");
                 ModelState.AddModelError("", ex.Message);
-                var blooms = await _bloomLevelService.GetAllAsync();
-                ViewBag.BloomLevels = new SelectList(blooms, "Id", "Name");
-                var rubricList = await _rubricService.GetAllRubricsAsync();
-                ViewBag.Rubrics = new SelectList(rubricList, "Id", "Name");
-                return View(model);
+                return await EditViewAsync(model);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating question");
                 ModelState.AddModelError("", L10n.T("An error occurred while updating the question"));
-                var blooms = await _bloomLevelService.GetAllAsync();
-                ViewBag.BloomLevels = new SelectList(blooms, "Id", "Name");
-                var rubricList = await _rubricService.GetAllRubricsAsync();
-                ViewBag.Rubrics = new SelectList(rubricList, "Id", "Name");
-                return View(model);
+                return await EditViewAsync(model);
             }
+        }
+
+        /// <summary>Re-renders the standalone edit screen with every dropdown repopulated.</summary>
+        private async Task<IActionResult> EditViewAsync(QuestionViewModel model)
+        {
+            await PopulateEditDropdowns();
+            return View(model);
         }
         public async Task<IActionResult> Delete(int? id)
         {
@@ -559,7 +572,7 @@ namespace AIVES.WebMVC.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, int? rubricId, CancellationToken cancellationToken)
+        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, int? rubricId, int? subjectId, int? topicId, CancellationToken cancellationToken)
         {
             var tab = returnTab == QuestionTabs.Bulk ? QuestionTabs.Bulk : QuestionTabs.Ai;
             var generated = GeneratedQuestionJson.Deserialize(resultJson);
@@ -567,7 +580,15 @@ namespace AIVES.WebMVC.Controllers
             var blooms = (await _bloomLevelService.GetAllAsync()).ToList();
             var levelByName = blooms.ToDictionary(bloom => bloom.Name, bloom => bloom.Id, StringComparer.OrdinalIgnoreCase);
 
+            var subjects = await _catalog.GetSubjectsAsync();
+            var topics = await _catalog.GetTopicsAsync();
+            var subjectName = subjects.FirstOrDefault(subject => subject.Id == subjectId)?.Name;
+            var topicName = topics.FirstOrDefault(topic => topic.Id == topicId)?.Name;
+
             var saved = 0;
+            // Keep the human readable label in step with the ids so the legacy Context search
+            // still finds these questions.
+            var contextLabel = string.Join(" / ", new[] { subjectName, topicName }.Where(part => !string.IsNullOrWhiteSpace(part)));
             for (var index = 0; index < generated.Count; index++)
             {
                 var candidate = generated[index];
@@ -590,7 +611,12 @@ namespace AIVES.WebMVC.Controllers
                         Content = candidate.Content,
                         ExpectedAnswer = candidate.ExpectedAnswer ?? string.Empty,
                         BloomLevelId = bloomLevelId,
-RubricId = rubricId ?? 0,
+                        // The catalogue picks come from the tab the batch was generated on, so the
+                        // saved questions stay reachable by subject and topic.
+                        RubricId = rubricId,
+                        SubjectId = subjectId,
+                        TopicId = topicId,
+                        Context = contextLabel,
                         IsActive = true
                     });
                     saved++;
@@ -634,6 +660,12 @@ RubricId = rubricId ?? 0,
 
             var rubrics = await _rubricService.GetAllRubricsAsync();
             view.Rubrics = rubrics.Select(rubric => new SelectListItemOption(rubric.Id, rubric.Name)).ToList();
+
+            // Subject and topic power the custom dropdowns on every question screen.
+            var subjects = await _catalog.GetSubjectsAsync();
+            var topics = await _catalog.GetTopicsAsync();
+            view.Subjects = subjects.Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList();
+            view.Topics = topics.Select(topic => new TopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList();
         }
 
         private QuestionViewModel MapToViewModel(QuestionDto question)
@@ -647,6 +679,10 @@ RubricId = rubricId ?? 0,
                 BloomLevelName = question.BloomLevelName,
                 RubricId = question.RubricId,
                 RubricName = question.RubricName,
+                SubjectId = question.SubjectId,
+                SubjectName = question.SubjectName,
+                TopicId = question.TopicId,
+                TopicName = question.TopicName,
                 ExpectedAnswer = question.ExpectedAnswer,
                 DisplayOrder = question.DisplayOrder,
                 IsActive = question.IsActive,

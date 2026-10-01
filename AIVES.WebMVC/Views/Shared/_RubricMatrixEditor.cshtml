@@ -44,7 +44,7 @@
             <table class="matrix" data-matrix>
                 <thead>
                     <tr data-matrix-head>
-                        <th class="matrix-rowhead">@L10n.T("Criterion")</th>
+                        <th class="matrix-rowhead">@("#")</th>
                         @for (var column = 0; column < columns.Count; column++)
                         {
                             var index = column;
@@ -71,11 +71,12 @@
                             var cells = rowModel.Cells ?? new List<AIVES.WebMVC.Models.ViewModels.MatrixCellInput>();
                             <tr data-matrix-row="@index">
                                 <td class="matrix-rowhead">
-                                    <textarea name="Rows[@index].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="@L10n.T("Criterion")" required>@rowModel.Criterion</textarea>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <input name="Rows[@index].Description" value="@rowModel.Description" class="form-control form-control-sm" placeholder="@L10n.T("Note")" maxlength="1000" />
+                                    <div class="matrix-rowhead-top">
+                                        <span class="matrix-row-number" data-matrix-row-number>@(index + 1)</span>
                                         <button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-row="@index" title="@L10n.T("Remove row")">&times;</button>
                                     </div>
+                                    <textarea name="Rows[@index].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="@L10n.T("Criterion")" required>@rowModel.Criterion</textarea>
+                                    <input name="Rows[@index].Description" value="@rowModel.Description" class="form-control form-control-sm" placeholder="@L10n.T("Note")" maxlength="1000" />
                                 </td>
                                 @for (var cell = 0; cell < columns.Count; cell++)
                                 {

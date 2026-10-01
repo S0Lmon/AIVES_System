@@ -27,16 +27,22 @@ public sealed class QuestionBankViewModel
     public string? Search { get; set; }
     public int? BloomLevelId { get; set; }
     public int? RubricId { get; set; }
+    public int? SubjectId { get; set; }
+    public int? TopicId { get; set; }
     public bool ActiveOnly { get; set; }
 
     public int TotalCount { get; set; }
     public int ActiveCount { get; set; }
     public int CoveredByRubric { get; set; }
     public int BloomSpread { get; set; }
+    public int LinkedToSubject { get; set; }
+    public int LinkedToTopic { get; set; }
 
     public IReadOnlyList<QuestionViewModel> Questions { get; set; } = [];
     public IReadOnlyList<SelectListItemOption> BloomLevels { get; set; } = [];
     public IReadOnlyList<SelectListItemOption> Rubrics { get; set; } = [];
+    public IReadOnlyList<SubjectOption> Subjects { get; set; } = [];
+    public IReadOnlyList<TopicOption> Topics { get; set; } = [];
 
     public QuestionViewModel Editor { get; set; } = new();
     public AiReviewViewModel Ai { get; set; } = new();

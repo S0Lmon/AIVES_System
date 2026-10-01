@@ -244,3 +244,81 @@
         order: 3;
     }
 }
+/* ---------- Subject page ----------
+   Opening a subject turns the tab into that subject's own page, so the hierarchy is one level deep
+   at a time and adding a topic is the first thing on screen rather than a hidden toggle.
+ */
+
+.subject-page {
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.subject-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: var(--space-sm);
+    border-bottom: var(--rule);
+}
+
+.subject-page-head h2 {
+    margin: 0 0 var(--space-3xs);
+}
+
+.subject-page-stats {
+    display: flex;
+    gap: var(--space-3xs);
+    flex-wrap: wrap;
+}
+
+.subject-page-actions {
+    display: flex;
+    gap: var(--space-3xs);
+    flex-wrap: wrap;
+    padding: var(--space-sm) 0;
+}
+
+.topic-create {
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-panel);
+    background: var(--color-accent-soft, rgba(47, 91, 215, .05));
+}
+
+.topic-create-head {
+    margin-bottom: var(--space-sm);
+}
+
+.topic-create-head h3 {
+    margin: 0 0 2px;
+    font-size: var(--text-md);
+}
+
+.topic-create-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: var(--space-sm);
+    align-items: end;
+}
+
+.topic-create-grid .form-label {
+    font-size: var(--text-xs);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+
+.topic-create-submit {
+    display: flex;
+    align-items: flex-end;
+}
+
+@media (max-width: 860px) {
+    .topic-create-grid {
+        grid-template-columns: 1fr;
+    }
+}

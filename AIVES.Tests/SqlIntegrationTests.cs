@@ -55,20 +55,62 @@ public sealed class SqlIntegrationTests
         {
             await db.Database.MigrateAsync();
             var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-            Assert.Equal(5, applied.Count);
+            Assert.Equal(6, applied.Count);
             Assert.Contains(applied, name => name.EndsWith("AddRubricMatrix", StringComparison.Ordinal));
+            Assert.Contains(applied, name => name.EndsWith("LinkQuestionsToSubjectAndTopic", StringComparison.Ordinal));
             Assert.False(db.Database.HasPendingModelChanges());
+
+            // A question must be able to point at both a subject and a topic, and must survive
+            // without a rubric because the create form treats the rubric as optional.
+            var subjects = new SubjectRepository(db);
+            var topics = new TopicRepository(db);
+            var subject = await subjects.AddAsync(new SubjectInput("Databases", "Catalog subject"));
+            var topic = await topics.AddAsync(new TopicInput(subject.Id, "Indexing", "Catalog topic"));
+
             var rubrics = new RubricService(new RubricRepository(db));
             var rubric = await rubrics.CreateRubricAsync(RubricFixtures.Matrix("SQL integration rubric"));
             var questions = new QuestionService(new QuestionRepository(db), new RubricRepository(db), new BloomLevelRepository(db));
-            var question = await questions.CreateQuestionAsync(new QuestionDto { Content = "Explain the three application layers", BloomLevelId = 1, RubricId = rubric.Id });
+            var question = await questions.CreateQuestionAsync(new QuestionDto
+            {
+                Content = "Explain the three application layers",
+                BloomLevelId = 1,
+                RubricId = rubric.Id,
+                SubjectId = subject.Id,
+                TopicId = topic.Id
+            });
             var detail = await questions.GetQuestionByIdAsync(question.Id);
             Assert.Equal("Remember", detail!.BloomLevelName);
             Assert.Equal(rubric.Name, detail.RubricName);
-            await questions.UpdateQuestionAsync(new QuestionDto { Id = question.Id, Content = "Explain the revised three application layers", BloomLevelId = 1, RubricId = rubric.Id });
+            Assert.Equal(subject.Id, detail.SubjectId);
+            Assert.Equal("Databases", detail.SubjectName);
+            Assert.Equal(topic.Id, detail.TopicId);
+            Assert.Equal("Indexing", detail.TopicName);
+
+            var noRubric = await questions.CreateQuestionAsync(new QuestionDto
+            {
+                Content = "A question stored without any rubric attached",
+                BloomLevelId = 1,
+                SubjectId = subject.Id
+            });
+            Assert.Null(noRubric.RubricId);
+            Assert.Null((await questions.GetQuestionByIdAsync(noRubric.Id))!.RubricId);
+
+            // The repository can reach a question from either side of the catalog.
+            Assert.Contains(await questions.GetQuestionsBySubjectAsync(subject.Id), q => q.Id == question.Id);
+            Assert.Contains(await questions.GetQuestionsByTopicAsync(topic.Id), q => q.Id == question.Id);
+
+            await questions.UpdateQuestionAsync(new QuestionDto { Id = question.Id, Content = "Explain the revised three application layers", BloomLevelId = 1, RubricId = rubric.Id, SubjectId = subject.Id, TopicId = topic.Id });
             var updated = await questions.GetQuestionByIdAsync(question.Id);
             Assert.Equal(detail.CreatedDate, updated!.CreatedDate);
             Assert.Equal("Explain the revised three application layers", updated.Content);
+
+            // Deleting the subject detaches its questions rather than taking them with it.
+            await subjects.DeleteAsync(subject.Id);
+            var orphaned = await questions.GetQuestionByIdAsync(question.Id);
+            Assert.NotNull(orphaned);
+            Assert.Null(orphaned!.SubjectId);
+
+            await questions.DeleteQuestionAsync(noRubric.Id);
             await questions.DeleteQuestionAsync(question.Id);
             Assert.Null(await questions.GetQuestionByIdAsync(question.Id));
             await rubrics.DeleteRubricAsync(rubric.Id);

@@ -3,14 +3,6 @@
     ViewData["Title"] = L10n.T("Rubric bank");
 }
 
-<div class="page-heading form-panel">
-    <div>
-        <span class="page-kicker">@L10n.T("Scoring")</span>
-        <h1>@L10n.T("Rubric bank")</h1>
-        <p>@L10n.T("Build a scoring matrix with your own rows and columns, or let AI draft one for you.")</p>
-    </div>
-</div>
-
 <nav class="bank-tabs" aria-label="@L10n.T("Rubric sections")">
     <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.RubricTabs.Bank ? "is-active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank">@L10n.T("Rubric bank")</a>
     <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.RubricTabs.Create ? "is-active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="create">@L10n.T("Create")</a>

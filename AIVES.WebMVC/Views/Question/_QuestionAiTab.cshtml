@@ -44,9 +44,14 @@
                     <textarea id="genOutcomes" name="LearningOutcomes" rows="3" class="form-control" maxlength="2000" placeholder="@L10n.T("What the candidates should be able to demonstrate")">@ai.LearningOutcomes</textarea>
                 </div>
                 <div class="col-12">
-                    <input type="hidden" name="SubjectId" value="@ai.SubjectId" />
-                    <input type="hidden" name="TopicId" value="@ai.TopicId" />
                     <input type="hidden" name="Provider" value="@(ai.Provider?.ToString())" />
+                </div>
+                <div class="col-12">
+                    <div class="picker-pair">
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Subject(ai.Subjects, "SubjectId", L10n.T("Catalog subject"), L10n.T("All subjects"), ai.SubjectId, id: "aiTabSubject"))
+                        @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(ai.Topics, "TopicId", L10n.T("Catalog topic"), L10n.T("All topics"), ai.TopicId, id: "aiTabTopic", subjects: ai.Subjects))
+                    </div>
+                    <div class="form-text">@L10n.T("Saved questions are linked to this subject and topic.")</div>
                 </div>
             </div>
 

@@ -1,22 +1,21 @@
 @await Html.PartialAsync("_ValidationScriptsPartial")
 <script>
     (function () {
-        // Catalog subject filters the topic list without a round trip.
-        var subjectPicker = document.getElementById('aiSubjectPicker');
-        var topicPicker = document.getElementById('aiTopicPicker');
-        if (subjectPicker && topicPicker) {
-            var applyFilter = function () {
-                var subjectId = subjectPicker.value;
-                topicPicker.querySelectorAll('option[data-subject-id]').forEach(function (option) {
-                    var matches = !subjectId || option.dataset.subjectId === subjectId;
-                    option.hidden = !matches;
-                    option.disabled = !matches;
-                    if (!matches && option.selected) topicPicker.value = '';
-                });
+        // Choosing from the catalogue fills the matching free text field, so the prompt still gets
+        // a subject and topic name even though the pickers post ids.
+        var mirror = function (selectName, targetId) {
+            var select = document.querySelector('[data-picker-select][name="' + selectName + '"]');
+            var target = document.getElementById(targetId);
+            if (!select || !target) return;
+            var apply = function () {
+                var option = select.options[select.selectedIndex];
+                if (option && option.value !== '') target.value = option.textContent.trim();
             };
-            subjectPicker.addEventListener('change', applyFilter);
-            applyFilter();
-        }
+            select.addEventListener('change', apply);
+            apply();
+        };
+        mirror('SubjectId', 'aiSubject');
+        mirror('TopicId', 'aiTopic');
 
         var form = document.getElementById('aiPanelForm');
         var results = document.getElementById('aiResults');

@@ -618,14 +618,176 @@ public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
 }
 
-[SqlFact]
-public async Task AnonymousUsersAreSentToLoginFromProfile()
-{
-    using var browser = app.Browser();
-    var response = await browser.GetAsync("/Profile");
-    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-    Assert.Contains("Login", response.Headers.Location!.ToString());
-}
+    [SqlFact]
+    public async Task AnonymousUsersAreSentToLoginFromProfile()
+    {
+        using var browser = app.Browser();
+        var response = await browser.GetAsync("/Profile");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("Login", response.Headers.Location!.ToString());
+    }
+
+    [SqlFact]
+    public async Task CreatingASubjectOpensItsOwnPageWithTopicCreationInFront()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        const string subjectName = "Functional catalogue subject";
+        var created = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = subjectName,
+            ["Description"] = "Created by the functional test"
+        });
+
+        // Creating a subject lands on that subject rather than back on the list.
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        var location = created.Headers.Location!.ToString();
+        Assert.Contains("tab=subject", location);
+        Assert.Contains("open=", location);
+
+        var openId = Regex.Match(location, @"open=(?<id>\d+)").Groups["id"].Value;
+        Assert.NotEmpty(openId);
+
+        var page = await Html(await browser.GetAsync($"/Catalog?tab=subject&open={openId}"));
+        Assert.Contains(subjectName, page);
+        Assert.Contains("Add a topic", page);
+        // The topic form is the subject page's main event, so it is rendered open, not hidden.
+        Assert.Matches(@"<form[^>]*action=""/Catalog/CreateTopic""[^>]*>", page);
+        Assert.Contains($"name=\"SubjectId\" value=\"{openId}\"", page);
+        // A subject with no topics yet says so rather than showing an empty table.
+        Assert.Contains("No topics under this subject yet", page);
+    }
+
+    [SqlFact]
+    public async Task AddingATopicKeepsTheSubjectPageOpenAndListsTheTopic()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        const string subjectName = "Subject with a topic";
+        var created = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = subjectName,
+            ["Description"] = string.Empty
+        });
+        var openId = Regex.Match(created.Headers.Location!.ToString(), "open=(?<id>\\d+)").Groups["id"].Value;
+
+        const string topicName = "Functional catalogue topic";
+        var topic = await Post(browser, $"/Catalog?tab=subject&open={openId}", "/Catalog/CreateTopic", new()
+        {
+            ["SubjectId"] = openId,
+            ["Name"] = topicName,
+            ["Description"] = "Created by the functional test"
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, topic.StatusCode);
+        Assert.Contains($"open={openId}", topic.Headers.Location!.ToString());
+
+        var page = await Html(await browser.GetAsync($"/Catalog?tab=subject&open={openId}"));
+        Assert.Contains(topicName, page);
+        Assert.Contains("The topic was added.", page);
+        // Topics are numbered down the page and each row carries its own edit form.
+        Assert.Contains($"/Catalog/UpdateTopic/", page);
+        Assert.Contains($"/Catalog/DeleteTopic/", page);
+    }
+
+    [SqlFact]
+    public async Task QuestionCreateSavesSubjectAndTopicAsRealReferences()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var subject = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = "Referenced subject",
+            ["Description"] = string.Empty
+        });
+        var subjectId = Regex.Match(subject.Headers.Location!.ToString(), "open=(?<id>\\d+)").Groups["id"].Value;
+        await Post(browser, $"/Catalog?tab=subject&open={subjectId}", "/Catalog/CreateTopic", new()
+        {
+            ["SubjectId"] = subjectId,
+            ["Name"] = "Referenced topic",
+            ["Description"] = string.Empty
+        });
+
+        var create = await Html(await browser.GetAsync("/Question?tab=create"));
+        // Both pickers render a real select, so the form still posts plain ids without JavaScript.
+        Assert.Contains("data-catalog-picker", create);
+        Assert.Contains("name=\"SubjectId\"", create);
+        Assert.Contains("name=\"TopicId\"", create);
+        Assert.Contains("Referenced subject", create);
+
+        var bank = await Html(await browser.GetAsync("/Question"));
+        // The bank list filters by subject and topic through the same pickers.
+        Assert.Contains("name=\"subjectId\"", bank);
+        Assert.Contains("name=\"topicId\"", bank);
+        Assert.Contains("bankFilterSubject", bank);
+    }
+
+    [SqlFact]
+    public async Task AQuestionCanBeSavedWithoutARubric()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        // The form offers "No rubric", so leaving it blank has to save rather than fail validation.
+        var values = Question();
+        values["RubricId"] = string.Empty;
+        values["Content"] = "A question stored without any rubric attached";
+
+        var created = await Post(browser, "/Question?tab=create", "/Question/Create", values);
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        Assert.Contains("tab=bank", created.Headers.Location!.ToString());
+
+        var bank = await Html(await browser.GetAsync("/Question?tab=bank"));
+        Assert.Contains("A question stored without any rubric attached", bank);
+    }
+
+    [SqlFact]
+    public async Task TheBankPagesOpenWithTheTabStripAndNoPageHeading()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        foreach (var page in new[] { "/Question", "/Rubric" })
+        {
+            var html = await Html(await browser.GetAsync(page));
+            // The header block was removed; the tab strip is now the first thing on the page.
+            Assert.DoesNotContain("page-heading", html);
+            Assert.Contains("bank-tabs", html);
+        }
+
+        var catalog = await Html(await browser.GetAsync("/Catalog"));
+        Assert.DoesNotContain("page-heading", catalog);
+        Assert.Contains("cat-tabs", catalog);
+
+        // Stat cards sit under the tab strip rather than above it.
+        Assert.True(catalog.IndexOf("cat-tabs", StringComparison.Ordinal)
+            < catalog.IndexOf("cat-stats", StringComparison.Ordinal),
+            "catalog stats should render below the tabs");
+
+        var question = await Html(await browser.GetAsync("/Question?tab=bank"));
+        Assert.True(question.IndexOf("bank-tabs", StringComparison.Ordinal)
+            < question.IndexOf("stat-strip", StringComparison.Ordinal),
+            "question stats should render below the tabs");
+    }
+
+    [SqlFact]
+    public async Task TheRubricMatrixNumbersItsRows()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Rubric?tab=create"));
+        // Row headers carry 1, 2, 3... beside the criterion name, matching the level columns.
+        var numbers = Regex.Matches(html, @"data-matrix-row-number>(?<n>\d+)<")
+            .Select(match => match.Groups["n"].Value).ToList();
+        Assert.NotEmpty(numbers);
+        Assert.Equal(Enumerable.Range(1, numbers.Count).Select(n => n.ToString()), numbers);
+        Assert.Contains("Rows[0].Criterion", html);
+    }
+
 
 [SqlFact]
 public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()

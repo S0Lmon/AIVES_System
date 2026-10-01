@@ -22,15 +22,18 @@ public sealed class TopicRepository(ApplicationDbContext context) : ITopicReposi
         await context.Topics.AsNoTracking().Include(topic => topic.Subject).Include(topic => topic.Materials)
             .FirstOrDefaultAsync(topic => topic.Id == id, cancellationToken) is { } topic ? ToDto(topic) : null;
 
-    public async Task<TopicInput> AddAsync(TopicInput input, CancellationToken cancellationToken = default)
+    public async Task<TopicDto> AddAsync(TopicInput input, CancellationToken cancellationToken = default)
     {
-        if (!await context.Subjects.AnyAsync(subject => subject.Id == input.SubjectId, cancellationToken))
-            throw new KeyNotFoundException($"Subject {input.SubjectId} was not found.");
+        var subjectName = await context.Subjects.AsNoTracking()
+            .Where(subject => subject.Id == input.SubjectId)
+            .Select(subject => subject.Name)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException($"Subject {input.SubjectId} was not found.");
 
         var entity = new Topic { SubjectId = input.SubjectId, Name = input.Name, Description = input.Description };
         context.Topics.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
-        return input;
+        return new TopicDto(entity.Id, entity.SubjectId, subjectName, entity.Name, entity.Description, 0);
     }
 
     public async Task UpdateAsync(int id, TopicInput input, CancellationToken cancellationToken = default)

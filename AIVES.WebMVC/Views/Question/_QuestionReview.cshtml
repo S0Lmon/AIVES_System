@@ -18,6 +18,9 @@
     @Html.AntiForgeryToken()
     <input type="hidden" name="returnTab" value="@returnTab" />
     <input type="hidden" name="resultJson" id="resultJson" value="@payload" />
+    @* The catalogue picks live on the form above, so carry them into the save. *@
+    <input type="hidden" name="subjectId" value="@Model.SubjectId" />
+    <input type="hidden" name="topicId" value="@Model.TopicId" />
 
     <div class="panel-header mb-3">
         <div>

@@ -32,9 +32,12 @@
             var criterion = tr.querySelector('textarea[name$=".Criterion"]');
             var description = tr.querySelector('input[name$=".Description"]');
             var remove = tr.querySelector('[data-matrix-remove-row]');
+            var number = tr.querySelector('[data-matrix-row-number]');
             if (criterion) criterion.setAttribute('name', 'Rows[' + rowIndex + '].Criterion');
             if (description) description.setAttribute('name', 'Rows[' + rowIndex + '].Description');
             if (remove) remove.setAttribute('data-matrix-remove-row', rowIndex);
+            // Rows are numbered 1, 2, 3 in the order they appear, so removing row 1 renumbers the rest.
+            if (number) number.textContent = String(rowIndex + 1);
 
             tr.querySelectorAll('[data-matrix-cell]').forEach(function (td, cellIndex) {
                 var descriptor = td.querySelector('textarea');
@@ -109,11 +112,12 @@
 
         var head = document.createElement('td');
         head.className = 'matrix-rowhead';
-        head.innerHTML = '<textarea name="Rows[' + rowIndex + '].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="Criterion" required></textarea>'
-            + '<div class="d-flex gap-2 align-items-center">'
-            + '<input name="Rows[' + rowIndex + '].Description" class="form-control form-control-sm" placeholder="Note" maxlength="1000">'
+        head.innerHTML = '<div class="matrix-rowhead-top">'
+            + '<span class="matrix-row-number" data-matrix-row-number>' + (rowIndex + 1) + '</span>'
             + '<button type="button" class="btn btn-light btn-sm text-danger" data-matrix-remove-row="' + rowIndex + '" title="Remove row">&times;</button>'
-            + '</div>';
+            + '</div>'
+            + '<textarea name="Rows[' + rowIndex + '].Criterion" class="form-control form-control-sm mb-1" rows="2" maxlength="300" placeholder="Criterion" required></textarea>'
+            + '<input name="Rows[' + rowIndex + '].Description" class="form-control form-control-sm" placeholder="Note" maxlength="1000">';
         tr.appendChild(head);
 
         for (var columnIndex = 0; columnIndex < columnCount; columnIndex++) {

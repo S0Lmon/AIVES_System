@@ -13,7 +13,7 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
 
     public Task<IReadOnlyList<SubjectDto>> GetSubjectsAsync(CancellationToken cancellationToken = default) => subjects.GetAllAsync(cancellationToken);
 
-    public Task<SubjectInput> CreateSubjectAsync(SubjectInput input, CancellationToken cancellationToken = default) =>
+    public Task<SubjectDto> CreateSubjectAsync(SubjectInput input, CancellationToken cancellationToken = default) =>
         subjects.AddAsync(Validate(input), cancellationToken);
 
     public Task UpdateSubjectAsync(int id, SubjectInput input, CancellationToken cancellationToken = default) =>
@@ -24,7 +24,7 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
     public Task<IReadOnlyList<TopicDto>> GetTopicsAsync(int? subjectId = null, CancellationToken cancellationToken = default) =>
         topics.GetAllAsync(subjectId, cancellationToken);
 
-    public Task<TopicInput> CreateTopicAsync(TopicInput input, CancellationToken cancellationToken = default) =>
+    public Task<TopicDto> CreateTopicAsync(TopicInput input, CancellationToken cancellationToken = default) =>
         topics.AddAsync(Validate(input), cancellationToken);
 
     public Task UpdateTopicAsync(int id, TopicInput input, CancellationToken cancellationToken = default) =>

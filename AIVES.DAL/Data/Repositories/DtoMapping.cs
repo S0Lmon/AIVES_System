@@ -4,13 +4,15 @@ namespace AIVES.DAL.Data.Repositories;
 
 internal static class DtoMapping
 {
-    public static QuestionDto ToDto(Question q) => new() { Id = q.Id, Content = q.Content, Context = q.Context, BloomLevelId = q.BloomLevelId, RubricId = q.RubricId, ExpectedAnswer = q.ExpectedAnswer, DisplayOrder = q.DisplayOrder, IsActive = q.IsActive, CreatedDate = q.CreatedDate, ModifiedDate = q.ModifiedDate, BloomLevelName = q.BloomLevel?.Name, RubricName = q.Rubric?.Name };
+    public static QuestionDto ToDto(Question q) => new() { Id = q.Id, Content = q.Content, Context = q.Context, BloomLevelId = q.BloomLevelId, RubricId = q.RubricId, TopicId = q.TopicId, SubjectId = q.SubjectId, ExpectedAnswer = q.ExpectedAnswer, DisplayOrder = q.DisplayOrder, IsActive = q.IsActive, CreatedDate = q.CreatedDate, ModifiedDate = q.ModifiedDate, BloomLevelName = q.BloomLevel?.Name, RubricName = q.Rubric?.Name, SubjectName = q.Subject?.Name, TopicName = q.Topic?.Name };
     public static void Apply(QuestionDto q, Question e)
     {
         e.Content = q.Content;
         e.Context = q.Context ?? string.Empty;
         e.BloomLevelId = q.BloomLevelId;
         e.RubricId = q.RubricId;
+        e.TopicId = q.TopicId;
+        e.SubjectId = q.SubjectId;
         e.ExpectedAnswer = q.ExpectedAnswer ?? string.Empty;
         e.DisplayOrder = q.DisplayOrder;
         e.IsActive = q.IsActive;

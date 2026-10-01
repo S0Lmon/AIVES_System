@@ -24,7 +24,8 @@ internal static class AppText
         ["System check"] = "Kiểm tra hệ thống",
         ["Admin"] = "Quản trị",
         ["Data policy"] = "Chính sách dữ liệu",
-        ["AI-powered Viva Exam System"] = "Hệ thống thi vấn đáp thông minh AI",
+        // One entry covers both the topbar eyebrow and the footer: the table is OrdinalIgnoreCase,
+        // so "AI-powered Viva Exam System" and "AI-powered viva exam system" are the same key.
         ["AI-powered viva exam system"] = "Hệ thống thi vấn đáp thông minh có sử dụng AI",
         ["Secure access for lecturers and students"] = "Xác thực an toàn cho giảng viên và sinh viên",
         ["Sign in"] = "Đăng nhập",
@@ -453,6 +454,29 @@ internal static class AppText
         ["Topics"] = "Chủ đề",
         ["Topic name"] = "Tên chủ đề",
         ["Subject name"] = "Tên môn học",
+        ["What this topic covers"] = "Chủ đề này bao gồm gì",
+        ["Type to filter"] = "Nhập để lọc",
+        ["Nothing to choose yet."] = "Chưa có gì để chọn.",
+        ["Choose a topic"] = "Chọn chủ đề",
+        ["No subject"] = "Không có môn học",
+        ["No topic"] = "Không có chủ đề",
+        ["Linked to subject"] = "Đã liên kết môn học",
+        ["Linked to topic"] = "Đã liên kết chủ đề",
+        ["Where it belongs"] = "Thuộc nhóm nào",
+        ["Link the question to the catalogue so it can be found by subject and topic."] = "Liên kết câu hỏi với danh mục để có thể tìm theo môn học và chủ đề.",
+        ["Optional free text for context"] = "Ghi chú ngữ cảnh tùy chọn",
+        ["Update the Bloom level, rubric and display order."] = "Cập nhật mức Bloom, rubric và thứ tự hiển thị.",
+        ["Decide whether this question joins the official bank straight away."] = "Quyết định câu hỏi này có ngay vào ngân hàng chính thức hay không.",
+        ["Saved questions are linked to this subject and topic."] = "Câu hỏi đã lưu sẽ được liên kết với môn học và chủ đề này.",
+        ["Add a topic"] = "Thêm chủ đề",
+        ["Create subject"] = "Tạo môn học",
+        ["Edit subject"] = "Sửa môn học",
+        ["Delete subject"] = "Xóa môn học",
+        ["Give it a name. You will add topics on the next screen."] = "Đặt tên cho môn học. Bạn sẽ thêm chủ đề ở bước tiếp theo.",
+        ["Topics hold the material that AI questions are grounded in."] = "Chủ đề chứa tài liệu làm ngữ cảnh cho câu hỏi AI.",
+        ["The subject was created. Add its topics below."] = "Đã tạo môn học. Hãy thêm chủ đề bên dưới.",
+        ["The topic was added."] = "Đã thêm chủ đề.",
+        ["No topics under this subject yet. Add one above to hold material."] = "Môn học này chưa có chủ đề nào. Hãy thêm một chủ đề ở phía trên để chứa tài liệu.",
         ["Search"] = "Tìm kiếm",
         ["Search subjects or topics"] = "Tìm kiếm môn học hoặc chủ đề",
         ["Search title or content"] = "Tìm theo tiêu đề hoặc nội dung",
@@ -605,4 +629,11 @@ internal static class AppText
 
         return english;
     }
+
+    /// <summary>
+    /// Exposed for the test that guards against near-duplicate keys. The table uses the indexer in
+    /// its initialiser, so a key that differs only in case overwrites the earlier one instead of
+    /// throwing, and the collision is otherwise invisible.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> VietnameseEntries => Vietnamese;
 }

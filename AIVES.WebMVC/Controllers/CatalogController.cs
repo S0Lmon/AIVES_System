@@ -20,39 +20,68 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
 
     [HttpGet]
     public async Task<IActionResult> Index(string? tab, string? subjectFilter, string? materialFilter,
-        int? subjectId, int? topicId, CancellationToken cancellationToken)
+        int? subjectId, int? topicId, int? open, CancellationToken cancellationToken)
     {
         ViewData["Title"] = L10n.T("Catalog");
-        return View(await BuildAsync(CatalogTabs.Normalize(tab), subjectFilter, materialFilter, subjectId, topicId, cancellationToken));
+        return View(await BuildAsync(CatalogTabs.Normalize(tab), subjectFilter, materialFilter, subjectId, topicId, open, cancellationToken));
     }
 
     // ---- Subject / topic -------------------------------------------------
 
+    /// <summary>Creating a subject opens that subject's page so topics can be added straight away.</summary>
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateSubject(SubjectInput input, CancellationToken cancellationToken) =>
-        await MutateAsync(() => catalog.CreateSubjectAsync(input, cancellationToken));
+    public async Task<IActionResult> CreateSubject(SubjectInput input, CancellationToken cancellationToken)
+    {
+        SubjectDto created;
+        try
+        {
+            created = await catalog.CreateSubjectAsync(input, cancellationToken);
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException)
+        {
+            TempData["Error"] = L10n.T(ex.Message);
+            return RedirectToAction(nameof(Index), new { tab = CatalogTabs.Subject });
+        }
+
+        TempData["Success"] = L10n.T("The subject was created. Add its topics below.");
+        return RedirectToAction(nameof(Index), new { tab = CatalogTabs.Subject, open = created.Id });
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateSubject(int id, SubjectInput input, CancellationToken cancellationToken) =>
-        await MutateAsync(() => catalog.UpdateSubjectAsync(id, input, cancellationToken));
+        await MutateAsync(() => catalog.UpdateSubjectAsync(id, input, cancellationToken), open: id);
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteSubject(int id, CancellationToken cancellationToken) =>
         await MutateAsync(() => catalog.DeleteSubjectAsync(id, cancellationToken), CatalogTabs.Subject,
             L10n.T("The subject and everything under it was deleted."));
 
+    /// <summary>Adding a topic keeps the subject page open so several can be added in a row.</summary>
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateTopic(TopicInput input, CancellationToken cancellationToken) =>
-        await MutateAsync(() => catalog.CreateTopicAsync(input, cancellationToken));
+    public async Task<IActionResult> CreateTopic(TopicInput input, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await catalog.CreateTopicAsync(input, cancellationToken);
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException)
+        {
+            TempData["Error"] = L10n.T(ex.Message);
+            return RedirectToAction(nameof(Index), new { tab = CatalogTabs.Subject, open = input.SubjectId });
+        }
+
+        TempData["Success"] = L10n.T("The topic was added.");
+        return RedirectToAction(nameof(Index), new { tab = CatalogTabs.Subject, open = input.SubjectId });
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateTopic(int id, TopicInput input, CancellationToken cancellationToken) =>
-        await MutateAsync(() => catalog.UpdateTopicAsync(id, input, cancellationToken));
+    public async Task<IActionResult> UpdateTopic(int id, int subjectId, TopicInput input, CancellationToken cancellationToken) =>
+        await MutateAsync(() => catalog.UpdateTopicAsync(id, input, cancellationToken), open: subjectId);
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteTopic(int id, CancellationToken cancellationToken) =>
+    public async Task<IActionResult> DeleteTopic(int id, int subjectId, CancellationToken cancellationToken) =>
         await MutateAsync(() => catalog.DeleteTopicAsync(id, cancellationToken), CatalogTabs.Subject,
-            L10n.T("The topic and its material were deleted."));
+            L10n.T("The topic and its material were deleted."), open: subjectId);
 
     // ---- Material --------------------------------------------------------
 
@@ -138,7 +167,7 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
     }
 
     private async Task<IActionResult> MutateAsync(Func<Task> action, string tab = CatalogTabs.Subject,
-        string? message = null, int? subjectId = null, int? topicId = null)
+        string? message = null, int? subjectId = null, int? topicId = null, int? open = null)
     {
         try
         {
@@ -155,7 +184,7 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
             TempData["Error"] = L10n.T("The catalog could not be updated. Please try again.");
         }
 
-        return RedirectToAction(nameof(Index), new { tab, subjectId, topicId });
+        return RedirectToAction(nameof(Index), new { tab, subjectId, topicId, open });
     }
 
     private async Task<IActionResult> FailMaterial(string message, int? subjectId, int? topicId)
@@ -165,7 +194,7 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
     }
 
     private async Task<CatalogViewModel> BuildAsync(string tab, string? subjectFilter, string? materialFilter,
-        int? subjectId, int? topicId, CancellationToken cancellationToken)
+        int? subjectId, int? topicId, int? open, CancellationToken cancellationToken)
     {
         var subjects = await catalog.GetSubjectsAsync(cancellationToken);
         var topics = await catalog.GetTopicsAsync(cancellationToken: cancellationToken);
@@ -215,6 +244,15 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
             .ToList();
 
         var subjectText = (subjectFilter ?? string.Empty).Trim();
+        var visibleSubjects = subjectText.Length == 0
+            ? nodes
+            : nodes.Where(subject => subject.Name.Contains(subjectText, StringComparison.OrdinalIgnoreCase)
+                || subject.Topics.Any(topic => topic.Name.Contains(subjectText, StringComparison.OrdinalIgnoreCase))).ToList();
+
+        // Only honour the open subject if it is still on screen, otherwise the page would 404 on a
+        // deleted or filtered out id.
+        var openSubject = open is { } openId ? visibleSubjects.FirstOrDefault(subject => subject.Id == openId) : null;
+
         return new CatalogViewModel
         {
             ActiveTab = tab,
@@ -225,10 +263,9 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
             MaterialFilter = text,
             FilterSubjectId = subjectId,
             FilterTopicId = effectiveTopicId,
-            Subjects = subjectText.Length == 0
-                ? nodes
-                : nodes.Where(subject => subject.Name.Contains(subjectText, StringComparison.OrdinalIgnoreCase)
-                    || subject.Topics.Any(topic => topic.Name.Contains(subjectText, StringComparison.OrdinalIgnoreCase))).ToList(),
+            OpenSubjectId = openSubject?.Id,
+            OpenSubject = openSubject,
+            Subjects = visibleSubjects,
             Materials = materials,
             SubjectOptions = subjects.Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList(),
             TopicOptions = visibleTopics.Select(topic => new TopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList()
