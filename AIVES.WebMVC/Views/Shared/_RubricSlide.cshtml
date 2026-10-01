@@ -1,0 +1,56 @@
+@{
+    var questionId = Context.Request.Query["id"].FirstOrDefault();
+    var hasId = int.TryParse(questionId, out var parsedId) && parsedId > 0;
+}
+
+<div class="slide-backdrop" data-slide-close hidden></div>
+<aside class="slide-panel" id="rubricPanel" role="dialog" aria-modal="true" aria-labelledby="rubricPanelTitle" hidden>
+    <header class="slide-header">
+        <div><span class="page-kicker">@L10n.T("Scoring")</span><h2 id="rubricPanelTitle">@L10n.T("Rubrics")</h2></div>
+        <button type="button" class="slide-close" data-slide-close aria-label="@L10n.T("Close")">✕</button>
+    </header>
+
+    <div class="slide-body">
+        @if (hasId)
+        {
+            <p class="slide-hint">@L10n.Format("Question #{0} is selected. Open the question to attach a rubric and criteria.", parsedId)</p>
+            <a class="btn btn-primary w-100" asp-controller="Question" asp-action="Edit" asp-route-id="@parsedId">@L10n.T("Edit this question")</a>
+        }
+        else
+        {
+            <p class="slide-hint">@L10n.T("Select a question to attach a rubric and its scoring criteria.")</p>
+        }
+
+        <div class="slide-tabs" role="tablist">
+            <button class="slide-tab is-active" type="button" role="tab" aria-selected="true" data-slide-tab="rubricOverview">@L10n.T("Overview")</button>
+            <button class="slide-tab" type="button" role="tab" aria-selected="false" data-slide-tab="rubricCriteria">@L10n.T("Criteria")</button>
+        </div>
+
+        <div class="slide-tab-panel is-active" data-slide-panel="rubricOverview">
+            <p class="slide-hint">@L10n.T("A rubric groups the levels a question can score at, so two lecturers grade the same answer consistently.")</p>
+            <ul class="checklist">
+                <li>@L10n.T("Attach one rubric per question from the question editor.")</li>
+                <li>@L10n.T("Each criterion carries a weight, a description and a score band.")</li>
+                <li>@L10n.T("The final score is the weighted sum of the matched bands.")</li>
+            </ul>
+        </div>
+
+        <div class="slide-tab-panel" data-slide-panel="rubricCriteria" hidden>
+            <p class="slide-hint">@L10n.T("Typical viva criteria: correctness, reasoning depth, terminology and example use.")</p>
+            <table class="table data-table compact">
+                <thead><tr><th>@L10n.T("Criterion")</th><th>@L10n.T("Weight")</th><th>@L10n.T("Score band")</th></tr></thead>
+                <tbody>
+                    <tr><td>@L10n.T("Correctness of the answer")</td><td>40%</td><td>0 – 10</td></tr>
+                    <tr><td>@L10n.T("Reasoning and justification")</td><td>30%</td><td>0 – 10</td></tr>
+                    <tr><td>@L10n.T("Use of subject terminology")</td><td>15%</td><td>0 – 5</td></tr>
+                    <tr><td>@L10n.T("Worked example or application")</td><td>15%</td><td>0 – 5</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="slide-actions">
+        <button type="button" class="btn btn-light" data-slide-close>@L10n.T("Close")</button>
+        <a asp-controller="Question" asp-action="Create" class="btn btn-primary">@L10n.T("Create question")</a>
+    </footer>
+</aside>

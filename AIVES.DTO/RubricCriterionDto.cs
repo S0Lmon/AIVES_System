@@ -1,5 +1,6 @@
 namespace AIVES.DTO
 {
+    /// <summary>One row of the matrix.</summary>
     public class RubricCriterionDto
     {
         public int Id
@@ -20,5 +21,7 @@ namespace AIVES.DTO
         {
             get; set;
         }
+        /// <summary>One cell per column. Empty descriptors are allowed while drafting.</summary>
+        public List<RubricCriterionLevelDto> Levels { get; set; } = new List<RubricCriterionLevelDto>();
     }
 }

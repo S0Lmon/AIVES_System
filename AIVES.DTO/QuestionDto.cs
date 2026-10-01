@@ -15,12 +15,35 @@ namespace AIVES.DTO
             get; set;
         }
         public string Content { get; set; } = string.Empty; // The question text
-        public string Context { get; set; } = string.Empty; // Subject/Topic the question relates to
+        public string Context { get; set; } = string.Empty; // Free text label for the question
         public int BloomLevelId
         {
             get; set;
         }
-        public int RubricId
+        public int? RubricId
+        {
+            get; set;
+        }
+        public int? TopicId
+        {
+            get; set;
+        }
+        public int? SubjectId
+        {
+            get; set;
+        }
+        public string? SubjectName
+        {
+            get; set;
+        }
+        public string? TopicName
+        {
+            get; set;
+        }
+        /// <summary>
+        /// Optional. One of <see cref="QuestionDifficulties.Ordered"/> when set; null means unset.
+        /// </summary>
+        public string? Difficulty
         {
             get; set;
         }

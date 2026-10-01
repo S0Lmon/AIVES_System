@@ -74,25 +74,31 @@ public sealed class LayerTests
     {
         using var db = CreateDatabase();
         var service = new RubricService(new RubricRepository(db));
-        var dto = await service.CreateRubricAsync(new RubricDto { Name = "Original" });
-        await service.UpdateRubricAsync(new RubricDto { Id = dto.Id, Name = "Updated", CreatedDate = DateTime.MinValue });
+        var dto = await service.CreateRubricAsync(Matrix("Original"));
+        var replacement = Matrix("Updated");
+        replacement.Id = dto.Id;
+        replacement.CreatedDate = DateTime.MinValue;
+        await service.UpdateRubricAsync(replacement);
         var updated = await service.GetRubricByIdAsync(dto.Id);
         Assert.Equal(dto.CreatedDate, updated!.CreatedDate);
         Assert.Equal("Updated", updated.Name);
     }
 
     [Theory]
-    [InlineData(201, 0, 0)]
-    [InlineData(5, 1001, 0)]
-    [InlineData(5, 0, -1)]
-    public async Task InvalidRubricCannotReachPersistence(int nameLength, int descriptionLength, int points)
+    [InlineData(201, 0)]
+    [InlineData(0, 1001)]
+    public async Task InvalidRubricCannotReachPersistence(int nameLength, int descriptionLength)
     {
         using var db = CreateDatabase();
         var service = new RubricService(new RubricRepository(db));
-        var dto = new RubricDto { Name = new string('a', nameLength), Description = new string('b', descriptionLength), TotalPoints = points };
+        var dto = Matrix(new string('a', Math.Max(1, nameLength)));
+        dto.Description = new string('b', descriptionLength);
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRubricAsync(dto));
         Assert.Empty(db.Rubrics);
     }
+
+    /// <summary>A valid two by two matrix, which is what a rubric is now required to be.</summary>
+    private static RubricDto Matrix(string name) => RubricFixtures.Matrix(name);
 
     [Fact]
     public async Task VerificationCodeIsHashedRateLimitedAndSingleUse()

@@ -1,15 +1,23 @@
 # AIVES System
 
-AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Project sử dụng ASP.NET Core MVC, SQL Server và Gemini để tạo bản nháp câu hỏi bằng tiếng Việt. Định hướng phát triển là hỗ trợ quy trình thi vấn đáp có AI, trong đó giảng viên duyệt câu hỏi và quyết định điểm.
+AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Project sử dụng ASP.NET Core MVC, SQL Server, Gemini hoặc Ollama để tạo bản nháp câu hỏi bằng tiếng Việt. Định hướng phát triển là hỗ trợ quy trình thi vấn đáp có AI, trong đó giảng viên duyệt câu hỏi và quyết định điểm.
 
-Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, tài khoản và tạo câu hỏi bằng AI**. Phỏng vấn bằng giọng nói, tổ chức kỳ thi và chấm điểm chưa được triển khai đầy đủ.
+Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, ngân hàng rubric dạng ma trận, danh mục môn học/chủ đề/tài liệu, tài khoản và tạo nội dung bằng AI**. Phỏng vấn bằng giọng nói, tổ chức kỳ thi và chấm điểm chưa được triển khai đầy đủ.
 
 ## Chức năng hiện có
 
 - **Tài khoản:** đăng ký bằng Gmail, gửi mã xác minh qua SMTP, xác minh email, gửi lại mã, đăng nhập bằng mật khẩu, đăng xuất và đăng nhập Google khi được cấu hình.
-- **Ngân hàng câu hỏi:** thêm, xem danh sách/chi tiết, sửa, xóa và lọc theo mức Bloom; lưu ngữ cảnh, đáp án mong đợi, rubric, thứ tự hiển thị và trạng thái hoạt động.
-- **Danh mục:** mức Bloom và rubric được truy xuất qua service/repository để chọn khi tạo câu hỏi. Rubric có nghiệp vụ CRUD ở BLL/DAL; chưa có màn hình quản lý rubric riêng.
-- **Gemini:** tạo từ 1 đến 10 câu hỏi theo môn học, chủ đề, chuẩn đầu ra và độ khó. Mỗi câu có đáp án mong đợi, mức Bloom và 2 câu hỏi đào sâu. Kết quả là bản nháp hiển thị để giảng viên duyệt, chưa tự động lưu vào ngân hàng.
+- **Ngân hàng câu hỏi:** bốn tab **Bank | Create | AI generation | Bulk generation**. Tab Bank thêm, xem danh sách/chi tiết, sửa, xóa và lọc theo mức Bloom; lưu ngữ cảnh, đáp án mong đợi, rubric, thứ tự hiển thị và trạng thái hoạt động. Rubric là tuỳ chọn.
+- **Tạo hàng loạt bằng AI:** chọn một kế hoạch sinh (môn học, chủ đề, số câu, độ khó, mức Bloom), xem trước toàn bộ kết quả, chỉnh sửa câu nào giữ và bỏ câu nào, rồi mới lưu hàng loạt vào ngân hàng. Mức Bloom của kế hoạch được gán server-side từ tên do AI trả về.
+- **Ngân hàng rubric:** ba tab **Bank | Create | AI generation**. Mỗi rubric là một ma trận do người dùng tự định nghĩa: 1–10 dòng tiêu chí và 2–6 cột mức đánh giá. Mỗi ô ghi mô tả riêng và điểm riêng. Mức `MaxPoints` của tiêu chí lấy bằng điểm cao nhất trong dòng, `TotalPoints` của rubric lấy bằng tổng các tiêu chí, nên người dùng không phải tự cộng.
+- **Trình biên tập ma trận:** thêm/xoá/đổi tên dòng và cột trực tiếp; ma trận luôn hình chữ nhật. Trùng tên mức, ô mồ côi, ô trùng hoặc ma trận không đủ điều kiện đều bị từ chối kèm thông báo.
+- **Sinh rubric bằng AI:** cùng cơ chế provider với câu hỏi (ưu tiên Gemini, tự chuyển sang Ollama), sinh ra một ma trận hoàn chỉnh để giảng viên duyệt rồi lưu.
+- **Danh mục:** mức Bloom, môn học, chủ đề, tài liệu và rubric được truy xuất qua service/repository để chọn khi tạo câu hỏi.
+- **Môn học / chủ đề / tài liệu:** CRUD đầy đủ cho ba cấp danh mục, nhập tài liệu từ tệp `.txt`, `.md`, `.csv`, `.json`. Tài liệu làm ngữ cảnh nền cho câu hỏi AI.
+- **Gemini / Ollama:** tạo từ 1 đến 10 câu hỏi theo môn học, chủ đề, chuẩn đầu ra và độ khó, có thể lấy thêm tài liệu của chủ đề làm ngữ cảnh. Router ưu tiên Gemini và tự chuyển sang mô hình Ollama cục bộ khi Gemini chưa cấu hình. Mỗi câu có đáp án mong đợi, mức Bloom và 2 câu hỏi đào sâu. Kết quả là bản nháp để giảng viên duyệt, chưa tự động lưu vào ngân hàng.
+- **Bảng trượt AI:** nút **Generate with AI** trên `Question/Create` mở một bảng trượt nhỏ gọn. Chọn bộ sinh, bật/tắt việc dùng tài liệu làm ngữ cảnh, bấm **Use this question** để đổ kết quả vào `Content`, `ExpectedAnswer` và `Bloom level` của biểu mẫu đang mở.
+- **AI exam room:** đang tạm tắt vì luồng phòng thi chưa đúng; mục menu được hiển thị dạng mờ và mọi đường dẫn cũ chuyển hướng về `Question/Create?slide=aiPanel`.
+- **Đa ngôn ngữ:** toàn bộ giao diện và thông báo hỗ trợ English và Tiếng Việt.
 - **Giao diện:** trang tổng quan và menu responsive cho desktop/mobile.
 
 Các module kỳ thi/lịch thi, STT/TTS, phỏng vấn thích ứng, hỗ trợ chấm điểm, giám sát, báo cáo và quản trị nâng cao hiện là **roadmap**. Các phần giới thiệu trên dashboard không đồng nghĩa với chức năng đã hoàn thành.
@@ -22,7 +30,7 @@ Các module kỳ thi/lịch thi, STT/TTS, phỏng vấn thích ứng, hỗ trợ
 | Presentation | ASP.NET Core MVC, Razor, Bootstrap, JavaScript |
 | Dữ liệu | EF Core 10, SQL Server, EF migrations |
 | Xác thực | ASP.NET Core Identity, cookie, Google OAuth |
-| Tích hợp | Gemini API, Gmail SMTP |
+| Tích hợp | Gemini API, Ollama (`phi3:mini`), Gmail SMTP |
 | Kiểm thử | xUnit, ASP.NET Core TestServer, EF InMemory và SQL Server thật |
 | Đóng gói | Dockerfile nhiều giai đoạn, Docker Compose |
 
@@ -83,6 +91,12 @@ Lưu các giá trị thật bằng User Secrets khi phát triển; dùng biến 
 dotnet user-secrets set "Gemini:ApiKey" "<GEMINI_API_KEY>" --project AIVES.WebMVC
 dotnet user-secrets set "Gemini:Model" "<MODEL_AVAILABLE_TO_YOUR_ACCOUNT>" --project AIVES.WebMVC
 
+# Fallback cục bộ bằng Ollama (tùy chọn)
+dotnet user-secrets set "Ollama:Enabled" "true" --project AIVES.WebMVC
+dotnet user-secrets set "Ollama:Model" "phi3:mini" --project AIVES.WebMVC
+dotnet user-secrets set "Ollama:BaseUrl" "http://localhost:11434" --project AIVES.WebMVC
+dotnet user-secrets set "Ollama:MaxContextCharacters" "6000" --project AIVES.WebMVC
+
 # Gửi mã xác minh email
 dotnet user-secrets set "GmailSmtp:Username" "<GMAIL_ADDRESS>" --project AIVES.WebMVC
 dotnet user-secrets set "GmailSmtp:AppPassword" "<GMAIL_APP_PASSWORD>" --project AIVES.WebMVC
@@ -97,6 +111,55 @@ SMTP mặc định là `smtp.gmail.com:587`. Google callback dùng đường d�
 Nếu chưa có Gemini key, giao diện AI báo chưa cấu hình. Nếu SMTP chưa cấu hình, đăng ký không thể gửi mã xác minh. Có thể cấu hình tài khoản phát triển qua `Development:TestAccount:Email`, `Password`, `DisplayName` trong User Secrets; tài khoản này chỉ được tạo khi chạy Development.
 
 Model mặc định trong repository là `gemini-3.8-flash`; cần kiểm tra model và quyền truy cập thực tế của tài khoản trước khi sử dụng.
+
+## Danh mục Môn học → Chủ đề → Tài liệu
+
+Ngoài ngân hàng câu hỏi, hệ thống có một danh mục phục vụ việc tạo câu hỏi bằng AI:
+
+- **Môn học (Subject)** → **Chủ đề (Topic)** → **Tài liệu (Material)**. Xóa môn học hoặc chủ đề sẽ xóa luôn cấp con (cascade). `Question.TopicId` là khóa ngoại nullable, xóa chủ đề chỉ gỡ liên kết chứ không xóa câu hỏi.
+- `Material/Import` nhận tệp `.txt`, `.md`, `.csv`, `.json` tối đa 2 MB; tên tệp thành tiêu đề tài liệu và nội dung được lưu nguyên văn.
+- `CatalogService.BuildRagContextAsync` chấm điểm tài liệu đang hoạt động theo các từ khóa của yêu cầu, chỉ giữ tối đa 6 tài liệu khớp nhất và cắt theo `Ollama:MaxContextCharacters`. Không có tài liệu khớp thì câu hỏi được tạo không kèm ngữ cảnh.
+
+```powershell
+# Áp dụng migration (đã có trong lúc khởi động, dùng khi cần chạy thủ công)
+dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebMVC
+```
+
+## Rubric dạng ma trận
+
+Mỗi rubric là một ma trận chấm điểm do giảng viên tự định nghĩa, lưu bằng ba bảng:
+
+```text
+Rubric ──< RubricLevel        (cột: các mức đánh giá, ví dụ Below / Approaching / Meets / Exceeds)
+   │
+   └────< RubricCriterion ──< RubricCriterionLevel   (ô: mô tả + điểm của một tiêu chí tại một mức)
+```
+
+- Migration `20261001111335_AddRubricMatrix` tạo bảng và **tự đồi bộ rubric cũ**: mỗi rubric được thêm bốn mức `Below / Approaching / Meets / Exceeds` và một ô cho mỗi tiêu chí. Điểm cột chia đều theo thang 1/4 → 4/4, nên thang luôn tăng dần. Descriptor của ô để trống để giảng viên điền sau.
+- Giới hạn do service kiểm tra: 1–10 dòng tiêu chí, 2–6 cột mức. Tên mức phải khác nhau, mọi ô phải đủ cặp (tiêu chí × mức) và không trùng.
+- **Điểm suy ra, không nhập tay:** `RubricCriterion.MaxPoints` = điểm cao nhất trong dòng, `Rubric.TotalPoints` = tổng các tiêu chí. Sửa một ô là hai giá trị này tự đổi theo.
+- Sửa rubric thay toàn bộ ma trận qua `RubricRepository.UpdateAsync`; dòng/cột bị bỏ đi sẽ bị xoá theo cascade. Xoá rubric xoá luôn cột, tiêu chí và ô.
+- Tab **AI generation** của `Rubric` sinh ma trận qua cùng router Gemini → Ollama; kết quả phải là hình chữ nhật đầy đủ thì mới cho lưu.
+- Cùng một `_RubricMatrixEditor.cshtml` được dùng cho cả Create và Edit, nên hai màn hình không lệch nhau về hành vi.
+
+## Bộ sinh AI: Gemini và Ollama
+
+`IQuestionGenerator` là interface trung lập provider; mỗi provider tự khai báo `Provider` và `IsConfigured`. `QuestionGeneratorRouter` chọn theo thứ tự ưu tiên **Gemini → Ollama**:
+
+- Người dùng có thể chọn `Automatic`, cố định `Gemini` hoặc cố định `Ollama` trong bảng trượt **AI generation**.
+- Nếu provider được yêu cầu chưa cấu hình, router tự chuyển sang provider còn lại thay vì báo lỗi.
+- Không còn provider nào cấu hình thì trả về thông báo có kiểm soát, không lộ chi tiết nội bộ.
+- Trang **System check** hiển thị trạng thái ghép của hai provider, ví dụ `Gemini has no API key, so the local Ollama model (phi3:mini) serves every request.`
+
+Cần cài [Ollama](https://ollama.com) và `ollama pull phi3:mini` để chạy hoàn toàn cục bộ. Gemini và Ollama dùng chung một prompt và một bộ phân tích phản hồi nên trả về cùng cấu trúc.
+
+Hai khác biệt thực tế giữa hai bộ sinh:
+
+- **Số câu.** `phi3:mini` trả về một đối tượng JSON duy nhất bất kể prompt có yêu cầu mảng bao nhiêu phần tử, nên `OllamaQuestionGenerator` gọi **mỗi câu một lần** rồi nối kết quả. Cách này giữ đúng quy tắc "đúng số câu đã yêu cầu" mà không phải tin vào mô hình. Gemini trả mảng trong một lần gọi nên vẫn dùng một request.
+- **Một đối tượng JSON cũng được chấp nhận** cho yêu cầu một câu, vì nhiều mô hình nhỏ bỏ qua chỉ dẫn "trả về mảng".
+- **Rubric sinh theo cột.** Với rubric, `OllamaRubricGenerator` gọi **mỗi mức một lần** để lấy đủ một hàng của ma trận, cùng lý do trên. Ma trận dở dang hoặc không hình chữ nhật bị `RubricGeneration` từ chối trước khi tới tầng lưu trữ.
+
+`IRubricGenerator` và `RubricGeneratorRouter` lặp lại đúng mẫu của câu hỏi, nên hai loại nội dung dùng chung một quy tắc chọn provider và một câu chữ thông báo khi không provider nào dùng được.
 
 ## Đa ngôn ngữ EN / VI
 
@@ -133,7 +196,7 @@ dotnet test AIVES_System.slnx -c Release --filter "FullyQualifiedName!~LiveGemin
 
 Test Gemini thật là opt-in: đặt `AIVES_TEST_GEMINI_API_KEY`, tùy chọn `AIVES_TEST_GEMINI_MODEL`, rồi chạy filter `FullyQualifiedName~LiveGeminiTests`. Ca này gọi nhà cung cấp thật và có thể phát sinh chi phí/quota.
 
-Lần kiểm tra ngày **01/10/2026**: **83/83 test nội bộ pass, không skip** trên môi trường có SQL Server; build Release 0 lỗi/0 cảnh báo; Docker build thành công. Đây là kết quả tại thời điểm kiểm tra, không phải trạng thái CI tự cập nhật.
+Lần kiểm tra ngày **01/10/2026**: build Release 0 lỗi/0 cảnh báo; **125/125 test nội bộ pass, 0 skip** (test Gemini thật là opt-in) trên môi trường có SQL Server. Đây là kết quả tại thời điểm kiểm tra, không phải trạng thái CI tự cập nhật.
 
 Xem [báo cáo kiểm thử và review](docs/Functional-Test-Report.md).
 
@@ -151,6 +214,9 @@ Các lệnh yêu cầu công cụ `dotnet-ef` tương thích EF Core 10. Databas
 ## Giới hạn hiện tại
 
 - Kiểm tra tích hợp thật gần nhất: Gemini trả HTTP 503, Gmail SMTP từ chối xác thực với mã 534. Google OAuth chưa được kiểm thử đầy đủ qua consent/token exchange thật.
+- Ollama đã được cài và `phi3:mini` đã kéo về; đã kiểm chứng thật qua bảng trượt AI: 2 câu trong khoảng 9 giây, và có grounding "Grounded in 1 material item" khi bật tài liệu làm ngữ cảnh.
+- AI exam room đang tạm tắt cho tới khi luồng phòng thi được thiết kế lại.
+- Câu hỏi AI tạo ra là bản nháp để giảng viên duyệt, chưa có bước lưu hàng loạt vào ngân hàng câu hỏi.
 - Resend OTP còn rủi ro khi nhiều yêu cầu đồng thời; nếu SMTP lỗi sau khi thay mã, mã cũ đã mất hiệu lực. Chi tiết và hướng xử lý nằm trong báo cáo review.
 - Các module roadmap chưa hoàn chỉnh.
 

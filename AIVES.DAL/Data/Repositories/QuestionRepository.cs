@@ -5,7 +5,11 @@ namespace AIVES.DAL.Data.Repositories;
 
 public sealed class QuestionRepository(ApplicationDbContext context) : IQuestionRepository
 {
-    private IQueryable<Question> Query => context.Questions.Include(q => q.BloomLevel).Include(q => q.Rubric);
+    private IQueryable<Question> Query => context.Questions
+        .Include(q => q.BloomLevel)
+        .Include(q => q.Rubric)
+        .Include(q => q.Topic)
+        .Include(q => q.Subject);
     private static async Task<IEnumerable<QuestionDto>> ReadAsync(IQueryable<Question> query) => (await query.AsNoTracking().ToListAsync()).Select(DtoMapping.ToDto).ToList();
     public async Task<QuestionDto?> GetByIdAsync(int id)
     {
@@ -15,6 +19,8 @@ public sealed class QuestionRepository(ApplicationDbContext context) : IQuestion
     public Task<IEnumerable<QuestionDto>> GetAllAsync() => ReadAsync(Query);
     public Task<IEnumerable<QuestionDto>> GetByBloomLevelAsync(int id) => ReadAsync(Query.Where(q => q.BloomLevelId == id));
     public Task<IEnumerable<QuestionDto>> GetByRubricAsync(int id) => ReadAsync(Query.Where(q => q.RubricId == id));
+    public Task<IEnumerable<QuestionDto>> GetBySubjectAsync(int id) => ReadAsync(Query.Where(q => q.SubjectId == id));
+    public Task<IEnumerable<QuestionDto>> GetByTopicAsync(int id) => ReadAsync(Query.Where(q => q.TopicId == id));
     public Task<IEnumerable<QuestionDto>> GetActiveQuestionsAsync() => ReadAsync(Query.Where(q => q.IsActive).OrderBy(q => q.DisplayOrder));
     public Task<IEnumerable<QuestionDto>> GetQuestionsByContextAsync(string value) => ReadAsync(Query.Where(q => q.Context == value && q.IsActive));
     public async Task AddAsync(QuestionDto dto)

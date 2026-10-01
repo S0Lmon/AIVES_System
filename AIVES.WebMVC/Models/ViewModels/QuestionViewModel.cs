@@ -27,13 +27,44 @@ namespace AIVES.WebMVC.Models.ViewModels
             get; set;
         }
 
-        [Required(ErrorMessage = "Rubric is required")]
-        public int RubricId
+        /// <summary>Optional. A question without a rubric is valid, so this is nullable.</summary>
+        public int? RubricId
         {
             get; set;
         }
 
         public string? RubricName
+        {
+            get; set;
+        }
+
+        /// <summary>Optional link into the catalog so a question is reachable by subject.</summary>
+        public int? SubjectId
+        {
+            get; set;
+        }
+
+        /// <summary>Optional link into the catalog so a question is reachable by topic.</summary>
+        public int? TopicId
+        {
+            get; set;
+        }
+
+        public string? SubjectName
+        {
+            get; set;
+        }
+
+        public string? TopicName
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Optional. One of the difficulties in <c>QuestionDifficulties.Ordered</c>; null when unset.
+        /// </summary>
+        [StringLength(32)]
+        public string? Difficulty
         {
             get; set;
         }

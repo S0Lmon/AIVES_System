@@ -4,6 +4,8 @@ using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Diagnostics;
+using AIVES.BLL.Services.Ai;
+using AIVES.BLL.Services.Catalog;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,12 +31,33 @@ public static class DependencyInjection
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IRubricService, RubricService>();
         services.AddScoped<ISystemCheckService, SystemCheckService>();
+        services.AddScoped<ICatalogService, CatalogService>();
         services.Configure<GeminiOptions>(configuration.GetSection(GeminiOptions.SectionName));
-        services.AddHttpClient<IGeminiQuestionGenerator, GeminiQuestionGenerator>(client =>
+        services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
+        services.AddHttpClient<IQuestionGenerator, GeminiQuestionGenerator>(client =>
         {
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             client.Timeout = TimeSpan.FromSeconds(60);
         });
+        services.AddHttpClient<IQuestionGenerator, OllamaQuestionGenerator>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
+        });
+        services.AddScoped<IQuestionGeneratorRouter, QuestionGeneratorRouter>();
+        services.AddHttpClient<IRubricGenerator, GeminiRubricGenerator>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(90);
+        });
+        services.AddHttpClient<IRubricGenerator, OllamaRubricGenerator>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(60, options.TimeoutSeconds * 2));
+        });
+        services.AddScoped<IRubricGeneratorRouter, RubricGeneratorRouter>();
         services.Configure<GmailSmtpOptions>(configuration.GetSection(GmailSmtpOptions.SectionName));
         services.AddScoped<IAppEmailSender, GmailSmtpEmailSender>();
         services.AddScoped<IEmailVerificationService, EmailVerificationService>();

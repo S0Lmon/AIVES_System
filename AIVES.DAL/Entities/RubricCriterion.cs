@@ -21,5 +21,6 @@ namespace AIVES.DAL.Entities
             get; set;
         }
         public virtual Rubric Rubric { get; set; } = null!;
+        public virtual ICollection<RubricCriterionLevel> Levels { get; set; } = new List<RubricCriterionLevel>();
     }
 }

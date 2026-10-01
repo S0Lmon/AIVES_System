@@ -45,6 +45,22 @@ namespace AIVES.BLL.Services
             return await _questionRepository.GetByBloomLevelAsync(bloomLevelId);
         }
 
+        public async Task<IEnumerable<QuestionDto>> GetQuestionsBySubjectAsync(int subjectId)
+        {
+            if (subjectId <= 0)
+                throw new ArgumentException("Invalid subject ID", nameof(subjectId));
+
+            return await _questionRepository.GetBySubjectAsync(subjectId);
+        }
+
+        public async Task<IEnumerable<QuestionDto>> GetQuestionsByTopicAsync(int topicId)
+        {
+            if (topicId <= 0)
+                throw new ArgumentException("Invalid topic ID", nameof(topicId));
+
+            return await _questionRepository.GetByTopicAsync(topicId);
+        }
+
         public async Task<IEnumerable<QuestionDto>> GetQuestionsByContextAsync(string context)
         {
             if (string.IsNullOrWhiteSpace(context))
@@ -112,13 +128,28 @@ namespace AIVES.BLL.Services
             if (question.BloomLevelId <= 0)
                 return false;
 
-            if (question.RubricId <= 0)
-                return false;
             var bloomLevel = await _bloomLevelRepository.GetByIdAsync(question.BloomLevelId);
             if (bloomLevel == null)
                 return false;
-            var rubric = await _rubricRepository.GetByIdAsync(question.RubricId);
-            if (rubric == null)
+
+            // Rubric, subject and topic are all optional links. When a rubric is chosen it has to
+            // exist, but leaving it blank must save rather than fail the way it used to.
+            if (question.RubricId is > 0)
+            {
+                var rubric = await _rubricRepository.GetByIdAsync(question.RubricId.Value);
+                if (rubric == null)
+                    return false;
+            }
+
+            if (question.SubjectId is <= 0)
+                return false;
+
+            // Difficulty is optional, but a value that is present has to be one the app knows, so a
+            // stale or hand-edited value cannot quietly enter the bank.
+            if (question.Difficulty is not null && !QuestionDifficulties.IsAllowed(question.Difficulty))
+                return false;
+
+            if (question.TopicId is <= 0)
                 return false;
 
             return true;

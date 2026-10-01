@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using AIVES.DAL.Data;
 using Microsoft.EntityFrameworkCore;
@@ -329,18 +331,18 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     {
         using var browser = app.Browser();
         await SignIn(browser);
-        foreach (var route in new[] { "/Question/Create", "/Question/Edit/1", "/Question/Delete/1", "/Account/Logout", "/AiExamRoom/QuestionGenerator" })
+        foreach (var route in new[] { "/Question/Create", "/Question/Edit/1", "/Question/Delete/1", "/Account/Logout", "/Question/GenerateQuestions" })
             Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync(route, new FormUrlEncodedContent([]))).StatusCode);
     }
 
     [SqlFact]
-    public async Task AiGenerationDisplaysStructuredQuestionsAndHandlesFailure()
+    public async Task AiPanelReturnsStructuredQuestionsAndHandlesFailure()
     {
         using var browser = app.Browser();
         await SignIn(browser);
-        var page = "/AiExamRoom/QuestionGenerator";
-        var fields = new Dictionary<string, string> { ["Subject"] = "Software engineering", ["Topic"] = "Three layers", ["QuestionCount"] = "2", ["Difficulty"] = "Cân bằng" };
-        var success = await Post(browser, page, page, fields);
+        var page = "/Question/GenerateQuestions";
+        var fields = new Dictionary<string, string> { ["Subject"] = "Software engineering", ["Topic"] = "Three layers", ["QuestionCount"] = "2", ["Difficulty"] = "Balanced" };
+        var success = await Post(browser, "/Question/Create", page, fields);
         Assert.Equal(HttpStatusCode.OK, success.StatusCode);
         var html = await Html(success);
         Assert.Contains("Generated question 1", html);
@@ -348,15 +350,193 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("First follow up", html);
         Assert.Contains("Expected test answer", html);
         Assert.DoesNotContain("Q1.ToString", html);
-        Assert.Contains("generated-index\">Q01", html);
-        Assert.Contains("generated-index\">Q02", html);
-fields["Topic"] = "simulate-failure";
-var failureHtml = await Html(await Post(browser, page, page, fields));
-Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
-Assert.DoesNotContain("Gemini test failure", failureHtml);
-}
+        Assert.Contains("ai-result-index\">Q01", html);
+        Assert.Contains("ai-result-index\">Q02", html);
+        // Each result carries the values the panel copies into the question form.
+        Assert.Contains("data-content=\"Generated question 1 for Three layers\"", html);
+        Assert.Contains("ai-result-actions", html);
+        Assert.Contains("ai-use", html);
+        fields["Topic"] = "simulate-failure";
+        var failureHtml = await Html(await Post(browser, "/Question/Create", page, fields));
+        Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
+        Assert.DoesNotContain("AI test failure", failureHtml);
+    }
 
-[SqlFact]
+    [SqlFact]
+    public async Task AiPanelIsDisabledOnTheExamRoomAndSendsUsersToTheQuestionPage()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var response = await browser.GetAsync("/AiExamRoom/QuestionGenerator");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Question/Create", response.Headers.Location!.OriginalString);
+    }
+
+    [SqlFact]
+    public async Task CreatePageCarriesTheCompactAiPanel()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var html = await Html(await browser.GetAsync("/Question/Create"));
+
+        Assert.Contains("data-slide=\"aiPanel\"", html);
+        Assert.Contains("slide-panel-compact", html);
+        Assert.Contains("id=\"aiPanelForm\"", html);
+        // The exam room nav entry is retired while its flow is reworked.
+        Assert.DoesNotContain("asp-controller=\"AiExamRoom\"", html);
+    }
+
+    [SqlFact]
+    public async Task QuestionBankExposesBankCreateAiAndBulkTabs()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Question"));
+        // The tag helpers render these into hrefs, so match the query they produce.
+        Assert.Contains("href=\"/Question?tab=bank\"", html);
+        Assert.Contains("tab=create", html);
+        Assert.Contains("tab=ai", html);
+        Assert.Contains("tab=bulk", html);
+
+        var ai = await Html(await browser.GetAsync("/Question?tab=ai"));
+        Assert.Contains("name=\"QuestionCount\"", ai);
+        Assert.Contains("action=\"/Question/GenerateReview\"", ai);
+
+        var bulk = await Html(await browser.GetAsync("/Question?tab=bulk"));
+        Assert.Contains("action=\"/Question/GenerateBulk\"", bulk);
+        // One planned count per Bloom level.
+        Assert.Contains("data-plan-count", bulk);
+    }
+
+    [SqlFact]
+    public async Task RubricBankExposesBankCreateAndAiTabsWithAMatrixEditor()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Rubric"));
+        Assert.Contains("href=\"/Rubric?tab=bank\"", html);
+        Assert.Contains("tab=create", html);
+        Assert.Contains("tab=ai", html);
+
+        var create = await Html(await browser.GetAsync("/Rubric?tab=create"));
+        // Rows are criteria and columns are levels, both editable on the same grid.
+        Assert.Contains("data-matrix-editor", create);
+        Assert.Contains("name=\"Columns[0].Name\"", create);
+        Assert.Contains("name=\"Rows[0].Criterion\"", create);
+        Assert.Contains("name=\"Rows[0].Cells[0].Descriptor\"", create);
+
+        var ai = await Html(await browser.GetAsync("/Rubric?tab=ai"));
+        Assert.Contains("action=\"/Rubric/Generate\"", ai);
+        Assert.Contains("name=\"CriterionCount\"", ai);
+        Assert.Contains("name=\"LevelCount\"", ai);
+    }
+
+    [SqlFact]
+    public async Task AMatrixRubricCanBeCreatedAndEditedFromTheEditor()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var values = new Dictionary<string, string>
+        {
+            ["Name"] = "Oral defence matrix",
+            ["Description"] = "Two rows across two columns",
+            ["Columns[0].Name"] = "Below",
+            ["Columns[0].Points"] = "1",
+            ["Columns[1].Name"] = "Exceeds",
+            ["Columns[1].Points"] = "4",
+            ["Rows[0].Criterion"] = "Correctness",
+            ["Rows[0].Cells[0].Descriptor"] = "Major errors present",
+            ["Rows[0].Cells[0].Points"] = "1",
+            ["Rows[0].Cells[1].Descriptor"] = "Accurate and complete",
+            ["Rows[0].Cells[1].Points"] = "4",
+            ["Rows[1].Criterion"] = "Reasoning",
+            ["Rows[1].Cells[0].Descriptor"] = "Answer is asserted, not shown",
+            ["Rows[1].Cells[0].Points"] = "1",
+            ["Rows[1].Cells[1].Descriptor"] = "Each claim is justified",
+            ["Rows[1].Cells[1].Points"] = "4"
+        };
+
+        var created = await Post(browser, "/Rubric?tab=create", "/Rubric/Create", values);
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+
+        var bank = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.Contains("Oral defence matrix", bank);
+        // Two rows x two columns, and the total is the sum of each row's best cell.
+        Assert.Contains("2 rows × 2 columns", bank);
+        Assert.Contains(">8<", bank);
+
+        // Deleting has to actually remove the row, columns and cells, not just report success.
+        // Scope to this rubric's own row: the same name also appears in the success alert
+        // above the table, and the first delete form on the page belongs to another rubric.
+        var row = Regex.Match(bank, "(?s)<tr[^>]*>((?:(?!</tr>).)*?Oral defence matrix(?:(?!</tr>).)*?)</tr>").Groups[1].Value;
+        var id = Regex.Match(row, "name=\"id\" value=\"(\\d+)\"").Groups[1].Value;
+        Assert.NotEmpty(id);
+        var deleted = await Post(browser, "/Rubric?tab=bank", "/Rubric/Delete", new() { ["id"] = id });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        var after = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.False(after.Contains("Oral defence matrix"),
+            $"Rubric {id} survived the delete. Page said: {Regex.Match(after, "alert-(?:success|danger)[^>]*>([^<]*)").Groups[1].Value}");
+    }
+
+    [SqlFact]
+    public async Task ARubricWithoutRowsIsRejectedAndNothingIsStored()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var before = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        var response = await Post(browser, "/Rubric?tab=create", "/Rubric/Create", new()
+        {
+            ["Name"] = "Empty grid",
+            ["Description"] = "No rows",
+            ["Columns[0].Name"] = "Only",
+            ["Columns[0].Points"] = "2"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await Html(response);
+        Assert.Contains("at least one criterion row", page);
+
+        var after = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.DoesNotContain("Empty grid", after);
+        Assert.Equal(CountOccurrences(before, "rubric"), CountOccurrences(after, "rubric"));
+    }
+
+    private static int CountOccurrences(string haystack, string needle) =>
+        Regex.Matches(haystack, Regex.Escape(needle)).Count;
+
+[Fact]
+    public void VietnameseTextTableBuildsWithoutDuplicateKeys()
+    {
+        // A repeated key throws inside the collection initializer, so the whole table
+        // fails to build and every page silently falls back to English. Touching the
+        // field here surfaces that failure directly.
+        var appText = typeof(AIVES.DTO.Localization.L10n).Assembly.GetType("AIVES.DTO.Localization.AppText")!;
+        var table = (IDictionary<string, string>)appText
+            .GetField("Vietnamese", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetValue(null)!;
+
+        Assert.NotEmpty(table);
+        Assert.Equal(table.Count, table.Keys.Distinct(StringComparer.Ordinal).Count());
+
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("vi");
+            Assert.Equal("Danh mục", AIVES.DTO.Localization.L10n.T("Catalog"));
+            Assert.Equal("Môn học", AIVES.DTO.Localization.L10n.T("Subject"));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [SqlFact]
 public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
 {
     using var browser = app.Browser();
@@ -403,13 +583,12 @@ public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
         using var browser = app.Browser();
         await SignIn(browser);
         var calls = app.Generator.Calls;
-        var page = "/AiExamRoom/QuestionGenerator";
-        var response = await Post(browser, page, page, new()
+        var response = await Post(browser, "/Question/Create", "/Question/GenerateQuestions", new()
         {
             ["Subject"] = "Test",
             ["Topic"] = "Test",
             ["QuestionCount"] = "11",
-            ["Difficulty"] = "Cân bằng"
+            ["Difficulty"] = "Balanced"
         });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(calls, app.Generator.Calls);
@@ -439,14 +618,176 @@ public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
 }
 
-[SqlFact]
-public async Task AnonymousUsersAreSentToLoginFromProfile()
-{
-    using var browser = app.Browser();
-    var response = await browser.GetAsync("/Profile");
-    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-    Assert.Contains("Login", response.Headers.Location!.ToString());
-}
+    [SqlFact]
+    public async Task AnonymousUsersAreSentToLoginFromProfile()
+    {
+        using var browser = app.Browser();
+        var response = await browser.GetAsync("/Profile");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("Login", response.Headers.Location!.ToString());
+    }
+
+    [SqlFact]
+    public async Task CreatingASubjectOpensItsOwnPageWithTopicCreationInFront()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        const string subjectName = "Functional catalogue subject";
+        var created = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = subjectName,
+            ["Description"] = "Created by the functional test"
+        });
+
+        // Creating a subject lands on that subject rather than back on the list.
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        var location = created.Headers.Location!.ToString();
+        Assert.Contains("tab=subject", location);
+        Assert.Contains("open=", location);
+
+        var openId = Regex.Match(location, @"open=(?<id>\d+)").Groups["id"].Value;
+        Assert.NotEmpty(openId);
+
+        var page = await Html(await browser.GetAsync($"/Catalog?tab=subject&open={openId}"));
+        Assert.Contains(subjectName, page);
+        Assert.Contains("Add a topic", page);
+        // The topic form is the subject page's main event, so it is rendered open, not hidden.
+        Assert.Matches(@"<form[^>]*action=""/Catalog/CreateTopic""[^>]*>", page);
+        Assert.Contains($"name=\"SubjectId\" value=\"{openId}\"", page);
+        // A subject with no topics yet says so rather than showing an empty table.
+        Assert.Contains("No topics under this subject yet", page);
+    }
+
+    [SqlFact]
+    public async Task AddingATopicKeepsTheSubjectPageOpenAndListsTheTopic()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        const string subjectName = "Subject with a topic";
+        var created = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = subjectName,
+            ["Description"] = string.Empty
+        });
+        var openId = Regex.Match(created.Headers.Location!.ToString(), "open=(?<id>\\d+)").Groups["id"].Value;
+
+        const string topicName = "Functional catalogue topic";
+        var topic = await Post(browser, $"/Catalog?tab=subject&open={openId}", "/Catalog/CreateTopic", new()
+        {
+            ["SubjectId"] = openId,
+            ["Name"] = topicName,
+            ["Description"] = "Created by the functional test"
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, topic.StatusCode);
+        Assert.Contains($"open={openId}", topic.Headers.Location!.ToString());
+
+        var page = await Html(await browser.GetAsync($"/Catalog?tab=subject&open={openId}"));
+        Assert.Contains(topicName, page);
+        Assert.Contains("The topic was added.", page);
+        // Topics are numbered down the page and each row carries its own edit form.
+        Assert.Contains($"/Catalog/UpdateTopic/", page);
+        Assert.Contains($"/Catalog/DeleteTopic/", page);
+    }
+
+    [SqlFact]
+    public async Task QuestionCreateSavesSubjectAndTopicAsRealReferences()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var subject = await Post(browser, "/Catalog?tab=subject", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = "Referenced subject",
+            ["Description"] = string.Empty
+        });
+        var subjectId = Regex.Match(subject.Headers.Location!.ToString(), "open=(?<id>\\d+)").Groups["id"].Value;
+        await Post(browser, $"/Catalog?tab=subject&open={subjectId}", "/Catalog/CreateTopic", new()
+        {
+            ["SubjectId"] = subjectId,
+            ["Name"] = "Referenced topic",
+            ["Description"] = string.Empty
+        });
+
+        var create = await Html(await browser.GetAsync("/Question?tab=create"));
+        // Both pickers render a real select, so the form still posts plain ids without JavaScript.
+        Assert.Contains("data-catalog-picker", create);
+        Assert.Contains("name=\"SubjectId\"", create);
+        Assert.Contains("name=\"TopicId\"", create);
+        Assert.Contains("Referenced subject", create);
+
+        var bank = await Html(await browser.GetAsync("/Question"));
+        // The bank list filters by subject and topic through the same pickers.
+        Assert.Contains("name=\"subjectId\"", bank);
+        Assert.Contains("name=\"topicId\"", bank);
+        Assert.Contains("bankFilterSubject", bank);
+    }
+
+    [SqlFact]
+    public async Task AQuestionCanBeSavedWithoutARubric()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        // The form offers "No rubric", so leaving it blank has to save rather than fail validation.
+        var values = Question();
+        values["RubricId"] = string.Empty;
+        values["Content"] = "A question stored without any rubric attached";
+
+        var created = await Post(browser, "/Question?tab=create", "/Question/Create", values);
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        Assert.Contains("tab=bank", created.Headers.Location!.ToString());
+
+        var bank = await Html(await browser.GetAsync("/Question?tab=bank"));
+        Assert.Contains("A question stored without any rubric attached", bank);
+    }
+
+    [SqlFact]
+    public async Task TheBankPagesOpenWithTheTabStripAndNoPageHeading()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        foreach (var page in new[] { "/Question", "/Rubric" })
+        {
+            var html = await Html(await browser.GetAsync(page));
+            // The header block was removed; the tab strip is now the first thing on the page.
+            Assert.DoesNotContain("page-heading", html);
+            Assert.Contains("bank-tabs", html);
+        }
+
+        var catalog = await Html(await browser.GetAsync("/Catalog"));
+        Assert.DoesNotContain("page-heading", catalog);
+        Assert.Contains("cat-tabs", catalog);
+
+        // Stat cards sit under the tab strip rather than above it.
+        Assert.True(catalog.IndexOf("cat-tabs", StringComparison.Ordinal)
+            < catalog.IndexOf("cat-stats", StringComparison.Ordinal),
+            "catalog stats should render below the tabs");
+
+        var question = await Html(await browser.GetAsync("/Question?tab=bank"));
+        Assert.True(question.IndexOf("bank-tabs", StringComparison.Ordinal)
+            < question.IndexOf("stat-strip", StringComparison.Ordinal),
+            "question stats should render below the tabs");
+    }
+
+    [SqlFact]
+    public async Task TheRubricMatrixNumbersItsRows()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Rubric?tab=create"));
+        // Row headers carry 1, 2, 3... beside the criterion name, matching the level columns.
+        var numbers = Regex.Matches(html, @"data-matrix-row-number>(?<n>\d+)<")
+            .Select(match => match.Groups["n"].Value).ToList();
+        Assert.NotEmpty(numbers);
+        Assert.Equal(Enumerable.Range(1, numbers.Count).Select(n => n.ToString()), numbers);
+        Assert.Contains("Rows[0].Criterion", html);
+    }
+
 
 [SqlFact]
 public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()

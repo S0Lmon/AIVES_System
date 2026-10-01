@@ -23,7 +23,27 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<RubricLevel> RubricLevels
+        {
+            get; set;
+        }
+        public DbSet<RubricCriterionLevel> RubricCriterionLevels
+        {
+            get; set;
+        }
         public DbSet<Question> Questions
+        {
+            get; set;
+        }
+        public DbSet<Subject> Subjects
+        {
+            get; set;
+        }
+        public DbSet<Topic> Topics
+        {
+            get; set;
+        }
+        public DbSet<Material> Materials
         {
             get; set;
         }
@@ -67,6 +87,11 @@ namespace AIVES.DAL.Data
                     .WithOne(e => e.Rubric)
                     .HasForeignKey(e => e.RubricId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(e => e.Levels)
+                    .WithOne(e => e.Rubric)
+                    .HasForeignKey(e => e.RubricId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<RubricCriterion>(entity =>
             {
@@ -74,6 +99,30 @@ namespace AIVES.DAL.Data
                 entity.Property(e => e.Criterion).IsRequired().HasMaxLength(300);
                 entity.Property(e => e.Description).HasMaxLength(1000);
                 entity.HasIndex(e => e.RubricId);
+            });
+
+            modelBuilder.Entity<RubricLevel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(120);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => e.RubricId);
+                entity.HasMany(e => e.Cells)
+                    .WithOne(e => e.RubricLevel)
+                    .HasForeignKey(e => e.RubricLevelId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<RubricCriterionLevel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Descriptor).HasMaxLength(1000);
+                entity.HasIndex(e => e.RubricCriterionId);
+                entity.HasIndex(e => e.RubricLevelId);
+                entity.HasOne(e => e.RubricCriterion)
+                    .WithMany(e => e.Levels)
+                    .HasForeignKey(e => e.RubricCriterionId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Question>(entity =>
             {
@@ -92,13 +141,66 @@ namespace AIVES.DAL.Data
                 entity.HasOne(e => e.Rubric)
                     .WithMany(e => e.Questions)
                     .HasForeignKey(e => e.RubricId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Topic)
+                    .WithMany()
+                    .HasForeignKey(e => e.TopicId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // SQL Server allows only one cascading path into a table, and Subjects already
+                // reaches Questions through Topics. So the direct link is NO ACTION and
+                // SubjectRepository clears it before deleting.
+                entity.HasOne(e => e.Subject)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasIndex(e => e.BloomLevelId);
                 entity.HasIndex(e => e.RubricId);
+                entity.HasIndex(e => e.TopicId);
+                entity.HasIndex(e => e.SubjectId);
                 entity.HasIndex(e => e.IsActive);
             });
             SeedBloomLevels(modelBuilder);
+            ConfigureCatalog(modelBuilder);
+        }
+
+        private static void ConfigureCatalog(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Subject>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => e.Name).IsUnique();
+
+                entity.HasMany(e => e.Topics)
+                    .WithOne(e => e.Subject)
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Topic>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => new { e.SubjectId, e.Name }).IsUnique();
+
+                entity.HasMany(e => e.Materials)
+                    .WithOne(e => e.Topic)
+                    .HasForeignKey(e => e.TopicId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Material>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(300);
+                entity.Property(e => e.Content).IsRequired().HasColumnType("nvarchar(max)");
+                entity.Property(e => e.SourceFileName).HasMaxLength(260);
+                entity.HasIndex(e => e.TopicId);
+                entity.HasIndex(e => e.IsActive);
+            });
         }
 
         private void SeedBloomLevels(ModelBuilder modelBuilder)
