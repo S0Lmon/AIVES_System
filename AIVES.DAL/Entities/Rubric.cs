@@ -15,6 +15,7 @@ namespace AIVES.DAL.Entities
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime ModifiedDate { get; set; } = DateTime.UtcNow;
         public virtual ICollection<RubricCriterion> Criteria { get; set; } = new List<RubricCriterion>();
+        public virtual ICollection<RubricLevel> Levels { get; set; } = new List<RubricLevel>();
         public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
     }
 }

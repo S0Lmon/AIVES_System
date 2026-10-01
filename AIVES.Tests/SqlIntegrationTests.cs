@@ -54,10 +54,12 @@ public sealed class SqlIntegrationTests
         try
         {
             await db.Database.MigrateAsync();
-            Assert.Equal(4, (await db.Database.GetAppliedMigrationsAsync()).Count());
+            var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
+            Assert.Equal(5, applied.Count);
+            Assert.Contains(applied, name => name.EndsWith("AddRubricMatrix", StringComparison.Ordinal));
             Assert.False(db.Database.HasPendingModelChanges());
             var rubrics = new RubricService(new RubricRepository(db));
-            var rubric = await rubrics.CreateRubricAsync(new RubricDto { Name = "SQL integration rubric" });
+            var rubric = await rubrics.CreateRubricAsync(RubricFixtures.Matrix("SQL integration rubric"));
             var questions = new QuestionService(new QuestionRepository(db), new RubricRepository(db), new BloomLevelRepository(db));
             var question = await questions.CreateQuestionAsync(new QuestionDto { Content = "Explain the three application layers", BloomLevelId = 1, RubricId = rubric.Id });
             var detail = await questions.GetQuestionByIdAsync(question.Id);

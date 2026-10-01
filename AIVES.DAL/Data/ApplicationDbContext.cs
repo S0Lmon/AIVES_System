@@ -23,6 +23,14 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<RubricLevel> RubricLevels
+        {
+            get; set;
+        }
+        public DbSet<RubricCriterionLevel> RubricCriterionLevels
+        {
+            get; set;
+        }
         public DbSet<Question> Questions
         {
             get; set;
@@ -79,6 +87,11 @@ namespace AIVES.DAL.Data
                     .WithOne(e => e.Rubric)
                     .HasForeignKey(e => e.RubricId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(e => e.Levels)
+                    .WithOne(e => e.Rubric)
+                    .HasForeignKey(e => e.RubricId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<RubricCriterion>(entity =>
             {
@@ -86,6 +99,30 @@ namespace AIVES.DAL.Data
                 entity.Property(e => e.Criterion).IsRequired().HasMaxLength(300);
                 entity.Property(e => e.Description).HasMaxLength(1000);
                 entity.HasIndex(e => e.RubricId);
+            });
+
+            modelBuilder.Entity<RubricLevel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(120);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.HasIndex(e => e.RubricId);
+                entity.HasMany(e => e.Cells)
+                    .WithOne(e => e.RubricLevel)
+                    .HasForeignKey(e => e.RubricLevelId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<RubricCriterionLevel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Descriptor).HasMaxLength(1000);
+                entity.HasIndex(e => e.RubricCriterionId);
+                entity.HasIndex(e => e.RubricLevelId);
+                entity.HasOne(e => e.RubricCriterion)
+                    .WithMany(e => e.Levels)
+                    .HasForeignKey(e => e.RubricCriterionId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Question>(entity =>
             {

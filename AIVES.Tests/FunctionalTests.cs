@@ -387,6 +387,125 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("asp-controller=\"AiExamRoom\"", html);
     }
 
+    [SqlFact]
+    public async Task QuestionBankExposesBankCreateAiAndBulkTabs()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Question"));
+        // The tag helpers render these into hrefs, so match the query they produce.
+        Assert.Contains("href=\"/Question?tab=bank\"", html);
+        Assert.Contains("tab=create", html);
+        Assert.Contains("tab=ai", html);
+        Assert.Contains("tab=bulk", html);
+
+        var ai = await Html(await browser.GetAsync("/Question?tab=ai"));
+        Assert.Contains("name=\"QuestionCount\"", ai);
+        Assert.Contains("action=\"/Question/GenerateReview\"", ai);
+
+        var bulk = await Html(await browser.GetAsync("/Question?tab=bulk"));
+        Assert.Contains("action=\"/Question/GenerateBulk\"", bulk);
+        // One planned count per Bloom level.
+        Assert.Contains("data-plan-count", bulk);
+    }
+
+    [SqlFact]
+    public async Task RubricBankExposesBankCreateAndAiTabsWithAMatrixEditor()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var html = await Html(await browser.GetAsync("/Rubric"));
+        Assert.Contains("href=\"/Rubric?tab=bank\"", html);
+        Assert.Contains("tab=create", html);
+        Assert.Contains("tab=ai", html);
+
+        var create = await Html(await browser.GetAsync("/Rubric?tab=create"));
+        // Rows are criteria and columns are levels, both editable on the same grid.
+        Assert.Contains("data-matrix-editor", create);
+        Assert.Contains("name=\"Columns[0].Name\"", create);
+        Assert.Contains("name=\"Rows[0].Criterion\"", create);
+        Assert.Contains("name=\"Rows[0].Cells[0].Descriptor\"", create);
+
+        var ai = await Html(await browser.GetAsync("/Rubric?tab=ai"));
+        Assert.Contains("action=\"/Rubric/Generate\"", ai);
+        Assert.Contains("name=\"CriterionCount\"", ai);
+        Assert.Contains("name=\"LevelCount\"", ai);
+    }
+
+    [SqlFact]
+    public async Task AMatrixRubricCanBeCreatedAndEditedFromTheEditor()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var values = new Dictionary<string, string>
+        {
+            ["Name"] = "Oral defence matrix",
+            ["Description"] = "Two rows across two columns",
+            ["Columns[0].Name"] = "Below",
+            ["Columns[0].Points"] = "1",
+            ["Columns[1].Name"] = "Exceeds",
+            ["Columns[1].Points"] = "4",
+            ["Rows[0].Criterion"] = "Correctness",
+            ["Rows[0].Cells[0].Descriptor"] = "Major errors present",
+            ["Rows[0].Cells[0].Points"] = "1",
+            ["Rows[0].Cells[1].Descriptor"] = "Accurate and complete",
+            ["Rows[0].Cells[1].Points"] = "4",
+            ["Rows[1].Criterion"] = "Reasoning",
+            ["Rows[1].Cells[0].Descriptor"] = "Answer is asserted, not shown",
+            ["Rows[1].Cells[0].Points"] = "1",
+            ["Rows[1].Cells[1].Descriptor"] = "Each claim is justified",
+            ["Rows[1].Cells[1].Points"] = "4"
+        };
+
+        var created = await Post(browser, "/Rubric?tab=create", "/Rubric/Create", values);
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+
+        var bank = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.Contains("Oral defence matrix", bank);
+        // Two rows x two columns, and the total is the sum of each row's best cell.
+        Assert.Contains("2 rows × 2 columns", bank);
+        Assert.Contains(">8<", bank);
+
+        // Deleting has to actually remove the row, columns and cells, not just report success.
+        // Scope the id to this rubric's own row so a shared fixture is left alone.
+        var id = Regex.Match(bank, "(?s)Oral defence matrix(.*?)name=\"id\" value=\"(\\d+)\"").Groups[2].Value;
+        Assert.NotEmpty(id);
+        var deleted = await Post(browser, "/Rubric?tab=bank", "/Rubric/Delete", new() { ["id"] = id });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+
+        Assert.DoesNotContain("Oral defence matrix", await Html(await browser.GetAsync("/Rubric?tab=bank")));
+    }
+
+    [SqlFact]
+    public async Task ARubricWithoutRowsIsRejectedAndNothingIsStored()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var before = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        var response = await Post(browser, "/Rubric?tab=create", "/Rubric/Create", new()
+        {
+            ["Name"] = "Empty grid",
+            ["Description"] = "No rows",
+            ["Columns[0].Name"] = "Only",
+            ["Columns[0].Points"] = "2"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await Html(response);
+        Assert.Contains("at least one criterion row", page);
+
+        var after = await Html(await browser.GetAsync("/Rubric?tab=bank"));
+        Assert.DoesNotContain("Empty grid", after);
+        Assert.Equal(CountOccurrences(before, "rubric"), CountOccurrences(after, "rubric"));
+    }
+
+    private static int CountOccurrences(string haystack, string needle) =>
+        Regex.Matches(haystack, Regex.Escape(needle)).Count;
+
 [Fact]
     public void VietnameseTextTableBuildsWithoutDuplicateKeys()
     {

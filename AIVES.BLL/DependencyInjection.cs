@@ -46,6 +46,18 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
         });
         services.AddScoped<IQuestionGeneratorRouter, QuestionGeneratorRouter>();
+        services.AddHttpClient<IRubricGenerator, GeminiRubricGenerator>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(90);
+        });
+        services.AddHttpClient<IRubricGenerator, OllamaRubricGenerator>((provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(60, options.TimeoutSeconds * 2));
+        });
+        services.AddScoped<IRubricGeneratorRouter, RubricGeneratorRouter>();
         services.Configure<GmailSmtpOptions>(configuration.GetSection(GmailSmtpOptions.SectionName));
         services.AddScoped<IAppEmailSender, GmailSmtpEmailSender>();
         services.AddScoped<IEmailVerificationService, EmailVerificationService>();
