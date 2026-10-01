@@ -40,6 +40,13 @@ namespace AIVES.DTO
         {
             get; set;
         }
+        /// <summary>
+        /// Optional. One of <see cref="QuestionDifficulties.Ordered"/> when set; null means unset.
+        /// </summary>
+        public string? Difficulty
+        {
+            get; set;
+        }
         public string ExpectedAnswer { get; set; } = string.Empty;
         public int DisplayOrder { get; set; } = 0;
         public bool IsActive { get; set; } = true;

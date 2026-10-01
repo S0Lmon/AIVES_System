@@ -120,7 +120,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("Order");
 
-                    b.ToTable("BloomLevels");
+                    b.ToTable("BloomLevels", (string)null);
 
                     b.HasData(
                         new
@@ -205,7 +205,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("UserId", "IsConsumed", "ExpiresAtUtc");
 
-                    b.ToTable("EmailVerificationCodes");
+                    b.ToTable("EmailVerificationCodes", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Material", b =>
@@ -250,7 +250,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("TopicId");
 
-                    b.ToTable("Materials");
+                    b.ToTable("Materials", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Question", b =>
@@ -314,7 +314,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("TopicId");
 
-                    b.ToTable("Questions");
+                    b.ToTable("Questions", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Rubric", b =>
@@ -350,7 +350,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Rubrics");
+                    b.ToTable("Rubrics", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.RubricCriterion", b =>
@@ -384,7 +384,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("RubricId");
 
-                    b.ToTable("RubricCriteria");
+                    b.ToTable("RubricCriteria", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.RubricCriterionLevel", b =>
@@ -415,7 +415,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("RubricLevelId");
 
-                    b.ToTable("RubricCriterionLevels");
+                    b.ToTable("RubricCriterionLevels", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.RubricLevel", b =>
@@ -449,7 +449,7 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("RubricId");
 
-                    b.ToTable("RubricLevels");
+                    b.ToTable("RubricLevels", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Subject", b =>
@@ -481,7 +481,7 @@ namespace AIVES.DAL.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Subjects");
+                    b.ToTable("Subjects", (string)null);
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Topic", b =>
@@ -516,7 +516,7 @@ namespace AIVES.DAL.Migrations
                     b.HasIndex("SubjectId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Topics");
+                    b.ToTable("Topics", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

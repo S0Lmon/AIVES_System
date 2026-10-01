@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AIVES.DAL.Entities
 {
     public class Question
@@ -21,6 +23,14 @@ namespace AIVES.DAL.Entities
             get; set;
         }
         public int? SubjectId
+        {
+            get; set;
+        }
+        /// <summary>
+        /// Optional generation hint, one of the values in <see cref="DTO.QuestionDifficulties"/>.
+        /// Null means nobody set one, which is different from a question recorded as Basic.
+        /// </summary>
+        public string? Difficulty
         {
             get; set;
         }

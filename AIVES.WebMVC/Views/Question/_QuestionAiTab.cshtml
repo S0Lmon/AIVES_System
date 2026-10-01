@@ -4,6 +4,13 @@
     var ai = Model.Ai;
 }
 
+@if (ai.HasResult)
+{
+    ViewData["ReviewReturnTab"] = "ai";
+    <div class="mb-3"></div>
+    <partial name="_QuestionReview" model="ai" />
+}
+
 <div class="panel form-panel mb-3">
     <form method="post" asp-action="GenerateReview">
         @Html.AntiForgeryToken()
@@ -73,8 +80,3 @@
     </form>
 </div>
 
-@if (ai.HasResult)
-{
-    ViewData["ReviewReturnTab"] = "ai";
-    <partial name="_QuestionReview" model="ai" />
-}
