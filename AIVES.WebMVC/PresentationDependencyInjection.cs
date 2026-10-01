@@ -1,9 +1,15 @@
+using System.Globalization;
+using AIVES.DTO;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 
 namespace AIVES.WebMVC;
 
 public static class PresentationDependencyInjection
 {
+    public const string LanguageCookieName = "AIVES.Language";
+
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.ConfigureApplicationCookie(options =>
@@ -28,6 +34,14 @@ public static class PresentationDependencyInjection
             });
         }
         services.AddControllersWithViews();
+        services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var supported = AppLanguageExtensions.Supported.Select(language => new CultureInfo(language.ToCultureCode())).ToList();
+            options.DefaultRequestCulture = new RequestCulture(AppLanguageExtensions.Default);
+            options.SupportedCultures = supported;
+            options.SupportedUICultures = supported;
+            options.RequestCultureProviders = [new AppLanguageCultureProvider(LanguageCookieName)];
+        });
         return services;
     }
 }

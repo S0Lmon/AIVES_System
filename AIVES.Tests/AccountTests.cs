@@ -88,6 +88,7 @@ public sealed class AccountTests
         }
         private static UserDto User => new("user", "test@gmail.com", "Test", false);
         public Task<UserDto?> FindByEmailAsync(string email) => Task.FromResult<UserDto?>(User);
+        public Task<UserProfileDto?> GetProfileAsync(string userId) => Task.FromResult<UserProfileDto?>(null);
         public Task<AccountResult> CreateAsync(RegisterRequest request, bool confirmed = false)
         {
             Created = true;

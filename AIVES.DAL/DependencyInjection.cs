@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 namespace AIVES.DAL;
 
 public static class DependencyInjection
@@ -22,11 +23,14 @@ public static class DependencyInjection
         services.AddScoped<IRubricRepository, RubricRepository>();
         services.AddScoped<IBloomLevelRepository, BloomLevelRepository>();
         services.AddScoped<IEmailVerificationRepository, EmailVerificationRepository>();
+        services.AddScoped<IDiagnosticsRepository, DiagnosticsRepository>();
         services.AddScoped<IAccountStore, IdentityAccountStore>();
         return services;
     }
     public static async Task InitializeDataAccessAsync(this IServiceProvider services, IConfiguration configuration, bool isDevelopment)
     {
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AdminRoleSeeder));
+
         using (var scope = services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -122,5 +126,7 @@ public static class DependencyInjection
                 }
             }
         }
+
+        await AdminRoleSeeder.SyncAsync(services, configuration, logger);
     }
 }

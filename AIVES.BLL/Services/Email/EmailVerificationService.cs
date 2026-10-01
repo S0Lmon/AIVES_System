@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
+using AIVES.DTO.Localization;
 
 namespace AIVES.BLL.Services.Email;
 
@@ -21,7 +22,7 @@ public sealed class EmailVerificationService : IEmailVerificationService
     {
         var latestCreatedAt = await _repository.GetLatestCreatedAtAsync(userId, cancellationToken);
         if (latestCreatedAt.HasValue && latestCreatedAt.Value > DateTime.UtcNow.AddMinutes(-1))
-            throw new InvalidOperationException("Vui lòng chờ một phút trước khi yêu cầu mã mới.");
+            throw new InvalidOperationException(L10n.T("Please wait a minute before requesting a new code."));
 
 
         var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();

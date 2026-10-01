@@ -120,6 +120,7 @@ public sealed class GoogleAccountTests
         public Task<ExternalLoginDto?> GetExternalLoginInfoAsync() => Task.FromResult(Info);
         public Task<ExternalSignInResultDto> ExternalLoginSignInAsync(string provider, string key) => Task.FromResult(SignInResult ?? new(ExistingLoginSucceeded));
         public Task<UserDto?> FindByEmailAsync(string email) => Task.FromResult(User);
+        public Task<UserProfileDto?> GetProfileAsync(string userId) => Task.FromResult<UserProfileDto?>(null);
         public Task<AccountResult> CreateAsync(RegisterRequest request, bool confirmed = false)
         {
             Assert.True(confirmed);

@@ -3,6 +3,7 @@ using AIVES.BLL.Services;
 using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Email;
+using AIVES.BLL.Services.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IRubricService, RubricService>();
+        services.AddScoped<ISystemCheckService, SystemCheckService>();
         services.Configure<GeminiOptions>(configuration.GetSection(GeminiOptions.SectionName));
         services.AddHttpClient<IGeminiQuestionGenerator, GeminiQuestionGenerator>(client =>
         {

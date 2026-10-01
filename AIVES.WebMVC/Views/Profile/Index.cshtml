@@ -1,0 +1,32 @@
+@model AIVES.WebMVC.Models.ViewModels.ProfileViewModel
+@{ ViewData["Title"] = L10n.T("Profile"); var initials = (Model.DisplayName.Length > 0 ? Model.DisplayName[..Math.Min(2, Model.DisplayName.Length)] : "??").ToUpperInvariant(); }
+
+<div class="page-heading">
+    <div><span class="page-kicker">Account</span><h1>@L10n.T("Profile")</h1><p>@L10n.T("Your AIVES account details and sign out options.")</p></div>
+</div>
+
+<div class="profile-grid">
+    <section class="panel overflow-hidden" aria-labelledby="profile-identity-title">
+        <div class="panel-header"><div><span class="page-kicker">Identity</span><h2 id="profile-identity-title">@L10n.T("Account")</h2></div></div>
+        <div class="panel-body">
+            <div class="profile-identity">
+                <span class="avatar avatar-lg" aria-hidden="true">@initials</span>
+                <div><h3>@Model.DisplayName</h3><span class="status-badge @(Model.EmailConfirmed ? "active" : "inactive")">@(Model.EmailConfirmed ? L10n.T("Email verified") : L10n.T("Email not verified"))</span></div>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item"><small>@L10n.T("Full name")</small><strong>@Model.DisplayName</strong></div>
+                <div class="detail-item"><small>Gmail</small><strong>@Model.Email</strong></div>
+                <div class="detail-item"><small>@L10n.T("Member since")</small><strong>@L10n.Format("{0}", Model.MemberSince.ToLocalTime().ToString("dd/MM/yyyy"))</strong></div>
+                <div class="detail-item"><small>@L10n.T("Role")</small><strong>@(Model.Roles.Count == 0 ? L10n.T("User") : string.Join(", ", Model.Roles))</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel overflow-hidden" aria-labelledby="profile-session-title">
+        <div class="panel-header"><div><span class="page-kicker">Session</span><h2 id="profile-session-title">@L10n.T("Sign out")</h2></div></div>
+        <div class="panel-body">
+            <p>@L10n.T("Sign out ends the current session on this device and returns you to the login page.")</p>
+            <form asp-controller="Profile" asp-action="Logout" method="post"><button type="submit" class="btn btn-danger">@L10n.T("Sign out")</button></form>
+        </div>
+    </section>
+</div>

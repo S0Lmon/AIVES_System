@@ -5,6 +5,7 @@ namespace AIVES.DAL.Data;
 public interface IAccountStore
 {
     Task<UserDto?> FindByEmailAsync(string email);
+    Task<UserProfileDto?> GetProfileAsync(string userId);
     Task<AccountResult> CreateAsync(RegisterRequest request, bool confirmed = false);
     Task DeleteAsync(string userId);
     Task ConfirmEmailAsync(string userId);

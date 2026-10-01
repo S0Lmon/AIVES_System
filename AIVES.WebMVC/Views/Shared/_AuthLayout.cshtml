@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="@L10n.Current.ToCultureCode()">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,9 +14,9 @@
 </head>
 <body class="auth-body">
     <main class="auth-shell">
-        <a class="auth-brand" asp-controller="Home" asp-action="Index"><span class="brand-mark">A</span><span><strong>AIVES</strong><small>AI-powered Viva Exam System</small></span></a>
+        <a class="auth-brand" asp-controller="Home" asp-action="Index"><span class="brand-mark">A</span><span><strong>AIVES</strong><small>@L10n.T("AI-powered Viva Exam System")</small></span></a>
         @RenderBody()
-        <footer class="auth-footer">AIVES · Xác thực an toàn cho giảng viên và sinh viên</footer>
+        <footer class="auth-footer">AIVES · @L10n.T("Secure access for lecturers and students")</footer>
     </main>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>

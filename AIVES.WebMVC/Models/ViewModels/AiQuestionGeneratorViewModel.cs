@@ -4,11 +4,11 @@ namespace AIVES.WebMVC.Models.ViewModels;
 
 public sealed class AiQuestionGeneratorViewModel
 {
-    [Required(ErrorMessage = "Vui lòng nhập môn học.")]
+    [Required(ErrorMessage = "Please enter a subject.")]
     [StringLength(120)]
     public string Subject { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Vui lòng nhập chủ đề.")]
+    [Required(ErrorMessage = "Please enter a topic.")]
     [StringLength(200)]
     public string Topic { get; set; } = string.Empty;
 
@@ -19,7 +19,6 @@ public sealed class AiQuestionGeneratorViewModel
     public int QuestionCount { get; set; } = 5;
 
     public string Difficulty { get; set; } = "Cân bằng";
-    public bool IsGeminiConfigured { get; set; }
     public List<GeneratedQuestionViewModel> Questions { get; set; } = [];
 }
 

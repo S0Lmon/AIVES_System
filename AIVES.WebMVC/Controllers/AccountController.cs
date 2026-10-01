@@ -1,4 +1,5 @@
 using AIVES.DTO;
+using AIVES.DTO.Localization;
 using AIVES.WebMVC.Models.ViewModels;
 using AIVES.BLL.Services.Accounts;
 using Microsoft.AspNetCore.Authorization;
@@ -8,11 +9,10 @@ namespace AIVES.WebMVC.Controllers;
 public sealed class AccountController(IAccountService accounts, ILogger<AccountController> logger) : Controller
 {
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl, IsGoogleConfigured = accounts.IsGoogleConfigured });
+    public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl });
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
-        model.IsGoogleConfigured = accounts.IsGoogleConfigured;
         if (!ModelState.IsValid)
             return View(model);
         try
@@ -26,12 +26,10 @@ public sealed class AccountController(IAccountService accounts, ILogger<AccountC
         return View(model);
     }
     [HttpGet]
-    public IActionResult Register() => View(new RegisterViewModel { IsEmailConfigured = accounts.IsEmailConfigured, IsGoogleConfigured = accounts.IsGoogleConfigured });
+    public IActionResult Register() => View(new RegisterViewModel());
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model, CancellationToken cancellationToken)
     {
-        model.IsEmailConfigured = accounts.IsEmailConfigured;
-        model.IsGoogleConfigured = accounts.IsGoogleConfigured;
         if (!ModelState.IsValid)
             return View(model);
         try
@@ -70,10 +68,10 @@ public sealed class AccountController(IAccountService accounts, ILogger<AccountC
         try
         {
             await accounts.ResendCodeAsync(email, cancellationToken);
-            TempData["AuthMessage"] = "Nếu tài khoản hợp lệ, một mã mới đã được gửi.";
+            TempData["AuthMessage"] = L10n.T("If the account is valid, a new code has been sent.");
         }
         catch (InvalidOperationException ex) { TempData["AuthMessage"] = ex.Message; }
-        catch (Exception ex) { logger.LogError(ex, "Could not resend verification email"); TempData["AuthMessage"] = "Không thể gửi mã xác minh. Vui lòng thử lại."; }
+        catch (Exception ex) { logger.LogError(ex, "Could not resend verification email"); TempData["AuthMessage"] = L10n.T("Could not send the verification code. Please try again."); }
         return RedirectToAction(nameof(VerifyEmail), new
         {
             email
@@ -119,6 +117,6 @@ public sealed class AccountController(IAccountService accounts, ILogger<AccountC
     private void ReportError(Exception ex)
     {
         logger.LogError(ex, "Account operation failed");
-        ModelState.AddModelError(string.Empty, "Đã có lỗi khi xử lý tài khoản. Vui lòng thử lại.");
+        ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while processing your account. Please try again."));
     }
 }

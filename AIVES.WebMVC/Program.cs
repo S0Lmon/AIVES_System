@@ -1,5 +1,7 @@
 using AIVES.BLL;
 using AIVES.WebMVC;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAives(builder.Configuration);
@@ -13,6 +15,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+var localizationOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;
+
+app.UseRequestLocalization(localizationOptions);
 app.UseHttpsRedirection();
 app.UseRouting();
 

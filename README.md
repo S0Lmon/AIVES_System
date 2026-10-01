@@ -98,6 +98,17 @@ Nếu chưa có Gemini key, giao diện AI báo chưa cấu hình. Nếu SMTP ch
 
 Model mặc định trong repository là `gemini-3.8-flash`; cần kiểm tra model và quyền truy cập thực tế của tài khoản trước khi sử dụng.
 
+## Đa ngôn ngữ EN / VI
+
+Giao diện hỗ trợ hai ngôn ngữ qua enum `AppLanguage` (`AIVES.DTO/AppLanguage.cs`). Mặc định là **English**; người dùng đổi ngôn ngữ bằng nút EN / VI trên thanh trên cùng.
+
+- Ngôn ngữ được lưu bằng cookie `AIVES.Language`, và có thể ghi đè tạm thời bằng query string `?culture=en` hoặc `?culture=vi`.
+- `AppLanguageCultureProvider` chuẩn hóa mọi giá trị qua enum trước khi áp dụng culture.
+- Chuỗi hiển thị dùng `L10n.T("English source")`; khoá chính là văn bản tiếng Anh nên khoá thiếu bản dịch vẫn hiển thị tiếng Anh thay vì trống.
+- Danh mục bản dịch nằm ở `AIVES.DTO/Localization/AppText.cs`. Thêm ngôn ngữ mới bằng cách bổ sung biến thể trong dictionary và một giá trị enum tương ứng.
+- Prompt gửi cho Gemini cũng theo ngôn ngữ đang chọn, nên câu hỏi sinh ra khớp với giao diện.
+- Thông báo lỗi của DataAnnotations vẫn dùng tiếng Anh vì thuộc tính attribute phải là hằng số lúc biên dịch; muốn dịch các thông báo này cần chuyển sang resx với `ErrorMessageResourceType`.
+
 ## Chạy bằng Docker Compose
 
 Từ thư mục gốc:
@@ -141,6 +152,6 @@ Các lệnh yêu cầu công cụ `dotnet-ef` tương thích EF Core 10. Databas
 
 - Kiểm tra tích hợp thật gần nhất: Gemini trả HTTP 503, Gmail SMTP từ chối xác thực với mã 534. Google OAuth chưa được kiểm thử đầy đủ qua consent/token exchange thật.
 - Resend OTP còn rủi ro khi nhiều yêu cầu đồng thời; nếu SMTP lỗi sau khi thay mã, mã cũ đã mất hiệu lực. Chi tiết và hướng xử lý nằm trong báo cáo review.
-- Các module roadmap và chuyển ngôn ngữ VI chưa hoàn chỉnh.
+- Các module roadmap chưa hoàn chỉnh.
 
 Cần giải quyết các điểm trên và kiểm tra cấu hình dịch vụ ngoài trước khi triển khai production.
