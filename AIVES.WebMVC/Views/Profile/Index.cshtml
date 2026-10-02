@@ -15,7 +15,7 @@
             </div>
             <div class="detail-grid">
                 <div class="detail-item"><small>@L10n.T("Full name")</small><strong>@Model.DisplayName</strong></div>
-                <div class="detail-item"><small>Gmail</small><strong>@Model.Email</strong></div>
+                <div class="detail-item"><small>Email</small><strong>@Model.Email</strong></div>
                 <div class="detail-item"><small>@L10n.T("Member since")</small><strong>@L10n.Format("{0}", Model.MemberSince.ToLocalTime().ToString("dd/MM/yyyy"))</strong></div>
                 <div class="detail-item"><small>@L10n.T("Role")</small><strong>@(Model.Roles.Count == 0 ? L10n.T("User") : string.Join(", ", Model.Roles))</strong></div>
             </div>

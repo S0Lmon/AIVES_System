@@ -1,12 +1,17 @@
 @model AIVES.WebMVC.Models.ViewModels.RegisterViewModel
-@{ Layout = "_AuthLayout"; ViewData["Title"] = @L10n.T("Register"); }
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = @L10n.T("Register");
+    var domains = string.Join(", ", Model.AllowedEmailDomains.Select(domain => "@" + domain));
+    var placeholder = "you@" + (Model.AllowedEmailDomains.FirstOrDefault() ?? "gmail.com");
+}
 <section class="auth-grid">
-    <div class="auth-context"><span class="page-kicker">Verified identity</span><h1>@L10n.T("Create an AIVES account")</h1><p>@L10n.T("Register with Gmail. AIVES sends a 6 digit code to confirm your address before the account is opened.")</p><dl><div><dt>10m</dt><dd>@L10n.T("Verification code expires automatically")</dd></div><div><dt>05</dt><dd>@L10n.T("Maximum number of wrong entries")</dd></div><div><dt>—</dt><dd>@L10n.T("The code is never stored in plain text")</dd></div></dl></div>
+    <div class="auth-context"><span class="page-kicker">Verified identity</span><h1>@L10n.T("Create an AIVES account")</h1><p>@L10n.T("Register with your email. AIVES sends a 6 digit code to confirm your address before the account is opened.")</p><dl><div><dt>10m</dt><dd>@L10n.T("Verification code expires automatically")</dd></div><div><dt>05</dt><dd>@L10n.T("Maximum number of wrong entries")</dd></div><div><dt>—</dt><dd>@L10n.T("The code is never stored in plain text")</dd></div></dl></div>
     <form asp-action="Register" method="post" class="panel auth-form">
-        <div class="auth-form-head"><span class="page-kicker">New account</span><h2>@L10n.T("Register")</h2><p>@L10n.T("Use a Gmail address you can access.")</p></div>
+        <div class="auth-form-head"><span class="page-kicker">New account</span><h2>@L10n.T("Register")</h2><p>@L10n.Format("Use an email address you can access, ending in {0}.", domains)</p></div>
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
         <div class="mb-3"><label asp-for="DisplayName" class="form-label">@L10n.T("Full name")</label><input asp-for="DisplayName" class="form-control" autocomplete="name" /><span asp-validation-for="DisplayName" class="text-danger small"></span></div>
-        <div class="mb-3"><label asp-for="Email" class="form-label">Gmail</label><input asp-for="Email" class="form-control" autocomplete="email" placeholder="you@gmail.com" /><span asp-validation-for="Email" class="text-danger small"></span></div>
+        <div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" autocomplete="email" placeholder="@placeholder" /><span asp-validation-for="Email" class="text-danger small"></span></div>
         <div class="auth-password-grid"><div><label asp-for="Password" class="form-label">@L10n.T("Password")</label><input asp-for="Password" class="form-control" autocomplete="new-password" /><span asp-validation-for="Password" class="text-danger small"></span></div><div><label asp-for="ConfirmPassword" class="form-label">@L10n.T("Confirm password")</label><input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword" class="text-danger small"></span></div></div>
         <button type="submit" class="btn btn-primary auth-submit">@L10n.T("Register and send code")</button>
         <div class="auth-divider"><span>@L10n.T("or")</span></div>

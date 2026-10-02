@@ -12,6 +12,11 @@ public interface IAccountService
     {
         get;
     }
+    /// <summary>Email domains (without "@") that may register with a password.</summary>
+    IReadOnlyList<string> AllowedEmailDomains
+    {
+        get;
+    }
     Task<AccountResult> LoginAsync(string email, string password, bool rememberMe);
     Task<UserProfileDto?> GetProfileAsync(string userId);
     Task<AccountResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);

@@ -21,7 +21,7 @@ public sealed class RegisterViewModel
     [StringLength(120, MinimumLength = 2)]
     public string DisplayName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Please enter your Gmail address.")]
+    [Required(ErrorMessage = "Please enter your email.")]
     [EmailAddress(ErrorMessage = "The email address is not valid.")]
     public string Email { get; set; } = string.Empty;
 
@@ -34,6 +34,9 @@ public sealed class RegisterViewModel
     [DataType(DataType.Password)]
     [Compare(nameof(Password), ErrorMessage = "The password confirmation does not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    /// <summary>Display only: the domains the form hints at; never bound from the request.</summary>
+    public IReadOnlyList<string> AllowedEmailDomains { get; set; } = [];
 }
 
 public sealed class VerifyEmailViewModel
