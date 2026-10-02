@@ -203,7 +203,9 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Ứng dụng mặc định ở `http://localhost:5201`. Compose chạy web cùng SQL Server và lưu database trong volume `aives-sql-data`. Không đưa `.env` vào Git. Cấu hình tài khoản demo và triển khai HTTPS/domain được mô tả trong [DEPLOY.md](DEPLOY.md).
+Ứng dụng mặc định ở `https://localhost` (chứng chỉ nội bộ của Caddy). Compose chạy Caddy làm reverse proxy HTTPS trước 2 instance web, cùng SQL Server lưu database trong volume `aives-sql-data`. Migrations chạy một lần trong container `migrate`; web dùng login SQL `aives_app` chỉ có quyền đọc/ghi dữ liệu. Không đưa `.env` vào Git. Kiến trúc, scale, tài khoản demo và tên miền được mô tả trong [DEPLOY.md](DEPLOY.md).
+
+Khi chạy nhiều instance ngoài Docker, đặt `Database:MigrateOnStartup=false` cho các instance web và chạy migrations một lần bằng `dotnet AIVES.WebMVC.dll --migrate-only`. Endpoint `GET /health` kiểm tra kết nối database.
 
 ## Kiểm thử
 

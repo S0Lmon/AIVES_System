@@ -55,9 +55,10 @@ public sealed class SqlIntegrationTests
         {
             await db.Database.MigrateAsync();
             var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-            Assert.Equal(6, applied.Count);
+            Assert.Equal(8, applied.Count);
             Assert.Contains(applied, name => name.EndsWith("AddRubricMatrix", StringComparison.Ordinal));
             Assert.Contains(applied, name => name.EndsWith("LinkQuestionsToSubjectAndTopic", StringComparison.Ordinal));
+            Assert.Contains(applied, name => name.EndsWith("AddDataProtectionKeys", StringComparison.Ordinal));
             Assert.False(db.Database.HasPendingModelChanges());
 
             // A question must be able to point at both a subject and a topic, and must survive

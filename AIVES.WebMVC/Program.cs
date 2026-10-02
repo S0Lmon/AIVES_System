@@ -7,7 +7,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAives(builder.Configuration);
 builder.Services.AddPresentation(builder.Configuration);
 var app = builder.Build();
-await app.Services.InitializeAivesAsync(builder.Configuration, app.Environment.IsDevelopment());
+
+// "--migrate-only" applies migrations and seed data, then exits. Deployments that run
+// several web instances do this once up front and set Database:MigrateOnStartup=false.
+var migrateOnly = args.Contains("--migrate-only");
+if (migrateOnly || builder.Configuration.GetValue("Database:MigrateOnStartup", true))
+    await app.Services.InitializeAivesAsync(builder.Configuration, app.Environment.IsDevelopment());
+if (migrateOnly)
+    return;
 
 if (!app.Environment.IsDevelopment())
 {
@@ -25,6 +32,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.MapHealthChecks("/health");
 
 app.MapControllerRoute(
     name: "default",
