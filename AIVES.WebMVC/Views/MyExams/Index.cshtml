@@ -28,6 +28,7 @@
                         <th scope="col">@L10n.T("Your slot") (@TimeZone.OffsetLabel)</th>
                         <th scope="col">@L10n.T("Order")</th>
                         <th scope="col">@L10n.T("Questions")</th>
+                        <th scope="col">@L10n.T("Viva")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +39,24 @@
                             <td class="text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td>
                             <td>@L10n.Format("{0} of {1}", exam.Order, exam.CandidateCount)</td>
                             <td class="small">@L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)</td>
+                            <td>
+                                @if (exam.InterviewStatus == AIVES.DTO.InterviewStatus.Completed)
+                                {
+                                    <span class="status-label ready">@L10n.T("Completed")</span>
+                                }
+                                else if (now >= exam.StartsAtUtc && now < exam.EndsAtUtc)
+                                {
+                                    <a class="btn btn-sm btn-primary" asp-controller="Interview" asp-action="Index" asp-route-id="@exam.CandidateId">@(exam.InterviewStatus == AIVES.DTO.InterviewStatus.InProgress ? L10n.T("Continue") : L10n.T("Start the viva"))</a>
+                                }
+                                else if (now < exam.StartsAtUtc)
+                                {
+                                    <span class="small text-muted">@L10n.T("Opens at your slot")</span>
+                                }
+                                else
+                                {
+                                    <span class="status-label missing">@(exam.InterviewStatus == AIVES.DTO.InterviewStatus.InProgress ? L10n.T("Not finished") : L10n.T("Missed"))</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

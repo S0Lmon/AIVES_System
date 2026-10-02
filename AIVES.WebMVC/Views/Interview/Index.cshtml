@@ -1,0 +1,76 @@
+@model AIVES.DTO.InterviewStateDto
+@inject AIVES.WebMVC.DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = Model.ExamTitle;
+    var culture = Model.Language.ToSpeechLocale();
+}
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Exams / AI viva</span>
+        <h1>@Model.ExamTitle</h1>
+        <p>@L10n.T("Your slot"): @TimeZone.ToLocal(Model.SlotStartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(Model.SlotEndsAtUtc).ToString("HH:mm") (@TimeZone.OffsetLabel)</p>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<div id="interview"
+     data-base-url="@Url.Content($"~/Interview/{Model.CandidateId}")"
+     data-lang="@culture"
+     data-initial-state="@System.Text.Json.JsonSerializer.Serialize(Model, AIVES.WebMVC.Controllers.InterviewController.JsonOptions)"
+     data-text-main="@L10n.T("Question {0} of {1}")"
+     data-text-followup="@L10n.T("Follow-up question")"
+     data-text-processing="@L10n.T("The examiner is considering your answer…")"
+     data-text-listening="@L10n.T("Listening… speak your answer.")"
+     data-text-speaking="@L10n.T("The examiner is reading the question…")"
+     data-text-no-speech="@L10n.T("Speech recognition is not available in this browser (use Chrome or Edge). Please type your answer.")"
+     data-text-mic-error="@L10n.T("The microphone could not be used. Allow microphone access, or type your answer.")"
+     data-text-error="@L10n.T("Something went wrong. Please try again.")">
+
+    <section class="panel p-4 mb-3" data-step="intro" hidden>
+        <h2 class="h5">@L10n.T("Before you start")</h2>
+        <ul class="mb-3">
+            <li>@L10n.T("The examiner reads each question aloud; answer by speaking. Your words appear as text while you talk.")</li>
+            <li>@L10n.T("Each answer has a time limit. When it runs out, your answer is submitted automatically.")</li>
+            <li>@L10n.T("Depending on your answer, the examiner may ask a follow-up question.")</li>
+            <li>@L10n.T("Use Chrome or Edge, allow the microphone, and stay in a quiet place. Do not reload the page.")</li>
+        </ul>
+        <button type="button" class="btn btn-primary" data-action="start">@L10n.T("Start the viva")</button>
+        <p class="small text-muted mt-2 mb-0">@L10n.T("Speech recognition runs in your browser and may send your audio to the browser's speech service. Only the recognised text is stored by AIVES.")</p>
+    </section>
+
+    <section class="panel p-4 mb-3" data-step="question" hidden>
+        <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+            <span class="badge text-bg-light" data-field="position"></span>
+            <span class="status-label ready" data-field="timer" aria-live="polite"></span>
+        </div>
+        <p class="fs-5 mb-3" data-field="question" aria-live="polite"></p>
+        <p class="small text-muted mb-2" data-field="status" aria-live="polite"></p>
+        <label class="form-label" for="interviewAnswer">@L10n.T("Your answer")</label>
+        <textarea id="interviewAnswer" class="form-control mb-2" rows="5" maxlength="5000" data-field="answer" readonly></textarea>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="interviewTyping" data-field="typing" />
+            <label class="form-check-label" for="interviewTyping">@L10n.T("Type my answer instead of speaking")</label>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-primary" data-action="submit">@L10n.T("Finish my answer")</button>
+            <button type="button" class="btn btn-light" data-action="repeat">@L10n.T("Read the question again")</button>
+        </div>
+    </section>
+
+    <section class="panel p-4 mb-3" data-step="processing" hidden>
+        <p class="mb-0" data-field="processing"></p>
+    </section>
+
+    <section class="panel p-4 mb-3" data-step="done" hidden>
+        <h2 class="h5">@L10n.T("Your viva is complete")</h2>
+        <p class="mb-0">@L10n.T("Thank you. Your answers have been recorded for your lecturer to review.")</p>
+    </section>
+
+    <div class="alert alert-danger" role="alert" data-field="error" hidden></div>
+</div>
+
+<a asp-controller="MyExams" asp-action="Index" class="btn btn-light">@L10n.T("Back to my exams")</a>
+
+@section Scripts { <script src="~/js/interview.js" asp-append-version="true"></script> }
