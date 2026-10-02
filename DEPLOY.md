@@ -120,6 +120,47 @@ docker compose ps -a          # migrate, db-init: Exited (0); web: healthy
 curl -fsS https://TEN_MIEN/health
 ```
 
+## Chạy trên máy Windows qua Cloudflare Tunnel
+
+Dùng khi server là một máy Windows ở nhà/văn phòng (Docker Desktop), không mở được port router hoặc không muốn lộ IP. Cloudflare nhận HTTPS ở tên miền của bạn rồi chuyển vào máy qua kết nối đi ra (outbound) của container `cloudflared`; Caddy chỉ phục vụ HTTP nội bộ.
+
+```text
+Người dùng ──HTTPS──► Cloudflare ──tunnel──► cloudflared ──HTTP──► caddy:80 ──► web × N
+```
+
+**1. Tạo tunnel (một lần).** Trong Cloudflare dashboard: *Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared*, đặt tên (ví dụ `aives`). Ở bước cài đặt, chọn Docker và copy phần token sau `--token` (chuỗi dài bắt đầu bằng `eyJ`). Ở bước *Public Hostname*: chọn subdomain + tên miền (ví dụ `aives.example.com`), *Service* = `HTTP`, *URL* = `caddy:80`.
+
+**2. Cấu hình `.env`:**
+
+```dotenv
+COMPOSE_PROFILES=tunnel
+CLOUDFLARE_TUNNEL_TOKEN=<token vừa copy>
+AIVES_DOMAIN=aives.example.com
+AIVES_CADDY_SITE=:80
+AIVES_HTTP_PORT=127.0.0.1:8088
+AIVES_HTTPS_PORT=127.0.0.1:8443
+```
+
+`AIVES_CADDY_SITE=:80` tắt việc Caddy tự xin chứng chỉ (Cloudflare đã lo HTTPS). Hai dòng port giữ Caddy chỉ mở trên `127.0.0.1`, nên máy khác trong mạng LAN không vào thẳng được; vẫn thử nhanh trên chính máy bằng `http://127.0.0.1:8088`. Caddy tin header `X-Forwarded-Proto` từ dải IP nội bộ (mạng Docker), nên app biết người dùng đang dùng HTTPS: cookie có cờ `Secure` và trả về HSTS.
+
+**3. Chạy** (Git Bash hoặc WSL; trong PowerShell dùng `bash scripts/preflight.sh`):
+
+```bash
+./scripts/preflight.sh
+docker compose up -d --build
+docker compose logs cloudflared | grep -i "registered tunnel connection"
+```
+
+Trong dashboard, tunnel chuyển sang *Healthy*; mở `https://aives.example.com/health` phải thấy `Healthy`.
+
+**4. Để máy chạy như server:**
+
+- Đặt mã nguồn trên ổ ổn định (SSD hệ thống), không đặt trên ổ có lỗi đọc/ghi.
+- Docker Desktop → *Settings → General* → bật **Start Docker Desktop when you sign in**. Docker Desktop chỉ chạy sau khi đăng nhập Windows, nên cần bật đăng nhập tự động (`netplwiz`) hoặc đăng nhập lại sau mỗi lần khởi động. Các container có `restart: unless-stopped` nên tự chạy lại khi Docker lên.
+- *Settings → System → Power*: không cho máy ngủ khi cắm điện.
+- *Windows Update → Advanced options → Active hours*: tránh tự khởi động lại trong giờ sử dụng.
+- Không chạy `docker compose down -v` (xóa database).
+
 ## Scale số instance web
 
 ```bash

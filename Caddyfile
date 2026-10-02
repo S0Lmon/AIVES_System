@@ -1,6 +1,15 @@
-# Reverse proxy in front of the web replicas. Caddy obtains and renews the TLS
-# certificate for AIVES_DOMAIN automatically (a local certificate for "localhost").
-{$AIVES_DOMAIN:localhost} {
+{
+	servers {
+		# Keep X-Forwarded-Proto/For set by a proxy in front of Caddy on the Docker network or LAN
+		# (cloudflared in tunnel mode), so the app still sees that the visitor used HTTPS.
+		trusted_proxies static private_ranges
+	}
+}
+
+# Reverse proxy in front of the web replicas. With a domain as the site address Caddy obtains and
+# renews its TLS certificate automatically (a local certificate for "localhost"). In tunnel mode
+# AIVES_CADDY_SITE is ":80": Cloudflare terminates HTTPS and cloudflared connects over plain HTTP.
+{$AIVES_CADDY_SITE:localhost} {
 	encode zstd gzip
 
 	reverse_proxy {

@@ -125,7 +125,8 @@ services:
     container_name: aives-caddy
     restart: unless-stopped
     environment:
-      AIVES_DOMAIN: "${AIVES_DOMAIN:-localhost}"
+      # A domain (TLS by Caddy), "localhost", or ":80" behind Cloudflare Tunnel.
+      AIVES_CADDY_SITE: "${AIVES_CADDY_SITE:-${AIVES_DOMAIN:-localhost}}"
     ports:
       - "${AIVES_HTTP_PORT:-80}:80"
       - "${AIVES_HTTPS_PORT:-443}:443"
@@ -138,6 +139,21 @@ services:
       - aives-network
     depends_on:
       - web
+
+  # Optional: publish through a Cloudflare Tunnel instead of opening ports 80/443 on the router.
+  # Enabled by COMPOSE_PROFILES=tunnel in .env; the tunnel's public hostname points to http://caddy:80.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: aives-cloudflared
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:-}"
+    networks:
+      - aives-network
+    depends_on:
+      - caddy
 
   # Optional local model: docker compose --profile ollama up -d, then set OLLAMA_ENABLED=true.
   ollama:
