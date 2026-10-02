@@ -52,6 +52,10 @@ public sealed class SubjectRepository(ApplicationDbContext context) : ISubjectRe
         await context.Questions
             .Where(question => question.SubjectId == id)
             .ExecuteUpdateAsync(setters => setters.SetProperty(question => question.SubjectId, (int?)null), cancellationToken);
+        // Same for exams (NO ACTION too); they keep the subject name they were created with.
+        await context.Exams
+            .Where(exam => exam.SubjectId == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(exam => exam.SubjectId, (int?)null), cancellationToken);
 
         context.Subjects.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);

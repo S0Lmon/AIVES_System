@@ -35,6 +35,7 @@ public static class PresentationDependencyInjection
         }
         services.AddAuthorization(options =>
             options.AddPolicy(AuthorizationPolicies.Staff, policy => policy.RequireRole(AppRoles.Admin, AppRoles.Lecturer)));
+        services.AddSingleton<DisplayTimeZone>();
         services.AddControllersWithViews();
         services.Configure<RequestLocalizationOptions>(options =>
         {

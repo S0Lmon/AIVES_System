@@ -546,6 +546,102 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     /// <summary>Adds a subject with one topic straight to the database; names are unique per call.</summary>
+    [SqlFact]
+    public async Task LecturerSchedulesAnExamAndStudentsSeeOnlyTheirOwnSlot()
+    {
+        using var lecturer = app.Browser();
+        await SignIn(lecturer);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        var (subjectId, topicId) = await CreateCatalogTopic("Exam topic");
+        var contents = await AddQuestions(subjectId, topicId, 6);
+
+        // Times are entered in Vietnam time (UTC+7) and shown the same way.
+        var day = DateTime.UtcNow.AddDays(2).Date;
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        {
+            ["Title"] = "Viva schedule test",
+            ["SubjectId"] = subjectId.ToString(),
+            ["TopicId"] = topicId.ToString(),
+            ["StartsAtLocal"] = day.ToString("yyyy-MM-dd") + "T09:00",
+            ["SlotMinutes"] = "10",
+            ["MainQuestionCount"] = "2",
+            ["MaxFollowUpQuestions"] = "1",
+            ["CandidateEmails"] = studentEmail.ToUpperInvariant() + "\nnot.registered@fpt.edu.vn"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        var detailsUrl = created.Headers.Location!.OriginalString;
+        Assert.Matches(@"^/Exam/Details/\d+$", detailsUrl);
+
+        var details = await Html(await lecturer.GetAsync(detailsUrl));
+        Assert.Contains("Viva schedule test", details);
+        Assert.Contains("09:00 – 09:10", details);
+        Assert.Contains("09:10 – 09:20", details);
+        Assert.Contains("Functional Tester", details);        // the registered candidate's name
+        Assert.Contains("not.registered@fpt.edu.vn", details);
+        Assert.Contains("No account yet", details);
+        Assert.Equal(4, contents.Count(content => details.Contains(content)));
+        Assert.Contains("Viva schedule test", await Html(await lecturer.GetAsync("/Exam")));
+
+        // The student sees their slot, never the questions, and cannot open the lecturer pages.
+        var mine = await Html(await student.GetAsync("/MyExams"));
+        Assert.Contains("Viva schedule test", mine);
+        Assert.Contains(day.ToString("yyyy-MM-dd") + " 09:00 – 09:10", mine);
+        Assert.Contains("1 of 2", mine);
+        Assert.DoesNotContain(contents, content => mine.Contains(content));
+        Assert.StartsWith("/Account/AccessDenied", (await student.GetAsync(detailsUrl)).Headers.Location!.PathAndQuery);
+
+        // Another lecturer cannot see it.
+        using var otherLecturer = app.Browser();
+        await SignIn(otherLecturer);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherLecturer.GetAsync(detailsUrl)).StatusCode);
+        Assert.DoesNotContain("Viva schedule test", await Html(await otherLecturer.GetAsync("/Exam")));
+
+        // The owner deletes it.
+        var deleted = await Post(lecturer, detailsUrl, detailsUrl.Replace("Details", "Delete"), new());
+        Assert.Equal("/Exam", deleted.Headers.Location!.OriginalString);
+        Assert.Equal(HttpStatusCode.NotFound, (await lecturer.GetAsync(detailsUrl)).StatusCode);
+        Assert.DoesNotContain("Viva schedule test", await Html(await student.GetAsync("/MyExams")));
+    }
+
+    [SqlFact]
+    public async Task ExamFormExplainsWhyItCannotBeSaved()
+    {
+        using var lecturer = app.Browser();
+        await SignIn(lecturer);
+        var (subjectId, topicId) = await CreateCatalogTopic("Small pool");
+        await AddQuestions(subjectId, topicId, 2);
+
+        var response = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        {
+            ["Title"] = "Too many questions",
+            ["SubjectId"] = subjectId.ToString(),
+            ["TopicId"] = topicId.ToString(),
+            ["StartsAtLocal"] = DateTime.UtcNow.AddDays(3).ToString("yyyy-MM-dd") + "T10:00",
+            ["SlotMinutes"] = "15",
+            ["MainQuestionCount"] = "3",
+            ["MaxFollowUpQuestions"] = "2",
+            ["CandidateEmails"] = "a@fpt.edu.vn"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = await Html(response);
+        Assert.Contains("Only 2 active questions match this subject and topic, but each candidate needs 3.", html);
+        Assert.Contains("value=\"Too many questions\"", html); // the form keeps what was typed
+    }
+
+    /// <summary>Adds active questions to a subject/topic and returns their texts.</summary>
+    private async Task<List<string>> AddQuestions(int subjectId, int topicId, int count)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var contents = Enumerable.Range(1, count).Select(i => $"Exam pool question {i} {Guid.NewGuid():N}").ToList();
+        foreach (var (content, index) in contents.Select((content, index) => (content, index)))
+            db.Questions.Add(new AIVES.DAL.Entities.Question { Content = content, ExpectedAnswer = "Answer", BloomLevelId = index % 4 + 1, SubjectId = subjectId, TopicId = topicId });
+        await db.SaveChangesAsync();
+        return contents;
+    }
+
     private async Task<(int SubjectId, int TopicId)> CreateCatalogTopic(string topicName)
     {
         using var scope = app.Services.CreateScope();

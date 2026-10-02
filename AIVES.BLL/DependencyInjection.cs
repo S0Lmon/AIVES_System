@@ -3,6 +3,7 @@ using AIVES.BLL.Services;
 using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Email;
+using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
@@ -30,6 +31,8 @@ public static class DependencyInjection
         services.AddScoped<IBloomLevelService, BloomLevelService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IExamService, ExamService>();
+        services.AddSingleton(TimeProvider.System);
         // Role changes bump the security stamp; re-check it every minute so a demoted lecturer
         // loses access promptly instead of after the 30 minute default.
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(1));
