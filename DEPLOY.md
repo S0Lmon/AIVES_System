@@ -153,6 +153,15 @@ docker compose logs cloudflared | grep -i "registered tunnel connection"
 
 Trong dashboard, tunnel chuyển sang *Healthy*; mở `https://aives.example.com/health` phải thấy `Healthy`.
 
+**Chưa có tên miền: Quick Tunnel.** Bỏ qua bước 1, trong `.env` đặt `COMPOSE_PROFILES=quicktunnel` (không cần token) và giữ `AIVES_CADDY_SITE=:80` cùng hai dòng port `127.0.0.1`. Cloudflare cấp một địa chỉ HTTPS tạm dạng `https://<ngẫu nhiên>.trycloudflare.com`:
+
+```powershell
+docker compose up -d
+docker compose logs quicktunnel | Select-String "trycloudflare.com"
+```
+
+Địa chỉ **đổi mỗi khi container `quicktunnel` khởi động lại** (khởi động lại máy/Docker), và Cloudflare chỉ dành Quick Tunnel cho thử nghiệm/demo (không cam kết uptime, giới hạn số request đồng thời). Khi có tên miền, chuyển sang `COMPOSE_PROFILES=tunnel` như trên.
+
 **4. Để máy chạy như server:**
 
 - Đặt mã nguồn trên ổ ổn định (SSD hệ thống), không đặt trên ổ có lỗi đọc/ghi.
