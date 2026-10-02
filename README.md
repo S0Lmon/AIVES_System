@@ -112,6 +112,26 @@ Nếu chưa có Gemini key, giao diện AI báo chưa cấu hình. Nếu SMTP ch
 
 Model mặc định trong repository là `gemini-3.8-flash`; cần kiểm tra model và quyền truy cập thực tế của tài khoản trước khi sử dụng.
 
+### Tài khoản demo khi phát triển
+
+Khi chưa cấu hình SMTP, có thể tạo sẵn hai tài khoản đã xác minh email để đăng nhập ngay: một giảng viên (user thường) và một admin. Tài khoản được tạo khi ứng dụng khởi động; mật khẩu tối thiểu 8 ký tự và có ít nhất một chữ số.
+
+```powershell
+# Giảng viên — chỉ được tạo khi chạy Development
+dotnet user-secrets set "Development:TestAccount:Email" "lecturer.demo@gmail.com" --project AIVES.WebMVC
+dotnet user-secrets set "Development:TestAccount:Password" "<LECTURER_PASSWORD>" --project AIVES.WebMVC
+dotnet user-secrets set "Development:TestAccount:DisplayName" "Giảng viên Demo" --project AIVES.WebMVC
+
+# Admin — tài khoản demo được gán quyền qua AdminAccess:Emails
+dotnet user-secrets set "DemoAccount:Enabled" "true" --project AIVES.WebMVC
+dotnet user-secrets set "DemoAccount:Email" "admin.demo@gmail.com" --project AIVES.WebMVC
+dotnet user-secrets set "DemoAccount:Password" "<ADMIN_PASSWORD>" --project AIVES.WebMVC
+dotnet user-secrets set "DemoAccount:DisplayName" "Admin Demo" --project AIVES.WebMVC
+dotnet user-secrets set "AdminAccess:Emails:0" "admin.demo@gmail.com" --project AIVES.WebMVC
+```
+
+Khởi động lại ứng dụng rồi đăng nhập tại `/Account/Login`. Tài khoản giảng viên truy cập ngân hàng câu hỏi, AI và Profile; chỉ tài khoản admin vào được `/Admin`. Nếu đặt thêm `DemoAccount:ResetPasswordOnStartup` là `true`, mật khẩu admin sẽ được đặt lại theo cấu hình mỗi lần khởi động. Không commit mật khẩu thật vào Git.
+
 ## Danh mục Môn học → Chủ đề → Tài liệu
 
 Ngoài ngân hàng câu hỏi, hệ thống có một danh mục phục vụ việc tạo câu hỏi bằng AI:
