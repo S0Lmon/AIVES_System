@@ -53,6 +53,8 @@ public static class DependencyInjection
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             dbContext.Database.Migrate();
+            await AdminRoleSeeder.EnsureRolesAsync(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
+            await AdminRoleSeeder.AssignDefaultRoleToRolelessUsersAsync(dbContext, scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>());
             if (isDevelopment)
             {
                 await DevelopmentDataSeeder.SeedAsync(dbContext);
@@ -82,6 +84,7 @@ public static class DependencyInjection
                             throw new InvalidOperationException($"Could not create the Development test account: {errors}");
                         }
                     }
+                    await AdminRoleSeeder.EnsureLecturerAsync(userManager, testUser);
                 }
             }
 
@@ -142,6 +145,7 @@ public static class DependencyInjection
                         }
                     }
                 }
+                await AdminRoleSeeder.EnsureLecturerAsync(userManager, demoUser);
             }
         }
 

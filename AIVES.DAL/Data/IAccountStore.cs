@@ -16,4 +16,7 @@ public interface IAccountStore
     Task<ExternalLoginDto?> GetExternalLoginInfoAsync();
     Task<ExternalSignInResultDto> ExternalLoginSignInAsync(string provider, string key);
     Task<AccountResult> AddLoginAsync(string userId, ExternalLoginDto info);
+    Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync();
+    /// <summary>Makes <paramref name="role"/> the user's only assignable role and invalidates their sign-in cookie.</summary>
+    Task<AccountResult> SetAssignableRoleAsync(string userId, string role);
 }
