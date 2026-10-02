@@ -21,7 +21,8 @@ Internet ──HTTPS──► caddy (TLS tự động, HTTP→HTTPS, cân bằng
 Thứ tự khởi động: `sqlserver` healthy → `migrate` áp dụng migrations và seed rồi thoát → `db-init` tạo/cập nhật login `aives_app` rồi thoát → các instance `web` → `caddy`.
 
 - **Chỉ `migrate` đổi schema** và là container duy nhất (cùng `db-init`) dùng `sa`. Các instance web chạy với `Database:MigrateOnStartup=false` và login `aives_app` chỉ có quyền `db_datareader`/`db_datawriter`, không tạo/sửa bảng được.
-- **Khóa Data Protection** (mã hóa cookie đăng nhập và antiforgery token) lưu trong bảng `DataProtectionKeys`, dùng chung giữa các instance. Người dùng không bị đăng xuất khi deploy lại hoặc khi request chuyển sang instance khác. Khóa được lưu chưa mã hóa trong database, vì vậy cần bảo vệ backup như dữ liệu nhạy cảm.
+- **Khóa Data Protection** (mã hóa cookie đăng nhập và antiforgery token) lưu trong bảng `DataProtectionKeys`, dùng chung giữa các instance. Người dùng không bị đăng xuất khi deploy lại hoặc khi request chuyển sang instance khác. Khóa được **mã hóa bằng chứng chỉ** `secrets/dataprotection.pfx` trước khi ghi vào database, nên lộ file backup database thôi thì không giả mạo được cookie. Chứng chỉ được nạp vào container dưới dạng Docker secret, không nằm trong image hay Git.
+- App không tự chuyển hướng HTTPS khi `ReverseProxy:TerminatesHttps=true` (compose đã đặt sẵn) vì Caddy đã làm việc này.
 - **Web không mở port ra ngoài**; chỉ `caddy` nhận traffic. Caddy tự lấy chứng chỉ Let's Encrypt cho `AIVES_DOMAIN` và tự phát hiện instance web mới sau mỗi 10 giây.
 - `GET /health` trả `Healthy` khi instance kết nối được database; Docker dùng nó làm healthcheck của `web`.
 
@@ -57,6 +58,7 @@ Các biến bắt buộc:
 | `MSSQL_SA_PASSWORD` | Mật khẩu `sa`, chỉ dùng cho `migrate` và `db-init` |
 | `MSSQL_APP_PASSWORD` | Mật khẩu login `aives_app` mà các instance web dùng; phải khác mật khẩu `sa` |
 | `AIVES_DOMAIN` | Tên miền công khai, ví dụ `aives.example.edu.vn`; để `localhost` khi thử trên máy |
+| `DATAPROTECTION_CERT_PASSWORD` | Mật khẩu của chứng chỉ mã hóa khóa cookie `secrets/dataprotection.pfx` |
 
 Hai mật khẩu SQL phải đủ mạnh (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký hiệu) và không chứa dấu chấm phẩy, dấu nháy đơn hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
 
@@ -66,9 +68,21 @@ Biến tùy chọn: `AIVES_WEB_REPLICAS` (số instance web, mặc định 2), `
 
 WebMVC là Presentation; BLL xử lý nghiệp vụ; DAL chứa EF Core, repository và migrations; DTO chứa dữ liệu trao đổi. Dockerfile restore cả bốn project trước khi publish. Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md) và lệnh EF Core với `--project AIVES.DAL --startup-project AIVES.WebMVC`. Các biến cấu hình triển khai giữ nguyên.
 
+## Kiểm tra cấu hình (preflight)
+
+```bash
+chmod +x scripts/preflight.sh
+./scripts/preflight.sh
+```
+
+Script đọc `.env` và dừng với mã lỗi nếu: thiếu biến bắt buộc, còn giá trị mẫu, mật khẩu SQL yếu hoặc chứa ký tự cấm, hai mật khẩu SQL trùng nhau, hoặc chứng chỉ không mở được bằng mật khẩu. Lần đầu chạy, script **tự tạo** `secrets/dataprotection.pfx` (RSA 3072, hiệu lực 10 năm; cần `openssl`). Các mục chưa cấu hình như Gemini, SMTP, `ADMIN_EMAIL` hay tên miền `localhost` chỉ hiện cảnh báo.
+
+**Sao lưu `secrets/dataprotection.pfx` cùng mật khẩu** ra nơi an toàn ngoài server. Nếu mất file này, các khóa trong database không giải mã được nữa: mọi người dùng bị đăng xuất, và phải xóa bảng `DataProtectionKeys` để app tạo khóa mới.
+
 ## Build và chạy
 
 ```bash
+./scripts/preflight.sh
 docker compose config
 docker compose up -d --build
 docker compose ps
@@ -128,8 +142,18 @@ docker compose exec ollama ollama pull phi3:mini
 ```bash
 cd AIVES_System
 git pull origin main
+./scripts/preflight.sh
 docker compose up -d --build
 docker image prune -f
+```
+
+### Nâng cấp server đã chạy bản trước khi có chứng chỉ
+
+Các khóa tạo trước khi bật chứng chỉ vẫn nằm trong database ở dạng chưa mã hóa cho tới khi hết hạn (90 ngày). Muốn loại bỏ ngay thì xóa chúng một lần sau khi deploy bản mới. Mọi người dùng sẽ phải đăng nhập lại một lần:
+
+```bash
+docker exec -e SQLCMDPASSWORD="$(grep '^MSSQL_SA_PASSWORD=' .env | cut -d= -f2-)" aives-sqlserver   /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -d AIVES   -Q "DELETE FROM DataProtectionKeys WHERE Xml LIKE '%<masterKey%'"
+docker compose restart web
 ```
 
 ## Dừng và khởi động lại
@@ -156,6 +180,8 @@ docker cp aives-sqlserver:/var/opt/mssql/data/AIVES.bak ./backups/AIVES.bak
 ```
 
 Không chạy `docker compose down -v` trên server đang có dữ liệu vì tùy chọn `-v` xóa volume SQL Server.
+
+Bản backup chứa khóa cookie đã mã hóa; để khôi phục sang server khác, mang theo cả `secrets/dataprotection.pfx` và `DATAPROTECTION_CERT_PASSWORD`, nếu không người dùng sẽ phải đăng nhập lại.
 
 ## Google OAuth khi có tên miền
 
