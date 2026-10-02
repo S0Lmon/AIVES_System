@@ -235,7 +235,7 @@ Các lệnh yêu cầu công cụ `dotnet-ef` tương thích EF Core 10. Databas
 
 ## Giới hạn hiện tại
 
-- Kiểm tra tích hợp thật gần nhất: Gemini trả HTTP 503, Gmail SMTP từ chối xác thực với mã 534. Google OAuth chưa được kiểm thử đầy đủ qua consent/token exchange thật.
+- Kiểm tra tích hợp thật gần nhất (03/10/2026): Gemini sinh câu hỏi thành công qua giao diện, có grounding theo tài liệu. Request Gemini trước đây bị gửi nhầm tới địa chỉ Ollama do hai HttpClient trùng tên (đã sửa). Gemini đôi khi trả 503 khi model quá tải; app tự thử lại tối đa 2 lần, và nếu một model quá tải kéo dài thì đổi `GEMINI_MODEL` (ví dụ `gemini-3.5-flash`). Gmail SMTP từ chối xác thực với mã 534 khi dùng mật khẩu thường thay vì App Password. Google OAuth chưa được kiểm thử đầy đủ qua consent/token exchange thật.
 - Ollama đã được cài và `phi3:mini` đã kéo về; đã kiểm chứng thật qua bảng trượt AI: 2 câu trong khoảng 9 giây, và có grounding "Grounded in 1 material item" khi bật tài liệu làm ngữ cảnh.
 - AI exam room đang tạm tắt cho tới khi luồng phòng thi được thiết kế lại.
 - Câu hỏi AI tạo ra là bản nháp để giảng viên duyệt, chưa có bước lưu hàng loạt vào ngân hàng câu hỏi.
