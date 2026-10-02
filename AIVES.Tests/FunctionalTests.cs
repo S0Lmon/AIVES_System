@@ -92,6 +92,15 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(route)).StatusCode);
     }
 
+    [SqlFact]
+    public async Task HealthEndpointIsAnonymousAndChecksTheDatabase()
+    {
+        using var browser = app.Browser();
+        var response = await browser.GetAsync("/health");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
     [SqlTheory]
     [InlineData("/")]
     [InlineData("/Home/Privacy")]

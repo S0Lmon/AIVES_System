@@ -1,10 +1,11 @@
 using AIVES.DAL.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace AIVES.DAL.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -48,6 +49,11 @@ namespace AIVES.DAL.Data
             get; set;
         }
         public DbSet<EmailVerificationCode> EmailVerificationCodes
+        {
+            get; set;
+        }
+        // Shared cookie/antiforgery keys so every web instance can read what another issued.
+        public DbSet<DataProtectionKey> DataProtectionKeys
         {
             get; set;
         }

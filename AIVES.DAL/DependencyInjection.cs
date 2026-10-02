@@ -1,6 +1,7 @@
 using AIVES.DAL.Data;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DAL.Entities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +18,11 @@ public static class DependencyInjection
         services.AddIdentity<ApplicationUser, IdentityRole>(configureIdentity)
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
-
+        services.AddDataProtection()
+            .PersistKeysToDbContext<ApplicationDbContext>()
+            .SetApplicationName("AIVES");
+        services.AddHealthChecks()
+            .AddDbContextCheck<ApplicationDbContext>("database");
 
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IRubricRepository, RubricRepository>();
