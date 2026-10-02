@@ -64,6 +64,14 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<ExamAttempt> ExamAttempts
+        {
+            get; set;
+        }
+        public DbSet<ExamTurn> ExamTurns
+        {
+            get; set;
+        }
         // Shared cookie/antiforgery keys so every web instance can read what another issued.
         public DbSet<DataProtectionKey> DataProtectionKeys
         {
@@ -230,6 +238,9 @@ namespace AIVES.DAL.Data
                 entity.Property(e => e.SubjectName).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.TopicName).HasMaxLength(200);
                 entity.Property(e => e.CreatedById).IsRequired().HasMaxLength(450);
+                entity.Property(e => e.Language).IsRequired().HasMaxLength(10).HasDefaultValue("vi-VN");
+                entity.Property(e => e.AnswerTimeLimitSeconds).HasDefaultValue(120);
+                entity.Property(e => e.MaxFollowUpsPerQuestion).HasDefaultValue(2);
                 entity.HasIndex(e => e.CreatedById);
                 entity.HasIndex(e => e.StartsAtUtc);
                 // NO ACTION like Question -> Subject: Subject -> Topic -> Exam would be a second cascade
@@ -269,6 +280,26 @@ namespace AIVES.DAL.Data
                     .WithMany()
                     .HasForeignKey(e => e.QuestionId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+            modelBuilder.Entity<ExamAttempt>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.ExamCandidateId).IsUnique();
+                entity.HasOne(e => e.Candidate)
+                    .WithOne(e => e.Attempt)
+                    .HasForeignKey<ExamAttempt>(e => e.ExamCandidateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<ExamTurn>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.QuestionText).IsRequired();
+                entity.Property(e => e.AnsweredAtUtc).IsConcurrencyToken();
+                entity.HasIndex(e => new { e.ExamAttemptId, e.Order }).IsUnique();
+                entity.HasOne(e => e.Attempt)
+                    .WithMany(e => e.Turns)
+                    .HasForeignKey(e => e.ExamAttemptId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<BloomLevel>().HasData(
                 new BloomLevel { Id = 1, Name = "Remember", Order = 1, Description = "Recall facts and basic concepts" },

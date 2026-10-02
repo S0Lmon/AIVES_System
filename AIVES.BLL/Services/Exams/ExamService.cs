@@ -47,7 +47,8 @@ public sealed class ExamService(
         if (existing.SubjectId is not int subjectId)
             throw new InvalidOperationException(L10n.T("The subject of this exam was deleted, so new questions cannot be drawn."));
         var input = new ExamInput(existing.Title, subjectId, existing.TopicId, existing.StartsAtUtc, existing.SlotMinutes,
-            existing.MainQuestionCount, existing.MaxFollowUpQuestions, existing.Candidates.Select(candidate => candidate.Email).ToList());
+            existing.MainQuestionCount, existing.MaxFollowUpQuestions, existing.Candidates.Select(candidate => candidate.Email).ToList(),
+            existing.AnswerTimeLimitSeconds, existing.MaxFollowUpsPerQuestion, existing.Language);
         var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, cancellationToken);
         await exams.UpdateAsync(id, draft, cancellationToken);
         logger.LogInformation("User {UserId} redrew the questions of exam {ExamId}", actor.UserId, id);
@@ -101,6 +102,14 @@ public sealed class ExamService(
             throw new ArgumentException(L10n.Format("The number of main questions must be between 1 and {0}.", ExamLimits.MaxMainQuestions), nameof(input));
         if (input.MaxFollowUpQuestions is < 0 or > ExamLimits.MaxFollowUpQuestions)
             throw new ArgumentException(L10n.Format("The number of follow-up questions must be between 0 and {0}.", ExamLimits.MaxFollowUpQuestions), nameof(input));
+        if (input.AnswerTimeLimitSeconds is < ExamLimits.MinAnswerSeconds or > ExamLimits.MaxAnswerSeconds)
+            throw new ArgumentException(L10n.Format("The answer time limit must be between {0} and {1} seconds.", ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds), nameof(input));
+        if (input.AnswerTimeLimitSeconds > input.SlotMinutes * 60)
+            throw new ArgumentException(L10n.T("The answer time limit cannot be longer than a candidate's slot."), nameof(input));
+        if (input.MaxFollowUpsPerQuestion is < 0 or > ExamLimits.MaxFollowUpsPerQuestionLimit)
+            throw new ArgumentException(L10n.Format("Follow-ups per question must be between 0 and {0}.", ExamLimits.MaxFollowUpsPerQuestionLimit), nameof(input));
+        if (!Enum.IsDefined(input.Language))
+            throw new ArgumentException(L10n.T("Choose the interview language."), nameof(input));
         if (input.StartsAtUtc <= clock.GetUtcNow().UtcDateTime)
             throw new ArgumentException(L10n.T("The exam must start in the future."), nameof(input));
 
@@ -134,7 +143,8 @@ public sealed class ExamService(
             .ToList();
 
         var draft = new ExamDraft(title, subject.Id, subject.Name, topic?.Id, topic?.Name, input.StartsAtUtc, input.SlotMinutes,
-            input.MainQuestionCount, input.MaxFollowUpQuestions, ownerId, candidates);
+            input.MainQuestionCount, input.MaxFollowUpQuestions, ownerId, candidates,
+            input.AnswerTimeLimitSeconds, input.MaxFollowUpsPerQuestion, input.Language);
         return (draft, allocation.ConsecutiveOverlaps);
     }
 

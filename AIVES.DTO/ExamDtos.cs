@@ -9,7 +9,10 @@ public sealed record ExamInput(
     int SlotMinutes,
     int MainQuestionCount,
     int MaxFollowUpQuestions,
-    IReadOnlyList<string> CandidateEmails);
+    IReadOnlyList<string> CandidateEmails,
+    int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
+    int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
+    AppLanguage Language = AppLanguage.Vi);
 
 /// <summary>Limits shared by validation and the form.</summary>
 public static class ExamLimits
@@ -20,6 +23,11 @@ public static class ExamLimits
     public const int MaxMainQuestions = 20;
     public const int MaxFollowUpQuestions = 20;
     public const int MaxCandidates = 300;
+    public const int MinAnswerSeconds = 30;
+    public const int MaxAnswerSeconds = 900;
+    public const int DefaultAnswerSeconds = 120;
+    public const int MaxFollowUpsPerQuestionLimit = 5;
+    public const int DefaultFollowUpsPerQuestion = 2;
 }
 
 /// <summary>An active question that may be drawn for an exam.</summary>
@@ -43,7 +51,10 @@ public sealed record ExamDraft(
     int MainQuestionCount,
     int MaxFollowUpQuestions,
     string CreatedById,
-    IReadOnlyList<ExamCandidateDraft> Candidates);
+    IReadOnlyList<ExamCandidateDraft> Candidates,
+    int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
+    int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
+    AppLanguage Language = AppLanguage.Vi);
 
 public sealed record ExamSummaryDto(
     int Id,
@@ -62,7 +73,9 @@ public sealed record ExamCandidateDto(
     string? DisplayName,
     DateTime StartsAtUtc,
     DateTime EndsAtUtc,
-    IReadOnlyList<ExamAssignedQuestion> Questions);
+    IReadOnlyList<ExamAssignedQuestion> Questions,
+    int CandidateId = 0,
+    InterviewRecordDto? Interview = null);
 
 public sealed record ExamDetailsDto(
     int Id,
@@ -77,7 +90,10 @@ public sealed record ExamDetailsDto(
     int MainQuestionCount,
     int MaxFollowUpQuestions,
     string CreatedById,
-    IReadOnlyList<ExamCandidateDto> Candidates)
+    IReadOnlyList<ExamCandidateDto> Candidates,
+    int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
+    int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
+    AppLanguage Language = AppLanguage.Vi)
 {
     public bool HasStarted(DateTime nowUtc) => nowUtc >= StartsAtUtc;
 }
@@ -93,7 +109,9 @@ public sealed record StudentExamDto(
     DateTime StartsAtUtc,
     DateTime EndsAtUtc,
     int MainQuestionCount,
-    int MaxFollowUpQuestions);
+    int MaxFollowUpQuestions,
+    int CandidateId = 0,
+    InterviewStatus? InterviewStatus = null);
 
 /// <summary>Who is acting on an exam: lecturers manage their own exams, administrators every exam.</summary>
 public sealed record ExamActor(string UserId, bool IsAdmin);
