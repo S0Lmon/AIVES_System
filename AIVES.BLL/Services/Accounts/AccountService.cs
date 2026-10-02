@@ -12,6 +12,7 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
 {
     public bool IsGoogleConfigured => !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientId"]) && !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientSecret"]);
     public bool IsEmailConfigured => emailSender.IsConfigured;
+    public IReadOnlyList<string> AllowedEmailDomains { get; } = ReadAllowedEmailDomains(configuration);
     public Task<AccountResult> LoginAsync(string email, string password, bool rememberMe) => store.PasswordSignInAsync(email.Trim(), password, rememberMe);
     public Task<UserProfileDto?> GetProfileAsync(string userId) => store.GetProfileAsync(userId);
     public async Task<AccountResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
@@ -21,8 +22,9 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
             Email = request.Email.Trim(),
             DisplayName = request.DisplayName.Trim()
         };
-        if (!request.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
-            return AccountResult.Failure(L10n.T("Please use a @gmail.com address."));
+        if (!IsAllowedEmailDomain(request.Email))
+            return AccountResult.Failure(L10n.Format("Please use an email address ending in {0}.",
+                string.Join(", ", AllowedEmailDomains.Select(domain => "@" + domain))));
         if (!IsEmailConfigured)
             return AccountResult.Failure(L10n.T("The verification code cannot be sent right now. Please try again later or contact an administrator."));
         var result = await store.CreateAsync(request);
@@ -89,4 +91,28 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
         return AccountResult.Success(user);
     }
     public Task LogoutAsync() => store.SignOutAsync();
+
+    // Exact match on the part after the last "@", so "user@notgmail.com" or
+    // "user@gmail.com.example.org" never pass for "gmail.com".
+    private bool IsAllowedEmailDomain(string email)
+    {
+        var at = email.LastIndexOf('@');
+        return at > 0 && AllowedEmailDomains.Contains(email[(at + 1)..], StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Registration:AllowedEmailDomains as an array (appsettings, or env vars ending in __0, __1)
+    /// or one comma-separated value; falls back to gmail.com when nothing is configured.
+    /// </summary>
+    private static IReadOnlyList<string> ReadAllowedEmailDomains(IConfiguration configuration)
+    {
+        var section = configuration.GetSection("Registration:AllowedEmailDomains");
+        var domains = section.GetChildren().Select(child => child.Value).Append(section.Value)
+            .SelectMany(value => (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(domain => domain.TrimStart('@').ToLowerInvariant())
+            .Where(domain => domain.Length > 0)
+            .Distinct()
+            .ToList();
+        return domains.Count > 0 ? domains : ["gmail.com"];
+    }
 }
