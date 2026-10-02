@@ -3,6 +3,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using AIVES.DAL.Data;
+using AIVES.DTO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -59,10 +60,18 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Account/VerifyEmail", response.Headers.Location!.OriginalString);
     }
-    private async Task<string> SignIn(HttpClient browser)
+    /// <summary>Registers, gives the account <paramref name="role"/> before verification signs it in, and returns the email.</summary>
+    private async Task<string> SignIn(HttpClient browser, string role = AppRoles.Lecturer)
     {
         var email = Email();
         await Register(browser, email);
+        if (role != AppRoles.Default)
+        {
+            using var scope = app.Services.CreateScope();
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            var user = await store.FindByEmailAsync(email);
+            Assert.True((await store.SetAssignableRoleAsync(user!.Id, role)).Succeeded);
+        }
         var response = await Post(browser, "/Account/VerifyEmail?email=" + email, "/Account/VerifyEmail", new()
         {
             ["Email"] = email,
@@ -164,6 +173,142 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
         Assert.Equal("/", login.Headers.Location!.OriginalString);
         Assert.Contains(login.Headers.GetValues("Set-Cookie"), c => c.StartsWith("AIVES.Auth=") && c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [SqlFact]
+    public async Task NewAccountsAreStudentsAndCannotReachLecturerPages()
+    {
+        using var browser = app.Browser();
+        var email = await SignIn(browser, AppRoles.Student);
+        using (var scope = app.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            var profile = await store.GetProfileAsync((await store.FindByEmailAsync(email))!.Id);
+            Assert.Equal([AppRoles.Student], profile!.Roles);
+        }
+
+        foreach (var page in new[] { "/Question", "/Question/Create", "/Question?tab=ai", "/Rubric", "/Catalog", "/Admin", "/Admin/Users" })
+        {
+            var response = await browser.GetAsync(page);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.StartsWith("/Account/AccessDenied", response.Headers.Location!.PathAndQuery);
+        }
+
+        // Writes are refused too, not just hidden: a valid antiforgery token does not get past the role check.
+        var subjectName = "Student subject " + Guid.NewGuid().ToString("N")[..8];
+        var write = await Post(browser, "/", "/Catalog/CreateSubject", new() { ["Name"] = subjectName, ["Description"] = string.Empty });
+        Assert.StartsWith("/Account/AccessDenied", write.Headers.Location!.PathAndQuery);
+        using (var scope = app.Services.CreateScope())
+            Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Subjects.AnyAsync(subject => subject.Name == subjectName));
+
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/Account/AccessDenied")).StatusCode);
+        var home = await Html(await browser.GetAsync("/"));
+        Assert.DoesNotContain("href=\"/Question?tab=bank\"", home);
+        Assert.DoesNotContain("href=\"/Admin/Users\"", home);
+    }
+
+    [SqlFact]
+    public async Task LecturersReachTheBanksButNotTheUsersPage()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        foreach (var page in new[] { "/Question", "/Rubric", "/Catalog" })
+            Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(page)).StatusCode);
+        Assert.Contains("href=\"/Question?tab=bank\"", await Html(await browser.GetAsync("/")));
+
+        var users = await browser.GetAsync("/Admin/Users");
+        Assert.StartsWith("/Account/AccessDenied", users.Headers.Location!.PathAndQuery);
+    }
+
+    [SqlFact]
+    public async Task AdminPromotesAStudentWhoThenReachesTheQuestionBank()
+    {
+        using var admin = app.Browser();
+        await SignInAsAdmin(admin);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        string studentId;
+        using (var scope = app.Services.CreateScope())
+            studentId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(studentEmail))!.Id;
+
+        var page = await Html(await admin.GetAsync("/Admin/Users"));
+        Assert.Contains(studentEmail, page);
+
+        var promoted = await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = studentId, ["role"] = AppRoles.Lecturer });
+        Assert.Equal(HttpStatusCode.Redirect, promoted.StatusCode);
+        Assert.Contains($"{studentEmail} is now Lecturer.", await Html(await admin.GetAsync("/Admin/Users")));
+        using (var scope = app.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            Assert.Equal([AppRoles.Lecturer], (await store.GetProfileAsync(studentId))!.Roles);
+        }
+
+        // A fresh sign-in carries the new role (an open session picks it up at the next stamp check).
+        await Post(student, "/", "/Account/Logout", new());
+        var login = await Post(student, "/Account/Login", "/Account/Login", new() { ["Email"] = studentEmail, ["Password"] = Password });
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await student.GetAsync("/Question")).StatusCode);
+    }
+
+    [SqlFact]
+    public async Task UsersPageRefusesAdminRoleAndSelfChanges()
+    {
+        using var admin = app.Browser();
+        var adminId = await SignInAsAdmin(admin);
+        using var other = app.Browser();
+        var otherEmail = await SignIn(other, AppRoles.Student);
+        string otherId;
+        using (var scope = app.Services.CreateScope())
+            otherId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(otherEmail))!.Id;
+
+        await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = otherId, ["role"] = AppRoles.Admin });
+        Assert.Contains("That role cannot be assigned here.", await Html(await admin.GetAsync("/Admin/Users")));
+        await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = adminId, ["role"] = AppRoles.Student });
+        Assert.Contains("You cannot change your own role.", await Html(await admin.GetAsync("/Admin/Users")));
+
+        using var scope2 = app.Services.CreateScope();
+        var store = scope2.ServiceProvider.GetRequiredService<IAccountStore>();
+        Assert.Equal([AppRoles.Student], (await store.GetProfileAsync(otherId))!.Roles);
+        Assert.Contains(AppRoles.Admin, (await store.GetProfileAsync(adminId))!.Roles);
+    }
+
+    [SqlFact]
+    public async Task AccountsWithoutARoleBecomeStudentsAtStartup()
+    {
+        string id;
+        using (var scope = app.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<AIVES.DAL.Entities.ApplicationUser>>();
+            var email = Email();
+            var legacy = new AIVES.DAL.Entities.ApplicationUser { UserName = email, Email = email, DisplayName = "Legacy", EmailConfirmed = true };
+            Assert.True((await users.CreateAsync(legacy)).Succeeded);
+            Assert.Empty(await users.GetRolesAsync(legacy));
+            id = legacy.Id;
+        }
+
+        // The same initialisation the migrate container runs on every deploy.
+        await AIVES.BLL.DependencyInjection.InitializeAivesAsync(app.Services, app.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(), isDevelopment: false);
+
+        using var check = app.Services.CreateScope();
+        Assert.Equal([AppRoles.Student], (await check.ServiceProvider.GetRequiredService<IAccountStore>().GetProfileAsync(id))!.Roles);
+    }
+
+    /// <summary>Creates a confirmed administrator directly and signs it in; returns its user id.</summary>
+    private async Task<string> SignInAsAdmin(HttpClient browser)
+    {
+        var email = Email();
+        string id;
+        using (var scope = app.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<AIVES.DAL.Entities.ApplicationUser>>();
+            var user = new AIVES.DAL.Entities.ApplicationUser { UserName = email, Email = email, DisplayName = "Admin Tester", EmailConfirmed = true };
+            Assert.True((await users.CreateAsync(user, Password)).Succeeded);
+            Assert.True((await users.AddToRoleAsync(user, AppRoles.Admin)).Succeeded);
+            id = user.Id;
+        }
+        var login = await Post(browser, "/Account/Login", "/Account/Login", new() { ["Email"] = email, ["Password"] = Password });
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        return id;
     }
 
     [SqlFact]

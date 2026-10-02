@@ -1,0 +1,11 @@
+@{ ViewData["Title"] = @L10n.T("Access denied"); }
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Account / Access</span>
+        <h1>@L10n.T("You do not have access to this page")</h1>
+        <p>@L10n.T("The question bank, rubrics and catalogue are for lecturers. If you are a lecturer, ask an administrator to give your account the lecturer role.")</p>
+    </div>
+</div>
+
+<a asp-controller="Home" asp-action="Index" class="btn btn-primary">@L10n.T("Back to overview")</a>

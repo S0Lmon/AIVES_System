@@ -15,7 +15,7 @@ public static class PresentationDependencyInjection
         services.ConfigureApplicationCookie(options =>
         {
             options.LoginPath = "/Account/Login";
-            options.AccessDeniedPath = "/Account/Login";
+            options.AccessDeniedPath = "/Account/AccessDenied";
             options.Cookie.Name = "AIVES.Auth";
             options.Cookie.HttpOnly = true;
             options.Cookie.SameSite = SameSiteMode.Lax;
@@ -33,6 +33,8 @@ public static class PresentationDependencyInjection
                 options.ClientSecret = googleClientSecret;
             });
         }
+        services.AddAuthorization(options =>
+            options.AddPolicy(AuthorizationPolicies.Staff, policy => policy.RequireRole(AppRoles.Admin, AppRoles.Lecturer)));
         services.AddControllersWithViews();
         services.Configure<RequestLocalizationOptions>(options =>
         {

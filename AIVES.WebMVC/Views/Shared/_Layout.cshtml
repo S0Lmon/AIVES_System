@@ -26,18 +26,24 @@
             <nav class="side-nav" aria-label="Main navigation">
                 <span class="nav-label">@L10n.T("Work space")</span>
                 <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index"><span class="nav-icon">OV</span> @L10n.T("Overview")</a>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">QB</span> @L10n.T("Question bank")</a>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">RB</span> @L10n.T("Rubric bank")</a>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index"><span class="nav-icon">SJ</span> @L10n.T("Catalog")</a>
+                @if (User.IsInRole(AIVES.DTO.AppRoles.Admin) || User.IsInRole(AIVES.DTO.AppRoles.Lecturer))
+                {
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">QB</span> @L10n.T("Question bank")</a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">RB</span> @L10n.T("Rubric bank")</a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index"><span class="nav-icon">SJ</span> @L10n.T("Catalog")</a>
+                }
                 <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">EX</span> @L10n.T("Exams") <small>@L10n.T("Under construction")</small></span>
                 <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">AI</span> @L10n.T("AI exam room") <small>@L10n.T("Disabled")</small></span>
                 <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">GR</span> @L10n.T("Grading") <small>@L10n.T("Under construction")</small></span>
                 <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">RP</span> @L10n.T("Reports") <small>@L10n.T("Under construction")</small></span>
                 <span class="nav-label nav-label-spaced">@L10n.T("System")</span>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">US</span> @L10n.T("Users")</span>
+                @if (User.IsInRole(AIVES.DTO.AppRoles.Admin))
+                {
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Users" ? "active" : "")" asp-controller="Admin" asp-action="Users"><span class="nav-icon">US</span> @L10n.T("Users") <small>@L10n.T("Admin")</small></a>
+                }
                 @if (User.IsInRole(AIVES.DTO.AdminRoles.RoleName))
                 {
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" ? "active" : "")" asp-controller="Admin" asp-action="Index"><span class="nav-icon">AD</span> @L10n.T("System check") <small>@L10n.T("Admin")</small></a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Admin" asp-action="Index"><span class="nav-icon">AD</span> @L10n.T("System check") <small>@L10n.T("Admin")</small></a>
                 }
                 <a class="side-link" asp-controller="Home" asp-action="Privacy"><span class="nav-icon">ST</span> @L10n.T("Data policy")</a>
             </nav>

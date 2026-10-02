@@ -9,7 +9,7 @@ namespace AIVES.WebMVC.Controllers;
 /// generator lives in the compact panel on the question pages, so any old link is sent there
 /// with the panel already open.
 /// </summary>
-[Authorize]
+[Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class AiExamRoomController : Controller
 {
     [HttpGet]

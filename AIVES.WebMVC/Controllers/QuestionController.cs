@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace AIVES.WebMVC.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = AuthorizationPolicies.Staff)]
     public class QuestionController : Controller
     {
         private readonly IQuestionService _questionService;
