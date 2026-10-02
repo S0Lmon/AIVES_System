@@ -25,7 +25,10 @@ if (!app.Environment.IsDevelopment())
 var localizationOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;
 
 app.UseRequestLocalization(localizationOptions);
-app.UseHttpsRedirection();
+// Behind a TLS-terminating proxy (Caddy in compose.yaml) the proxy already redirects to HTTPS,
+// and redirecting here would also bounce the plain-HTTP health probes between containers.
+if (!builder.Configuration.GetValue<bool>("ReverseProxy:TerminatesHttps"))
+    app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthentication();

@@ -11,6 +11,7 @@ x-app-environment: &app-environment
   ASPNETCORE_ENVIRONMENT: Production
   ASPNETCORE_HTTP_PORTS: 8080
   ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+  ReverseProxy__TerminatesHttps: "true"
 
 services:
   sqlserver:
@@ -82,6 +83,9 @@ services:
       <<: *app-environment
       Database__MigrateOnStartup: "false"
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=AIVES;User Id=aives_app;Password=${MSSQL_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      # Encrypts the shared Data Protection keys at rest; create it with scripts/preflight.sh.
+      DataProtection__CertificatePath: /run/secrets/dataprotection-cert
+      DataProtection__CertificatePassword: "${DATAPROTECTION_CERT_PASSWORD:?DATAPROTECTION_CERT_PASSWORD is required}"
       Gemini__ApiKey: "${GEMINI_API_KEY:-}"
       Gemini__Model: "${GEMINI_MODEL:-gemini-3.8-flash}"
       Ollama__Enabled: "${OLLAMA_ENABLED:-false}"
@@ -96,6 +100,8 @@ services:
       GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
     expose:
       - "8080"
+    secrets:
+      - dataprotection-cert
     networks:
       - aives-network
     healthcheck:
@@ -142,6 +148,10 @@ services:
       - ollama-models:/root/.ollama
     networks:
       - aives-network
+
+secrets:
+  dataprotection-cert:
+    file: ./secrets/dataprotection.pfx
 
 volumes:
   aives-sql-data:
