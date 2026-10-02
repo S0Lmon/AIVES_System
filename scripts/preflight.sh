@@ -60,16 +60,35 @@ fi
 
 echo "Tên miền và HTTPS"
 domain=$(value AIVES_DOMAIN)
-if [[ -z $domain ]]; then
+caddy_site=$(value AIVES_CADDY_SITE)
+if [[ ,$(value COMPOSE_PROFILES), == *,tunnel,* ]]; then
+    # Cloudflare terminates HTTPS; Caddy must serve plain HTTP or it keeps failing ACME challenges.
+    if [[ -z $(value CLOUDFLARE_TUNNEL_TOKEN) ]]; then
+        error "COMPOSE_PROFILES có 'tunnel' nhưng CLOUDFLARE_TUNNEL_TOKEN trống."
+    else
+        ok "Cloudflare Tunnel bật (token đã đặt)."
+    fi
+    if [[ $caddy_site != :80 && $caddy_site != http://* ]]; then
+        error "Chế độ tunnel cần AIVES_CADDY_SITE=:80 (hiện là '${caddy_site:-<theo AIVES_DOMAIN>}')."
+    fi
+    if [[ -z $domain || $domain == localhost ]]; then
+        warn "Đặt AIVES_DOMAIN bằng hostname công khai của tunnel (dùng cho Google OAuth và tài liệu)."
+    else
+        ok "Hostname công khai: https://$domain (cấu hình Public Hostname trỏ tới http://caddy:80)."
+    fi
+    if [[ $(value AIVES_HTTP_PORT) != 127.0.0.1:* ]]; then
+        warn "Nên đặt AIVES_HTTP_PORT=127.0.0.1:8088 để Caddy chỉ mở trên máy này; truy cập ngoài đi qua tunnel."
+    fi
+elif [[ -z $domain ]]; then
     error "AIVES_DOMAIN chưa được đặt."
 elif [[ $domain == localhost || $domain == 127.0.0.1 ]]; then
     warn "AIVES_DOMAIN=$domain chỉ phù hợp khi thử trên máy; server thật cần tên miền đã trỏ DNS về server."
 else
     ok "AIVES_DOMAIN=$domain (Caddy sẽ xin chứng chỉ Let's Encrypt; cần mở port 80/443)."
-fi
-https_port=$(value AIVES_HTTPS_PORT)
-if [[ -n $https_port && $https_port != 443 && $domain != localhost ]]; then
-    warn "AIVES_HTTPS_PORT=$https_port: Let's Encrypt và chuyển hướng HTTP→HTTPS đều cần port 443."
+    https_port=$(value AIVES_HTTPS_PORT)
+    if [[ -n $https_port && $https_port != 443 ]]; then
+        warn "AIVES_HTTPS_PORT=$https_port: Let's Encrypt và chuyển hướng HTTP→HTTPS đều cần port 443."
+    fi
 fi
 
 echo "Khóa Data Protection"
