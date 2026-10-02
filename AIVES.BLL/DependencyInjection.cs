@@ -34,24 +34,26 @@ public static class DependencyInjection
         services.AddScoped<ICatalogService, CatalogService>();
         services.Configure<GeminiOptions>(configuration.GetSection(GeminiOptions.SectionName));
         services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
-        services.AddHttpClient<IQuestionGenerator, GeminiQuestionGenerator>(client =>
+        // Each generator needs its own client name: AddHttpClient<TClient, TImpl> otherwise names the
+        // client after the shared interface, and the Ollama BaseAddress would also apply to Gemini.
+        services.AddHttpClient<IQuestionGenerator, GeminiQuestionGenerator>(nameof(GeminiQuestionGenerator), client =>
         {
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-            client.Timeout = TimeSpan.FromSeconds(60);
-        });
-        services.AddHttpClient<IQuestionGenerator, OllamaQuestionGenerator>((provider, client) =>
+            client.Timeout = TimeSpan.FromSeconds(120);
+        }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddHttpClient<IQuestionGenerator, OllamaQuestionGenerator>(nameof(OllamaQuestionGenerator), (provider, client) =>
         {
             var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
         });
         services.AddScoped<IQuestionGeneratorRouter, QuestionGeneratorRouter>();
-        services.AddHttpClient<IRubricGenerator, GeminiRubricGenerator>(client =>
+        services.AddHttpClient<IRubricGenerator, GeminiRubricGenerator>(nameof(GeminiRubricGenerator), client =>
         {
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-            client.Timeout = TimeSpan.FromSeconds(90);
-        });
-        services.AddHttpClient<IRubricGenerator, OllamaRubricGenerator>((provider, client) =>
+            client.Timeout = TimeSpan.FromSeconds(150);
+        }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddHttpClient<IRubricGenerator, OllamaRubricGenerator>(nameof(OllamaRubricGenerator), (provider, client) =>
         {
             var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
