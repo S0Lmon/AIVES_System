@@ -52,6 +52,18 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<Exam> Exams
+        {
+            get; set;
+        }
+        public DbSet<ExamCandidate> ExamCandidates
+        {
+            get; set;
+        }
+        public DbSet<ExamCandidateQuestion> ExamCandidateQuestions
+        {
+            get; set;
+        }
         // Shared cookie/antiforgery keys so every web instance can read what another issued.
         public DbSet<DataProtectionKey> DataProtectionKeys
         {
@@ -211,6 +223,53 @@ namespace AIVES.DAL.Data
 
         private void SeedBloomLevels(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Exam>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.SubjectName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.TopicName).HasMaxLength(200);
+                entity.Property(e => e.CreatedById).IsRequired().HasMaxLength(450);
+                entity.HasIndex(e => e.CreatedById);
+                entity.HasIndex(e => e.StartsAtUtc);
+                // NO ACTION like Question -> Subject: Subject -> Topic -> Exam would be a second cascade
+                // path. SubjectRepository.DeleteAsync clears SubjectId; the stored name stays.
+                entity.HasOne(e => e.Subject)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Topic)
+                    .WithMany()
+                    .HasForeignKey(e => e.TopicId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+            modelBuilder.Entity<ExamCandidate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
+                entity.HasIndex(e => new { e.ExamId, e.Email }).IsUnique();
+                entity.HasIndex(e => new { e.ExamId, e.Order }).IsUnique();
+                entity.HasIndex(e => e.Email);
+                entity.HasOne(e => e.Exam)
+                    .WithMany(e => e.Candidates)
+                    .HasForeignKey(e => e.ExamId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<ExamCandidateQuestion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Content).IsRequired();
+                entity.Property(e => e.BloomLevelName).HasMaxLength(100);
+                entity.HasIndex(e => new { e.ExamCandidateId, e.Order }).IsUnique();
+                entity.HasOne(e => e.Candidate)
+                    .WithMany(e => e.Questions)
+                    .HasForeignKey(e => e.ExamCandidateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Question)
+                    .WithMany()
+                    .HasForeignKey(e => e.QuestionId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
             modelBuilder.Entity<BloomLevel>().HasData(
                 new BloomLevel { Id = 1, Name = "Remember", Order = 1, Description = "Recall facts and basic concepts" },
                 new BloomLevel { Id = 2, Name = "Understand", Order = 2, Description = "Explain ideas or concepts" },
