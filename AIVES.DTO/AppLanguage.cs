@@ -21,6 +21,13 @@ public static class AppLanguageExtensions
         _ => Default
     };
 
+    /// <summary>Full locale for speech synthesis and recognition, which pick their models by region.</summary>
+    public static string ToSpeechLocale(this AppLanguage language) => language switch
+    {
+        AppLanguage.Vi => "vi-VN",
+        _ => "en-US"
+    };
+
     public static AppLanguage ToLanguage(this string? cultureCode) =>
         cultureCode?.Trim().ToLowerInvariant() switch
         {

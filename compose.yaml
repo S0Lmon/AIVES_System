@@ -88,6 +88,8 @@ services:
       DataProtection__CertificatePassword: "${DATAPROTECTION_CERT_PASSWORD:?DATAPROTECTION_CERT_PASSWORD is required}"
       Gemini__ApiKey: "${GEMINI_API_KEY:-}"
       Gemini__Model: "${GEMINI_MODEL:-gemini-3.8-flash}"
+      # Fast model for live follow-up questions during the AI viva (about 1 s per decision).
+      Interview__Model: "${INTERVIEW_MODEL:-gemini-3.5-flash-lite}"
       Ollama__Enabled: "${OLLAMA_ENABLED:-false}"
       Ollama__BaseUrl: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       Ollama__Model: "${OLLAMA_MODEL:-phi3:mini}"

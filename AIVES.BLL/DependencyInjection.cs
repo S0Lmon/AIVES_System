@@ -4,6 +4,7 @@ using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Exams;
+using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
@@ -32,6 +33,14 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IExamService, ExamService>();
+        services.Configure<InterviewOptions>(configuration.GetSection(InterviewOptions.SectionName));
+        services.AddScoped<IInterviewService, InterviewService>();
+        services.AddHttpClient<IFollowUpGenerator, GeminiFollowUpGenerator>(nameof(GeminiFollowUpGenerator), client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            // The service gives up sooner (Interview:AiTimeoutSeconds); this only bounds a stuck socket.
+            client.Timeout = TimeSpan.FromSeconds(30);
+        }).AddHttpMessageHandler(() => new TransientRetryHandler());
         services.AddSingleton(TimeProvider.System);
         // Role changes bump the security stamp; re-check it every minute so a demoted lecturer
         // loses access promptly instead of after the 30 minute default.

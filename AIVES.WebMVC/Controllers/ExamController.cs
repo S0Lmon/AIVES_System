@@ -74,6 +74,9 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
             SlotMinutes = exam.SlotMinutes,
             MainQuestionCount = exam.MainQuestionCount,
             MaxFollowUpQuestions = exam.MaxFollowUpQuestions,
+            MaxFollowUpsPerQuestion = exam.MaxFollowUpsPerQuestion,
+            AnswerTimeLimitSeconds = exam.AnswerTimeLimitSeconds,
+            Language = exam.Language,
             CandidateEmails = string.Join(Environment.NewLine, exam.Candidates.Select(candidate => candidate.Email))
         };
         return View("Form", await FillAsync(model, cancellationToken));
@@ -158,7 +161,10 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         model.SlotMinutes,
         model.MainQuestionCount,
         model.MaxFollowUpQuestions,
-        exams.ParseCandidateEmails(model.CandidateEmails));
+        exams.ParseCandidateEmails(model.CandidateEmails),
+        model.AnswerTimeLimitSeconds,
+        model.MaxFollowUpsPerQuestion,
+        model.Language);
 
     private async Task<ExamFormViewModel> FillAsync(ExamFormViewModel model, CancellationToken cancellationToken)
     {

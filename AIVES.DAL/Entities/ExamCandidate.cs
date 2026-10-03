@@ -12,5 +12,6 @@ namespace AIVES.DAL.Entities
         public string Email { get; set; } = string.Empty;
         public virtual Exam Exam { get; set; } = null!;
         public virtual ICollection<ExamCandidateQuestion> Questions { get; set; } = new List<ExamCandidateQuestion>();
+        public virtual ExamAttempt? Attempt { get; set; }
     }
 }
