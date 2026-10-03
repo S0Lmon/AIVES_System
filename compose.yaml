@@ -98,6 +98,7 @@ services:
       GmailSmtp__Username: "${GMAIL_USERNAME:-}"
       GmailSmtp__AppPassword: "${GMAIL_APP_PASSWORD:-}"
       GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
+      Registration__AllowedEmailDomains: "${REGISTRATION_EMAIL_DOMAINS:-gmail.com,fpt.edu.vn}"
     expose:
       - "8080"
     secrets:

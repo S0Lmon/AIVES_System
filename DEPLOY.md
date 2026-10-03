@@ -62,7 +62,9 @@ Các biến bắt buộc:
 
 Hai mật khẩu SQL phải đủ mạnh (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký hiệu) và không chứa dấu chấm phẩy, dấu nháy đơn hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
 
-Biến tùy chọn: `AIVES_WEB_REPLICAS` (số instance web, mặc định 2), `AIVES_HTTP_PORT`/`AIVES_HTTPS_PORT` (mặc định 80/443), `ADMIN_EMAIL` (email được cấp quyền Admin).
+Biến tùy chọn: `AIVES_WEB_REPLICAS` (số instance web, mặc định 2), `AIVES_HTTP_PORT`/`AIVES_HTTPS_PORT` (mặc định 80/443), `ADMIN_EMAIL` (email được cấp quyền Admin), `REGISTRATION_EMAIL_DOMAINS` (tên miền email được phép đăng ký, phân tách bằng dấu phẩy, mặc định `gmail.com,fpt.edu.vn`).
+
+`GMAIL_USERNAME` có thể là tài khoản Gmail hoặc Google Workspace (ví dụ email `@fpt.edu.vn`). Google chỉ cho đăng nhập SMTP bằng **App Password** (https://myaccount.google.com/apppasswords, cần bật xác minh 2 bước); mật khẩu đăng nhập thường bị từ chối với lỗi `534 5.7.9`. Một số trường tắt App Password cho tài khoản Workspace — khi đó hãy dùng một tài khoản Gmail riêng để gửi.
 
 ## Cấu trúc solution
 
