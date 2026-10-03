@@ -61,7 +61,19 @@ fi
 echo "Tên miền và HTTPS"
 domain=$(value AIVES_DOMAIN)
 caddy_site=$(value AIVES_CADDY_SITE)
-if [[ ,$(value COMPOSE_PROFILES), == *,tunnel,* ]]; then
+profiles=,$(value COMPOSE_PROFILES),
+if [[ $profiles == *,tunnel,* && $profiles == *,quicktunnel,* ]]; then
+    error "Chỉ bật một trong hai profile 'tunnel' hoặc 'quicktunnel'."
+fi
+if [[ $profiles == *,quicktunnel,* ]]; then
+    ok "Quick Tunnel bật: địa chỉ https://*.trycloudflare.com đổi mỗi lần container khởi động lại."
+    if [[ $caddy_site != :80 && $caddy_site != http://* ]]; then
+        error "Quick Tunnel cần AIVES_CADDY_SITE=:80 (hiện là '${caddy_site:-<theo AIVES_DOMAIN>}')."
+    fi
+    if [[ $(value AIVES_HTTP_PORT) != 127.0.0.1:* ]]; then
+        warn "Nên đặt AIVES_HTTP_PORT=127.0.0.1:8088 để Caddy chỉ mở trên máy này; truy cập ngoài đi qua tunnel."
+    fi
+elif [[ $profiles == *,tunnel,* ]]; then
     # Cloudflare terminates HTTPS; Caddy must serve plain HTTP or it keeps failing ACME challenges.
     if [[ -z $(value CLOUDFLARE_TUNNEL_TOKEN) ]]; then
         error "COMPOSE_PROFILES có 'tunnel' nhưng CLOUDFLARE_TUNNEL_TOKEN trống."
