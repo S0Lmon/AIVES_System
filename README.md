@@ -2,12 +2,13 @@
 
 AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Project sử dụng ASP.NET Core MVC, SQL Server, Gemini hoặc Ollama để tạo bản nháp câu hỏi bằng tiếng Việt. Định hướng phát triển là hỗ trợ quy trình thi vấn đáp có AI, trong đó giảng viên duyệt câu hỏi và quyết định điểm.
 
-Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, ngân hàng rubric dạng ma trận, danh mục môn học/chủ đề/tài liệu, tài khoản và tạo nội dung bằng AI**. Phỏng vấn bằng giọng nói, tổ chức kỳ thi và chấm điểm chưa được triển khai đầy đủ.
+Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, ngân hàng rubric dạng ma trận, danh mục môn học/chủ đề/tài liệu, tài khoản/phân quyền, tạo nội dung bằng AI và lập lịch kỳ thi vấn đáp**. Phỏng vấn bằng giọng nói và chấm điểm chưa được triển khai.
 
 ## Chức năng hiện có
 
 - **Tài khoản:** đăng ký bằng email thuộc các tên miền được phép (mặc định `gmail.com` và `fpt.edu.vn`, cấu hình qua `Registration:AllowedEmailDomains`; so khớp chính xác phần sau `@`), gửi mã xác minh qua SMTP, xác minh email, gửi lại mã, đăng nhập bằng mật khẩu, đăng xuất và đăng nhập Google khi được cấu hình.
 - **Phân quyền:** ba vai trò `Admin`, `Lecturer` (giảng viên), `Student` (sinh viên). Mọi tài khoản mới (mật khẩu hoặc Google) là `Student` và **không** vào được ngân hàng câu hỏi, rubric hay danh mục; chỉ `Lecturer` và `Admin` dùng được các trang này. Admin (đặt qua `AdminAccess:Emails`/`ADMIN_EMAIL`) nâng/hạ vai trò Giảng viên ↔ Sinh viên ở trang **Users** (`/Admin/Users`); thay đổi áp dụng cho phiên đang mở trong vòng một phút. Tài khoản tạo trước khi có phân quyền được gán `Student` ở lần khởi động (migrate) đầu tiên sau khi nâng cấp. Tài khoản phát triển (`Development:TestAccount`) và tài khoản demo (`DemoAccount`) được gán `Lecturer`.
+- **Kỳ thi & lịch thi:** giảng viên tạo phiên thi vấn đáp (`/Exam`) gắn môn học (và chủ đề), giờ bắt đầu, số phút mỗi thí sinh, số câu hỏi chính và số câu hỏi đào sâu tối đa, danh sách thí sinh theo email (dán mỗi dòng một email, theo thứ tự thi). Khung giờ từng thí sinh được tính nối tiếp. Hệ thống rút bộ câu hỏi chính riêng cho từng thí sinh từ các câu đang hoạt động của môn/chủ đề: ưu tiên không trùng với các thí sinh thi liền trước (tránh tới 3 người khi ngân hàng đủ lớn), dùng đều các câu, rồi đa dạng mức Bloom; nếu ngân hàng quá nhỏ thì cảnh báo số câu trùng. Nội dung câu được sao lưu lúc giao nên sửa/xóa câu gốc không đổi hồ sơ kỳ thi. Giảng viên chỉ thấy kỳ thi của mình (admin thấy tất cả); sau giờ bắt đầu không sửa/rút lại được. Sinh viên xem khung giờ của mình ở **Lịch thi của tôi** (`/MyExams`), không thấy câu hỏi. Giờ nhập/hiển thị theo `Exams:TimeZone` (mặc định `Asia/Ho_Chi_Minh`).
 - **Ngân hàng câu hỏi:** bốn tab **Bank | Create | AI generation | Bulk generation**. Tab Bank thêm, xem danh sách/chi tiết, sửa, xóa và lọc theo mức Bloom; lưu ngữ cảnh, đáp án mong đợi, rubric, thứ tự hiển thị và trạng thái hoạt động. Rubric là tuỳ chọn.
 - **Tạo hàng loạt bằng AI:** chọn một kế hoạch sinh (môn học, chủ đề, số câu, độ khó, mức Bloom), xem trước toàn bộ kết quả, chỉnh sửa câu nào giữ và bỏ câu nào, rồi mới lưu hàng loạt vào ngân hàng. Mức Bloom của kế hoạch được gán server-side từ tên do AI trả về.
 - **Ngân hàng rubric:** ba tab **Bank | Create | AI generation**. Mỗi rubric là một ma trận do người dùng tự định nghĩa: 1–10 dòng tiêu chí và 2–6 cột mức đánh giá. Mỗi ô ghi mô tả riêng và điểm riêng. Mức `MaxPoints` của tiêu chí lấy bằng điểm cao nhất trong dòng, `TotalPoints` của rubric lấy bằng tổng các tiêu chí, nên người dùng không phải tự cộng.
@@ -21,7 +22,7 @@ Phiên bản hiện tại tập trung vào **ngân hàng câu hỏi, ngân hàng
 - **Đa ngôn ngữ:** toàn bộ giao diện và thông báo hỗ trợ English và Tiếng Việt.
 - **Giao diện:** trang tổng quan và menu responsive cho desktop/mobile.
 
-Các module kỳ thi/lịch thi, STT/TTS, phỏng vấn thích ứng, hỗ trợ chấm điểm, giám sát, báo cáo và quản trị nâng cao hiện là **roadmap**. Các phần giới thiệu trên dashboard không đồng nghĩa với chức năng đã hoàn thành.
+Các module STT/TTS, phỏng vấn thích ứng, hỗ trợ chấm điểm, giám sát, báo cáo và quản trị nâng cao hiện là **roadmap**. Các phần giới thiệu trên dashboard không đồng nghĩa với chức năng đã hoàn thành.
 
 ## Công nghệ
 

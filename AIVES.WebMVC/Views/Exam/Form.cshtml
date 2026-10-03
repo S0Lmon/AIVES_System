@@ -1,0 +1,77 @@
+@model AIVES.WebMVC.Models.ViewModels.ExamFormViewModel
+@using AIVES.WebMVC.Models.ViewModels
+@{
+    var editing = Model.Id is not null;
+    ViewData["Title"] = editing ? @L10n.T("Edit exam") : @L10n.T("New exam");
+}
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Exams / @(editing ? "Edit" : "New")</span>
+        <h1>@(editing ? L10n.T("Edit exam") : L10n.T("New exam"))</h1>
+        <p>@L10n.T("Questions are drawn from the active questions of the chosen subject (and topic). Saving assigns a fresh set to every candidate.")</p>
+    </div>
+</div>
+
+<div class="panel form-panel mb-4">
+    <form method="post" asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@Model.Id">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Exam")</h2><p>@L10n.T("Name the session and choose where its questions come from.")</p></div></div>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Title" class="form-label">@L10n.T("Title")</label>
+                    <input asp-for="Title" class="form-control" maxlength="@AIVES.DTO.ExamLimits.TitleMaxLength" />
+                </div>
+                <div class="col-md-6">
+                    @await Html.PartialAsync("_CatalogPicker", CatalogPickers.Subject(Model.Subjects, "SubjectId", L10n.T("Subject"), L10n.T("Choose a subject"), Model.SubjectId == 0 ? null : Model.SubjectId, required: true, id: "examSubject"))
+                </div>
+                <div class="col-md-6">
+                    @await Html.PartialAsync("_CatalogPicker", CatalogPickers.Topic(Model.Topics, "TopicId", L10n.T("Topic"), L10n.T("Any topic"), Model.TopicId, id: "examTopic", subjects: Model.Subjects))
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Schedule")</h2><p>@L10n.T("Candidates sit one after another; each slot follows the previous one.")</p></div></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="StartsAtLocal" class="form-label">@L10n.T("First slot starts") (@Model.TimeZoneLabel)</label>
+                    <input asp-for="StartsAtLocal" type="datetime-local" class="form-control" value="@(Model.StartsAtLocal?.ToString("yyyy-MM-ddTHH:mm"))" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SlotMinutes" class="form-label">@L10n.T("Minutes per candidate")</label>
+                    <input asp-for="SlotMinutes" type="number" min="@AIVES.DTO.ExamLimits.MinSlotMinutes" max="@AIVES.DTO.ExamLimits.MaxSlotMinutes" class="form-control" />
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Questions per candidate")</h2><p>@L10n.T("Main questions are fixed per candidate; follow-up questions are the most the examiner may add.")</p></div></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="MainQuestionCount" class="form-label">@L10n.T("Main questions")</label>
+                    <input asp-for="MainQuestionCount" type="number" min="1" max="@AIVES.DTO.ExamLimits.MaxMainQuestions" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label>
+                    <input asp-for="MaxFollowUpQuestions" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxFollowUpQuestions" class="form-control" />
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("One email per line, in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
+            <label asp-for="CandidateEmails" class="form-label">@L10n.T("Candidate emails")</label>
+            <textarea asp-for="CandidateEmails" rows="8" class="form-control" placeholder="student1@fpt.edu.vn&#10;student2@fpt.edu.vn"></textarea>
+        </section>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>
+            <a asp-action="@(editing ? "Details" : "Index")" asp-route-id="@Model.Id" class="btn btn-light">@L10n.T("Cancel")</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }
