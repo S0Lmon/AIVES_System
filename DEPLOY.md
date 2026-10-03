@@ -6,7 +6,24 @@
 - Docker Engine và Docker Compose plugin
 - RAM tối thiểu 8 GB
 - SSD còn trống tối thiểu 30 GB
-- Mở TCP port 5201 để kiểm thử ban đầu
+- Mở TCP port 80 và 443 (UDP 443 nếu muốn HTTP/3); trỏ bản ghi DNS `A` của tên miền về IP server
+
+## Kiến trúc triển khai
+
+```text
+Internet ──HTTPS──► caddy (TLS tự động, HTTP→HTTPS, cân bằng tải round-robin)
+                       │
+             web × AIVES_WEB_REPLICAS   (stateless, /health, user SQL aives_app)
+                       │
+                   sqlserver  ◄── migrate (sa, chạy một lần) ◄── db-init (tạo aives_app)
+```
+
+Thứ tự khởi động: `sqlserver` healthy → `migrate` áp dụng migrations và seed rồi thoát → `db-init` tạo/cập nhật login `aives_app` rồi thoát → các instance `web` → `caddy`.
+
+- **Chỉ `migrate` đổi schema** và là container duy nhất (cùng `db-init`) dùng `sa`. Các instance web chạy với `Database:MigrateOnStartup=false` và login `aives_app` chỉ có quyền `db_datareader`/`db_datawriter`, không tạo/sửa bảng được.
+- **Khóa Data Protection** (mã hóa cookie đăng nhập và antiforgery token) lưu trong bảng `DataProtectionKeys`, dùng chung giữa các instance. Người dùng không bị đăng xuất khi deploy lại hoặc khi request chuyển sang instance khác. Khóa được lưu chưa mã hóa trong database, vì vậy cần bảo vệ backup như dữ liệu nhạy cảm.
+- **Web không mở port ra ngoài**; chỉ `caddy` nhận traffic. Caddy tự lấy chứng chỉ Let's Encrypt cho `AIVES_DOMAIN` và tự phát hiện instance web mới sau mỗi 10 giây.
+- `GET /health` trả `Healthy` khi instance kết nối được database; Docker dùng nó làm healthcheck của `web`.
 
 ## Cài Docker trên Ubuntu
 
@@ -33,7 +50,17 @@ cp .env.example .env
 nano .env
 ```
 
-Đặt mật khẩu SQL mạnh, không dùng dấu chấm phẩy hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
+Các biến bắt buộc:
+
+| Biến | Ý nghĩa |
+|---|---|
+| `MSSQL_SA_PASSWORD` | Mật khẩu `sa`, chỉ dùng cho `migrate` và `db-init` |
+| `MSSQL_APP_PASSWORD` | Mật khẩu login `aives_app` mà các instance web dùng; phải khác mật khẩu `sa` |
+| `AIVES_DOMAIN` | Tên miền công khai, ví dụ `aives.example.edu.vn`; để `localhost` khi thử trên máy |
+
+Hai mật khẩu SQL phải đủ mạnh (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký hiệu) và không chứa dấu chấm phẩy, dấu nháy đơn hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
+
+Biến tùy chọn: `AIVES_WEB_REPLICAS` (số instance web, mặc định 2), `AIVES_HTTP_PORT`/`AIVES_HTTPS_PORT` (mặc định 80/443), `ADMIN_EMAIL` (email được cấp quyền Admin).
 
 ## Cấu trúc solution
 
@@ -60,13 +87,41 @@ DEMO_ACCOUNT_DISPLAY_NAME=AIVES Demo
 DEMO_ACCOUNT_RESET_PASSWORD=true
 ```
 
-Chạy lại `docker compose up -d --build`. Sau khi đăng nhập thành công, đặt `DEMO_ACCOUNT_RESET_PASSWORD=false` (hoặc `DEMO_ACCOUNT_ENABLED=false`) rồi chạy `docker compose up -d` để mật khẩu không bị đặt lại trong các lần khởi động sau.
+Chạy lại `docker compose up -d --build`; tài khoản được tạo bởi container `migrate`. Sau khi đăng nhập thành công, đặt `DEMO_ACCOUNT_RESET_PASSWORD=false` (hoặc `DEMO_ACCOUNT_ENABLED=false`) rồi chạy `docker compose up -d` để mật khẩu không bị đặt lại trong các lần khởi động sau.
 
 Mở ứng dụng bằng địa chỉ:
 
 ```text
-http://IP_CUA_SERVER:5201
+https://TEN_MIEN
 ```
+
+Khi thử trên máy với `AIVES_DOMAIN=localhost`, Caddy dùng chứng chỉ nội bộ nên trình duyệt sẽ cảnh báo chứng chỉ. Nếu đổi `AIVES_HTTPS_PORT` khác 443, hãy mở thẳng `https://localhost:<port>` vì chuyển hướng HTTP→HTTPS luôn trỏ về port 443.
+
+Kiểm tra nhanh:
+
+```bash
+docker compose ps -a          # migrate, db-init: Exited (0); web: healthy
+curl -fsS https://TEN_MIEN/health
+```
+
+## Scale số instance web
+
+```bash
+docker compose up -d --scale web=4 --no-recreate
+```
+
+Hoặc đặt `AIVES_WEB_REPLICAS=4` trong `.env` rồi `docker compose up -d`. Caddy tự đưa instance mới vào vòng cân bằng tải trong khoảng 10 giây. Mỗi instance web dùng khoảng 150–300 MB RAM; SQL Server bản Express giới hạn khoảng 1,4 GB bộ nhớ đệm và database 10 GB, nên khi dữ liệu hoặc tải tăng cần chuyển `MSSQL_PID` sang bản phù hợp (có bản quyền) hoặc tách database sang máy riêng.
+
+## Ollama (tùy chọn)
+
+Mặc định Ollama tắt trong Docker. Để chạy model cục bộ cạnh ứng dụng:
+
+```bash
+docker compose --profile ollama up -d
+docker compose exec ollama ollama pull phi3:mini
+```
+
+Đặt `OLLAMA_ENABLED=true` (và `OLLAMA_MODEL` nếu dùng model khác) trong `.env`, rồi `docker compose up -d`. Nếu Ollama chạy ở máy khác (khuyến nghị máy có GPU), chỉ cần đặt `OLLAMA_BASE_URL` trỏ tới máy đó, không cần profile `ollama`.
 
 ## Cập nhật phiên bản mới
 
@@ -104,7 +159,7 @@ Không chạy `docker compose down -v` trên server đang có dữ liệu vì t�
 
 ## Google OAuth khi có tên miền
 
-Google OAuth trên server công khai cần HTTPS. Sau khi cấu hình domain và reverse proxy, đặt redirect URI trong Google Cloud Console:
+Google OAuth trên server công khai cần HTTPS; Caddy đã cung cấp HTTPS khi `AIVES_DOMAIN` là tên miền thật. Đặt redirect URI trong Google Cloud Console:
 
 ```text
 https://TEN_MIEN/signin-google
