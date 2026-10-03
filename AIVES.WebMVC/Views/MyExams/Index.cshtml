@@ -40,9 +40,14 @@
                             <td>@L10n.Format("{0} of {1}", exam.Order, exam.CandidateCount)</td>
                             <td class="small">@L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)</td>
                             <td>
-                                @if (exam.InterviewStatus == AIVES.DTO.InterviewStatus.Completed)
+                                @if (exam.ResultAvailable)
+                                {
+                                    <a class="btn btn-sm btn-primary" asp-action="Result" asp-route-id="@exam.CandidateId">@L10n.Format("Result: {0}/10", exam.FinalScore?.ToString("0.##"))</a>
+                                }
+                                else if (exam.InterviewStatus == AIVES.DTO.InterviewStatus.Completed)
                                 {
                                     <span class="status-label ready">@L10n.T("Completed")</span>
+                                    <div class="small text-muted">@L10n.T("Waiting for your lecturer to confirm the grade")</div>
                                 }
                                 else if (now >= exam.StartsAtUtc && now < exam.EndsAtUtc)
                                 {

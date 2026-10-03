@@ -90,6 +90,12 @@ services:
       Gemini__Model: "${GEMINI_MODEL:-gemini-3.8-flash}"
       # Fast model for live follow-up questions during the AI viva (about 1 s per decision).
       Interview__Model: "${INTERVIEW_MODEL:-gemini-3.5-flash-lite}"
+      # Grading runs after the viva in a background worker on each replica (claims prevent double work).
+      Grading__Model: "${GRADING_MODEL:-}"
+      # Encrypted answer recordings; every replica must see the same folder.
+      Recordings__Path: /app/recordings
+      Reports__SchoolName: "${REPORT_SCHOOL_NAME:-TRƯỜNG ĐẠI HỌC FPT}"
+      Reports__UnitName: "${REPORT_UNIT_NAME:-}"
       Ollama__Enabled: "${OLLAMA_ENABLED:-false}"
       Ollama__BaseUrl: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       Ollama__Model: "${OLLAMA_MODEL:-phi3:mini}"
@@ -103,6 +109,8 @@ services:
       Registration__AllowedEmailDomains: "${REGISTRATION_EMAIL_DOMAINS:-gmail.com,fpt.edu.vn}"
     expose:
       - "8080"
+    volumes:
+      - aives-recordings:/app/recordings
     secrets:
       - dataprotection-cert
     networks:
@@ -189,6 +197,9 @@ secrets:
 volumes:
   aives-sql-data:
     name: aives-sql-data
+  # Encrypted with the Data Protection keys (which live in the database), so back up both together.
+  aives-recordings:
+    name: aives-recordings
   caddy-data:
     name: aives-caddy-data
   caddy-config:

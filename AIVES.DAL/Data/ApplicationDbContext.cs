@@ -72,6 +72,30 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<QuestionGrade> QuestionGrades
+        {
+            get; set;
+        }
+        public DbSet<TurnRecording> TurnRecordings
+        {
+            get; set;
+        }
+        public DbSet<AuditEntry> AuditEntries
+        {
+            get; set;
+        }
+        public DbSet<SubjectLecturer> SubjectLecturers
+        {
+            get; set;
+        }
+        public DbSet<GlossaryTerm> GlossaryTerms
+        {
+            get; set;
+        }
+        public DbSet<SystemSetting> SystemSettings
+        {
+            get; set;
+        }
         // Shared cookie/antiforgery keys so every web instance can read what another issued.
         public DbSet<DataProtectionKey> DataProtectionKeys
         {
@@ -190,6 +214,71 @@ namespace AIVES.DAL.Data
             });
             SeedBloomLevels(modelBuilder);
             ConfigureCatalog(modelBuilder);
+            ConfigureGradingAndOperations(modelBuilder);
+        }
+
+        private static void ConfigureGradingAndOperations(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<QuestionGrade>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.ExamCandidateQuestionId).IsUnique();
+                entity.Property(e => e.MaxScore).HasPrecision(6, 2);
+                entity.Property(e => e.AiScore).HasPrecision(6, 2);
+                entity.Property(e => e.LecturerScore).HasPrecision(6, 2);
+                entity.Property(e => e.AiModel).HasMaxLength(100);
+                entity.Property(e => e.LecturerComment).HasMaxLength(2000);
+                entity.Property(e => e.UpdatedById).HasMaxLength(450);
+                entity.HasOne(e => e.Question)
+                    .WithOne(e => e.Grade)
+                    .HasForeignKey<QuestionGrade>(e => e.ExamCandidateQuestionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<TurnRecording>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.ExamTurnId).IsUnique();
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(400);
+                entity.HasOne(e => e.Turn)
+                    .WithOne(e => e.Recording)
+                    .HasForeignKey<TurnRecording>(e => e.ExamTurnId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<AuditEntry>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Action).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.ActorId).HasMaxLength(450);
+                entity.Property(e => e.ActorEmail).HasMaxLength(256);
+                entity.Property(e => e.Details).HasMaxLength(4000);
+                entity.HasIndex(e => e.AtUtc);
+                entity.HasIndex(e => new { e.ExamId, e.AtUtc });
+                entity.HasIndex(e => e.Action);
+            });
+            modelBuilder.Entity<SubjectLecturer>(entity =>
+            {
+                entity.HasKey(e => new { e.SubjectId, e.UserId });
+                entity.Property(e => e.UserId).HasMaxLength(450);
+                entity.HasIndex(e => e.UserId);
+                entity.HasOne(e => e.Subject).WithMany().HasForeignKey(e => e.SubjectId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<GlossaryTerm>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Term).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.SpokenForms).HasMaxLength(1000);
+                entity.HasIndex(e => new { e.SubjectId, e.Term }).IsUnique();
+                entity.HasOne(e => e.Subject).WithMany().HasForeignKey(e => e.SubjectId).OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<SystemSetting>(entity =>
+            {
+                entity.HasKey(e => e.Key);
+                entity.Property(e => e.Key).HasMaxLength(100);
+                entity.Property(e => e.Value).IsRequired().HasMaxLength(2000);
+            });
         }
 
         private static void ConfigureCatalog(ModelBuilder modelBuilder)
@@ -285,6 +374,12 @@ namespace AIVES.DAL.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.ExamCandidateId).IsUnique();
+                entity.HasIndex(e => new { e.Status, e.GradingStatus });
+                entity.Property(e => e.GradingClaimedAtUtc).IsConcurrencyToken();
+                entity.Property(e => e.FinalScore).HasPrecision(5, 2);
+                entity.Property(e => e.FinalizedById).HasMaxLength(450);
+                entity.Property(e => e.GradingError).HasMaxLength(1000);
+                entity.Property(e => e.LecturerComment).HasMaxLength(2000);
                 entity.HasOne(e => e.Candidate)
                     .WithOne(e => e.Attempt)
                     .HasForeignKey<ExamAttempt>(e => e.ExamCandidateId)

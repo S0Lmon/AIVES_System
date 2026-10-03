@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Exams;
+using AIVES.BLL.Services.Operations;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebMVC.Models.ViewModels;
@@ -11,9 +12,10 @@ namespace AIVES.WebMVC.Controllers;
 
 /// <summary>Viva exam sessions for lecturers: schedule, candidates and per-candidate question sets.</summary>
 [Authorize(Policy = AuthorizationPolicies.Staff)]
-public sealed class ExamController(IExamService exams, ICatalogService catalog, DisplayTimeZone timeZone, ILogger<ExamController> logger) : Controller
+public sealed class ExamController(IExamService exams, ICatalogService catalog, ISubjectAccessService subjectAccess, ISystemSettingsService settings,
+    DisplayTimeZone timeZone, ILogger<ExamController> logger) : Controller
 {
-    private ExamActor Actor => new(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, User.IsInRole(AppRoles.Admin));
+    private ExamActor Actor => User.ToExamActor();
 
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken) =>
@@ -24,7 +26,11 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
     {
         // Default to the next full hour so the form opens with a valid, future start.
         var now = timeZone.ToLocal(DateTime.UtcNow);
-        var model = new ExamFormViewModel { StartsAtLocal = now.Date.AddHours(now.Hour + 1) };
+        var model = new ExamFormViewModel
+        {
+            StartsAtLocal = now.Date.AddHours(now.Hour + 1),
+            Language = (await settings.GetSpeechAsync(cancellationToken)).DefaultLanguage
+        };
         return View("Form", await FillAsync(model, cancellationToken));
     }
 
@@ -77,6 +83,7 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
             MaxFollowUpsPerQuestion = exam.MaxFollowUpsPerQuestion,
             AnswerTimeLimitSeconds = exam.AnswerTimeLimitSeconds,
             Language = exam.Language,
+            Recording = exam.Recording,
             CandidateEmails = string.Join(Environment.NewLine, exam.Candidates.Select(candidate => candidate.Email))
         };
         return View("Form", await FillAsync(model, cancellationToken));
@@ -164,11 +171,16 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         exams.ParseCandidateEmails(model.CandidateEmails),
         model.AnswerTimeLimitSeconds,
         model.MaxFollowUpsPerQuestion,
-        model.Language);
+        model.Language,
+        model.Recording);
 
     private async Task<ExamFormViewModel> FillAsync(ExamFormViewModel model, CancellationToken cancellationToken)
     {
-        model.Subjects = (await catalog.GetSubjectsAsync(cancellationToken)).Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList();
+        // Lecturers only see subjects they are assigned to (or subjects nobody is assigned to).
+        var subjects = await subjectAccess.FilterAsync(await catalog.GetSubjectsAsync(cancellationToken), subject => subject.Id, Actor, cancellationToken);
+        model.Subjects = subjects.Select(subject => new SubjectOption(subject.Id, subject.Name)).ToList();
+        var speech = await settings.GetSpeechAsync(cancellationToken);
+        model.EnabledLanguages = speech.EnabledLanguages.Contains(model.Language) ? speech.EnabledLanguages : [.. speech.EnabledLanguages, model.Language];
         model.Topics = (await catalog.GetTopicsAsync(cancellationToken: cancellationToken)).Select(topic => new TopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList();
         model.TimeZoneLabel = timeZone.OffsetLabel;
         return model;

@@ -11,7 +11,8 @@ namespace AIVES.BLL.Services.Interview;
 public interface IInterviewService
 {
     Task<InterviewStateDto> GetStateAsync(int candidateId, string email, CancellationToken cancellationToken = default);
-    Task<InterviewStateDto> StartAsync(int candidateId, string email, CancellationToken cancellationToken = default);
+    /// <summary>Starts the viva. A recorded exam needs <paramref name="recordingConsent"/>.</summary>
+    Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records the answer to the current question and returns the next step. A submission for any

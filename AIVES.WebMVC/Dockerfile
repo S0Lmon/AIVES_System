@@ -15,5 +15,7 @@ WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 COPY --from=build /app/publish .
+# A fresh named volume copies this folder's owner, so the non-root app user can write recordings.
+RUN mkdir -p /app/recordings && chown $APP_UID /app/recordings
 USER $APP_UID
 ENTRYPOINT ["dotnet", "AIVES.WebMVC.dll"]
