@@ -32,3 +32,22 @@ public sealed class AdminCheckViewModel
     public string StatusClass { get; set; } = string.Empty;
     public string? Remedy { get; set; }
 }
+public sealed class UserManagementViewModel
+{
+    public string? Message { get; set; }
+    public string? Error { get; set; }
+    public List<UserRowViewModel> Users { get; set; } = [];
+}
+
+public sealed class UserRowViewModel
+{
+    public string Id { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public bool EmailConfirmed { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public bool IsAdmin { get; set; }
+    /// <summary>Lecturer or Student; null for accounts created before roles existed.</summary>
+    public string? Role { get; set; }
+    public bool IsCurrentUser { get; set; }
+}

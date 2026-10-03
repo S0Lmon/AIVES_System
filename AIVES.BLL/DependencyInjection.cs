@@ -6,6 +6,7 @@ using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,10 @@ public static class DependencyInjection
         });
         services.AddScoped<IBloomLevelService, BloomLevelService>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
+        // Role changes bump the security stamp; re-check it every minute so a demoted lecturer
+        // loses access promptly instead of after the 30 minute default.
+        services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(1));
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IRubricService, RubricService>();
         services.AddScoped<ISystemCheckService, SystemCheckService>();

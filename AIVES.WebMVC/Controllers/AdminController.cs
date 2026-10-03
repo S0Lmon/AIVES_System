@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
@@ -11,13 +13,66 @@ namespace AIVES.WebMVC.Controllers;
 public sealed class AdminController : Controller
 {
     private readonly ISystemCheckService _systemChecks;
+    private readonly IUserAdminService _users;
     private readonly ILogger<AdminController> _logger;
 
-    public AdminController(ISystemCheckService systemChecks, ILogger<AdminController> logger)
+    public AdminController(ISystemCheckService systemChecks, IUserAdminService users, ILogger<AdminController> logger)
     {
         _systemChecks = systemChecks;
+        _users = users;
         _logger = logger;
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Users()
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var users = await _users.ListUsersAsync();
+        return View(new UserManagementViewModel
+        {
+            Message = TempData["UserMessage"] as string,
+            Error = TempData["UserError"] as string,
+            Users = users.Select(user => new UserRowViewModel
+            {
+                Id = user.Id,
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                EmailConfirmed = user.EmailConfirmed,
+                CreatedAtUtc = user.CreatedAtUtc,
+                IsAdmin = user.Roles.Contains(AppRoles.Admin),
+                Role = user.Roles.FirstOrDefault(role => AppRoles.Assignable.Contains(role)),
+                IsCurrentUser = user.Id == currentUserId
+            }).ToList()
+        });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetRole(string userId, string role)
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        try
+        {
+            var result = await _users.SetRoleAsync(userId, role, currentUserId);
+            if (result.Succeeded)
+                TempData["UserMessage"] = L10n.Format("{0} is now {1}.", result.User?.Email ?? userId, RoleLabel(role));
+            else
+                TempData["UserError"] = string.Join(" ", result.Errors);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not change the role of {UserId}", userId);
+            TempData["UserError"] = L10n.T("The role could not be changed. Please try again.");
+        }
+        return RedirectToAction(nameof(Users));
+    }
+
+    public static string RoleLabel(string? role) => role switch
+    {
+        AppRoles.Admin => L10n.T("Administrator"),
+        AppRoles.Lecturer => L10n.T("Lecturer"),
+        AppRoles.Student => L10n.T("Student"),
+        _ => L10n.T("No role")
+    };
 
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)

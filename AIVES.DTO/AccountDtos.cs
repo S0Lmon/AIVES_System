@@ -2,6 +2,7 @@ namespace AIVES.DTO;
 
 public sealed record UserDto(string Id, string Email, string DisplayName, bool EmailConfirmed);
 public sealed record UserProfileDto(string Id, string Email, string DisplayName, bool EmailConfirmed, DateTime CreatedAtUtc, IReadOnlyList<string> Roles);
+public sealed record UserSummaryDto(string Id, string Email, string DisplayName, bool EmailConfirmed, DateTime CreatedAtUtc, IReadOnlyList<string> Roles);
 public sealed record RegisterRequest(string Email, string Password, string DisplayName);
 public sealed record ExternalLoginDto(string Provider, string ProviderKey, string? Email, string? DisplayName);
 public sealed record AccountResult(bool Succeeded, IReadOnlyList<string> Errors, UserDto? User = null)
