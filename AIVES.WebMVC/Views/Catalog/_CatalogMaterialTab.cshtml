@@ -55,11 +55,11 @@ else
         @Html.AntiForgeryToken()
         <div class="cat-inline-grid">
             @await Html.PartialAsync("_CatalogPicker", AIVES.WebMVC.Models.ViewModels.CatalogPickers.Topic(Model.TopicOptions, "topicId", L10n.T("Store under topic"), L10n.T("Choose a topic"), Model.FilterTopicId, required: true, filteredBy: null, id: "materialTopic-import"))
-            <input type="file" name="file" class="form-control form-control-sm" accept=".txt,.md,.markdown,.csv,.json" required />
+            <input type="file" name="file" class="form-control form-control-sm" accept=".txt,.md,.markdown,.csv,.json,.pdf,.docx,.pptx" required />
             <button type="submit" class="btn btn-primary btn-sm">@L10n.T("Import")</button>
             <button type="button" class="btn btn-light btn-sm" data-toggle-form="importMaterialForm">@L10n.T("Cancel")</button>
         </div>
-        <small class="text-muted">@L10n.T("Supported formats: .txt, .md, .csv, .json") — @L10n.T("max 2 MB")</small>
+        <small class="text-muted">@L10n.T("Supported formats: .txt, .md, .csv, .json, .pdf, .docx, .pptx") — @L10n.T("max 20 MB")</small>
     </form>
 
     <div class="panel overflow-hidden">
@@ -74,7 +74,7 @@ else
             <div class="empty-state">
                 <div class="empty-icon">0</div>
                 <h3>@L10n.T("No material for this selection")</h3>
-                <p>@L10n.T("Add material manually or import a .txt, .md, .csv or .json file.")</p>
+                <p>@L10n.T("Add material manually or import a textbook chapter or lecture slides (.pdf, .docx, .pptx, .txt, .md).")</p>
                 <button type="button" class="btn btn-primary" data-toggle-form="newMaterialForm">@L10n.T("Add material")</button>
             </div>
         }

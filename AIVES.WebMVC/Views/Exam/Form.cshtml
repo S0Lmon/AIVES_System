@@ -72,10 +72,19 @@
                 <div class="col-md-6">
                     <label asp-for="Language" class="form-label">@L10n.T("Interview language")</label>
                     <select asp-for="Language" class="form-select">
-                        <option value="@AIVES.DTO.AppLanguage.Vi">Tiếng Việt</option>
-                        <option value="@AIVES.DTO.AppLanguage.En">English</option>
+                        @if (Model.EnabledLanguages.Contains(AIVES.DTO.AppLanguage.Vi)) { <option value="@AIVES.DTO.AppLanguage.Vi">Tiếng Việt</option> }
+                        @if (Model.EnabledLanguages.Contains(AIVES.DTO.AppLanguage.En)) { <option value="@AIVES.DTO.AppLanguage.En">English</option> }
                     </select>
                     <div class="form-text">@L10n.T("Used to read questions aloud, recognise answers and write follow-ups.")</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Recording" class="form-label">@L10n.T("Record the viva")</label>
+                    <select asp-for="Recording" class="form-select">
+                        <option value="@AIVES.DTO.RecordingMode.Audio">@L10n.T("Audio of every answer")</option>
+                        <option value="@AIVES.DTO.RecordingMode.AudioVideo">@L10n.T("Audio and camera video")</option>
+                        <option value="@AIVES.DTO.RecordingMode.None">@L10n.T("Do not record")</option>
+                    </select>
+                    <div class="form-text">@L10n.T("Kept encrypted as evidence for grade appeals. Students must agree before they start; only you and administrators can play it.")</div>
                 </div>
             </div>
         </section>

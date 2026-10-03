@@ -161,5 +161,6 @@ public sealed class AccountTests
         public Task<AccountResult> AddLoginAsync(string userId, ExternalLoginDto info) => throw new NotSupportedException();
         public Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync() => throw new NotSupportedException();
         public Task<AccountResult> SetAssignableRoleAsync(string userId, string role) => throw new NotSupportedException();
+        public Task<AccountResult> SetDisabledAsync(string userId, bool disabled) => throw new NotSupportedException();
     }
 }

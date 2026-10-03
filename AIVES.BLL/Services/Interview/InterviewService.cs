@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using AIVES.BLL.Services.Operations;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
@@ -9,6 +11,9 @@ namespace AIVES.BLL.Services.Interview;
 public sealed class InterviewService(
     IInterviewRepository interviews,
     IFollowUpGenerator followUps,
+    IGlossaryService glossary,
+    ISystemSettingsService settings,
+    IAuditService audit,
     IOptions<InterviewOptions> options,
     TimeProvider clock,
     ILogger<InterviewService> logger) : IInterviewService
@@ -36,14 +41,15 @@ public sealed class InterviewService(
             {
                 // The slot is over: close the open question unanswered and finish.
                 await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
-                await interviews.AdvanceAsync(last.TurnId, FollowUpReason.LimitReached, null, Now, cancellationToken);
+                if (await interviews.AdvanceAsync(last.TurnId, FollowUpReason.LimitReached, null, Now, cancellationToken))
+                    await AuditCompletedAsync(context, "slot ended", cancellationToken);
                 context = await LoadAsync(candidateId, email, cancellationToken);
             }
         }
-        return ToState(context, Now);
+        return await ToStateAsync(context, cancellationToken);
     }
 
-    public async Task<InterviewStateDto> StartAsync(int candidateId, string email, CancellationToken cancellationToken = default)
+    public async Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false, CancellationToken cancellationToken = default)
     {
         var context = await LoadAsync(candidateId, email, cancellationToken);
         if (context.Record is not null)
@@ -54,10 +60,17 @@ public sealed class InterviewService(
             throw new InvalidOperationException(L10n.T("Your exam slot has ended."));
         if (context.Questions.Count == 0)
             throw new InvalidOperationException(L10n.T("No questions were assigned to you. Please contact your lecturer."));
+        if (context.Recording != RecordingMode.None && !recordingConsent)
+            throw new InvalidOperationException(L10n.T("This viva is recorded. Please agree to the recording to start, or contact your lecturer."));
 
         var first = new NewInterviewTurn(TurnKind.Main, 1, 0, context.Questions[0].Content, Now);
-        if (await interviews.StartAsync(candidateId, Now, first, cancellationToken))
+        var consent = context.Recording != RecordingMode.None && recordingConsent;
+        if (await interviews.StartAsync(candidateId, Now, first, consent, cancellationToken))
+        {
             logger.LogInformation("Candidate {CandidateId} started the interview", candidateId);
+            await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewStarted, null, context.CandidateEmail, context.ExamId, candidateId,
+                consent ? $"Agreed to {context.Recording} recording" : null), cancellationToken);
+        }
         return await GetStateAsync(candidateId, email, cancellationToken);
     }
 
@@ -65,28 +78,46 @@ public sealed class InterviewService(
     {
         var context = await LoadAsync(candidateId, email, cancellationToken);
         if (context.Record is not { Status: InterviewStatus.InProgress } record)
-            return ToState(context, Now);
+            return await ToStateAsync(context, cancellationToken);
         var current = record.Turns[^1];
         if (current.TurnId != input.TurnId || current.AnsweredAtUtc is not null)
             return await GetStateAsync(candidateId, email, cancellationToken);
 
-        var transcript = (input.Transcript ?? string.Empty).Trim();
+        var raw = (input.Transcript ?? string.Empty).Trim();
+        if (raw.Length > MaxTranscriptLength)
+            raw = raw[..MaxTranscriptLength];
+        var terms = await GlossaryAsync(context, cancellationToken);
+        var transcript = TranscriptNormalizer.Normalize(raw, terms);
         if (transcript.Length > MaxTranscriptLength)
             transcript = transcript[..MaxTranscriptLength];
+        var metrics = new AnswerMetrics(
+            transcript == raw ? null : raw,
+            input.ResponseDelayMs is >= 0 and < 3_600_000 ? input.ResponseDelayMs : null,
+            input.SpeakingMs is >= 0 and < 3_600_000 ? input.SpeakingMs : null);
         var now = Now;
         var timedOut = now > current.AskedAtUtc.AddSeconds(context.AnswerTimeLimitSeconds) + Grace;
-        if (!await interviews.SaveAnswerAsync(current.TurnId, transcript, input.InputMode, now, timedOut, cancellationToken))
+        if (!await interviews.SaveAnswerAsync(current.TurnId, transcript, input.InputMode, now, timedOut, cancellationToken, metrics))
             return await GetStateAsync(candidateId, email, cancellationToken);
 
-        var (decision, next) = await DecideAsync(context, record, current, transcript, now, cancellationToken);
-        await interviews.AdvanceAsync(current.TurnId, decision, next, Now, cancellationToken);
-        logger.LogInformation("Candidate {CandidateId} answered turn {TurnId}: {Decision}, next {Next}", candidateId, current.TurnId, decision,
-            next is null ? "end" : next.Kind.ToString());
-        return ToState(await LoadAsync(candidateId, email, cancellationToken), Now);
+        var stopwatch = Stopwatch.StartNew();
+        var (decision, next) = await DecideAsync(context, record, current, transcript, now, terms, cancellationToken);
+        var latency = (int)stopwatch.ElapsedMilliseconds;
+        if (await interviews.AdvanceAsync(current.TurnId, decision, next, Now, cancellationToken, latency))
+            await AuditCompletedAsync(context, "all questions asked", cancellationToken);
+        logger.LogInformation("Candidate {CandidateId} answered turn {TurnId}: {Decision} in {Latency} ms, next {Next}", candidateId, current.TurnId, decision,
+            latency, next is null ? "end" : next.Kind.ToString());
+        return await ToStateAsync(await LoadAsync(candidateId, email, cancellationToken), cancellationToken);
     }
 
+    private Task AuditCompletedAsync(InterviewContext context, string reason, CancellationToken cancellationToken) =>
+        audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewCompleted, null, context.CandidateEmail, context.ExamId, context.CandidateId, reason), cancellationToken);
+
+    private async Task<IReadOnlyList<GlossaryTermDto>> GlossaryAsync(InterviewContext context, CancellationToken cancellationToken) =>
+        context.SubjectId is { } subjectId ? await glossary.ListAsync(subjectId, cancellationToken) : [];
+
     private async Task<(FollowUpReason Decision, NewInterviewTurn? Next)> DecideAsync(
-        InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto current, string transcript, DateTime now, CancellationToken cancellationToken)
+        InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto current, string transcript, DateTime now,
+        IReadOnlyList<GlossaryTermDto> terms, CancellationToken cancellationToken)
     {
         var moveOn = NextMainTurn(context, current.MainIndex);
         if (now >= context.SlotEndsAtUtc)
@@ -107,7 +138,8 @@ public sealed class InterviewService(
         var exchanges = record.Turns.Where(turn => turn.MainIndex == current.MainIndex)
             .Select(turn => new InterviewExchange(turn.QuestionText, turn.TurnId == current.TurnId ? transcript : turn.Answer ?? string.Empty))
             .ToList();
-        var request = new FollowUpRequest(context.Language, context.SubjectName, main.Content, main.ExpectedAnswer, exchanges, Math.Min(leftHere, leftTotal));
+        var request = new FollowUpRequest(context.Language, context.SubjectName, main.Content, main.ExpectedAnswer, exchanges, Math.Min(leftHere, leftTotal),
+            terms.Select(term => term.Term).ToList());
 
         try
         {
@@ -139,6 +171,16 @@ public sealed class InterviewService(
         return context;
     }
 
+    private async Task<InterviewStateDto> ToStateAsync(InterviewContext context, CancellationToken cancellationToken)
+    {
+        var state = ToState(context, Now);
+        if (state.Status == InterviewStatus.Completed)
+            return state;
+        var speech = await settings.GetSpeechAsync(cancellationToken);
+        var phrases = TranscriptNormalizer.Phrases(await GlossaryAsync(context, cancellationToken));
+        return state with { Speech = speech, Phrases = phrases };
+    }
+
     private static InterviewStateDto ToState(InterviewContext context, DateTime now)
     {
         var record = context.Record;
@@ -147,6 +189,7 @@ public sealed class InterviewService(
         if (record is { Status: InterviewStatus.InProgress } && record.Turns[^1] is { AnsweredAtUtc: null } open)
             current = new InterviewTurnDto(open.TurnId, open.Kind, open.QuestionText, open.MainIndex, context.Questions.Count,
                 open.FollowUpIndex, open.AskedAtUtc, context.AnswerTimeLimitSeconds);
-        return new InterviewStateDto(context.CandidateId, context.ExamTitle, context.Language, status, context.SlotStartsAtUtc, context.SlotEndsAtUtc, current, now);
+        return new InterviewStateDto(context.CandidateId, context.ExamTitle, context.Language, status, context.SlotStartsAtUtc, context.SlotEndsAtUtc, current, now,
+            context.Recording, context.RecordingConsentAtUtc is not null);
     }
 }

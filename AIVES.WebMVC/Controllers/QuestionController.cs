@@ -95,7 +95,7 @@ namespace AIVES.WebMVC.Controllers
 
             // The Create tab needs the compact panel, and the Bulk tab needs a default plan seeded
             // from the Bloom levels that exist.
-            if (view.ActiveTab is QuestionTabs.Create or QuestionTabs.Bulk or QuestionTabs.Ai)
+            if (view.ActiveTab is QuestionTabs.Create or QuestionTabs.Bulk or QuestionTabs.Ai or QuestionTabs.Import)
                 await PopulateAiPanel(view);
 
             return View(view);
@@ -673,10 +673,21 @@ namespace AIVES.WebMVC.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, List<string>? difficulty, int? rubricId, int? subjectId, int? topicId, CancellationToken cancellationToken)
+        public async Task<IActionResult> InsertReviewed(string returnTab, string? resultJson, List<int>? pick, List<string>? difficulty, int? rubricId, int? subjectId, int? topicId,
+            CancellationToken cancellationToken, List<string>? content = null, List<string>? expectedAnswer = null, List<string>? bloom = null)
         {
-            var tab = returnTab == QuestionTabs.Bulk ? QuestionTabs.Bulk : QuestionTabs.Ai;
+            var tab = returnTab is QuestionTabs.Bulk or QuestionTabs.Import ? returnTab : QuestionTabs.Ai;
             var generated = GeneratedQuestionJson.Deserialize(resultJson);
+            // The review lets the lecturer edit each row; the edits arrive as one field per row, in row order.
+            for (var index = 0; index < generated.Count; index++)
+            {
+                if (content is not null && index < content.Count && !string.IsNullOrWhiteSpace(content[index]))
+                    generated[index].Content = content[index].Trim();
+                if (expectedAnswer is not null && index < expectedAnswer.Count && expectedAnswer[index] is not null)
+                    generated[index].ExpectedAnswer = expectedAnswer[index].Trim();
+                if (bloom is not null && index < bloom.Count && BloomLevels.Normalize(bloom[index]) is { } level)
+                    generated[index].BloomLevel = level;
+            }
             var chosen = pick ?? [];
             var blooms = (await _bloomLevelService.GetAllAsync()).ToList();
             var levelByName = blooms.ToDictionary(bloom => bloom.Name, bloom => bloom.Id, StringComparer.OrdinalIgnoreCase);
@@ -756,6 +767,53 @@ namespace AIVES.WebMVC.Controllers
             view.Bulk.Request.Results = view.Ai.Results;
             await PopulateDropdowns(view);
             await PopulateAiPanel(view);
+            return View(nameof(Index), view);
+        }
+
+        /// <summary>Reads questions from a CSV, Excel or JSON file into the review screen; nothing is saved yet.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(6 * 1024 * 1024)]
+        public async Task<IActionResult> ImportQuestions(IFormFile? file, int? subjectId, int? topicId)
+        {
+            var view = new QuestionBankViewModel { ActiveTab = QuestionTabs.Import };
+            await PopulateDropdowns(view);
+            await PopulateAiPanel(view);
+            view.Import = new AiReviewViewModel { SubjectId = subjectId ?? 0, TopicId = topicId, RubricOptions = view.Rubrics, Subjects = view.Ai.Subjects, AllTopics = view.Ai.AllTopics };
+            if (file is null || file.Length == 0)
+            {
+                view.ImportProblems = [L10n.T("Choose a file to import.")];
+                return View(nameof(Index), view);
+            }
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                view.ImportProblems = [L10n.T("The file is larger than 5 MB.")];
+                return View(nameof(Index), view);
+            }
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                using var buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer);
+                buffer.Position = 0;
+                var result = AIVES.BLL.Services.Import.QuestionImportParser.Parse(buffer, file.FileName);
+                view.ImportProblems = result.Problems;
+                view.Import.HasResult = result.Questions.Count > 0;
+                view.Import.Results = result.Questions.Select(question => new GeneratedQuestionViewModel
+                {
+                    Content = question.Content,
+                    ExpectedAnswer = question.ExpectedAnswer,
+                    BloomLevel = question.BloomLevel,
+                    Difficulty = question.Difficulty,
+                    FollowUpQuestions = question.FollowUpQuestions
+                }).ToList();
+                _logger.LogInformation("Read {Count} questions from {FileName} for review", result.Questions.Count, file.FileName);
+            }
+            catch (Exception ex) when (ex is ArgumentException or System.Text.Json.JsonException or InvalidDataException or FormatException)
+            {
+                _logger.LogWarning(ex, "Could not read question import {FileName}", file.FileName);
+                view.ImportProblems = [ex is ArgumentException ? ex.Message : L10n.T("The file could not be read. Check its format against the template.")];
+            }
             return View(nameof(Index), view);
         }
 

@@ -59,6 +59,7 @@ public sealed class InterviewServiceTests
         var clock = new FixedClock(Now);
         var ai = new ScriptedGenerator();
         var service = new InterviewService(new InterviewRepository(db), ai,
+            TestServices.Glossary(db), TestServices.Settings(db, clock), TestServices.Audit(db, clock),
             Options.Create(new InterviewOptions { AiTimeoutSeconds = aiTimeoutSeconds, AnswerGraceSeconds = 15 }), clock, NullLogger<InterviewService>.Instance);
         return new Harness(service, db, clock, ai, candidate.Id);
     }

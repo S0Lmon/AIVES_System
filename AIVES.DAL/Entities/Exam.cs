@@ -18,6 +18,10 @@ namespace AIVES.DAL.Entities
         public int MaxFollowUpsPerQuestion { get; set; } = 2;
         /// <summary>Culture code the interview is read and recognised in, e.g. "vi-VN".</summary>
         public string Language { get; set; } = "vi-VN";
+        /// <summary>Record each spoken answer (audio) as evidence for grade appeals.</summary>
+        public bool RecordAudio { get; set; }
+        /// <summary>Also record the camera; implies audio.</summary>
+        public bool RecordVideo { get; set; }
         /// <summary>Identity user id of the lecturer who owns the exam.</summary>
         public string CreatedById { get; set; } = string.Empty;
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
