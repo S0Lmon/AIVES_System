@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Email;
 using AIVES.BLL.Services.Gemini;
+using AIVES.BLL.Services.Interview;
 using AIVES.DAL.Data;
 using AIVES.DAL.Entities;
 using AIVES.DTO;
@@ -20,6 +21,7 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
 {
     public TestMailSender Mail { get; } = new();
     public TestQuestionGenerator Generator { get; } = new();
+    public TestFollowUpGenerator FollowUps { get; } = new();
     private string? connectionString;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -45,6 +47,8 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddSingleton<IQuestionGenerator>(Generator);
             services.RemoveAll<IQuestionGeneratorRouter>();
             services.AddSingleton<IQuestionGeneratorRouter>(Generator);
+            services.RemoveAll<IFollowUpGenerator>();
+            services.AddSingleton<IFollowUpGenerator>(FollowUps);
         });
     }
 
@@ -85,6 +89,21 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
         {
             Codes[email] = code;
             return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>Asks one follow-up when an answer contains "probe"; otherwise the answer is enough.</summary>
+    public sealed class TestFollowUpGenerator : IFollowUpGenerator
+    {
+        public bool IsConfigured => true;
+        public ConcurrentQueue<FollowUpRequest> Requests { get; } = new();
+
+        public Task<FollowUpDecision> DecideAsync(FollowUpRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Enqueue(request);
+            return Task.FromResult(request.Exchanges[^1].Answer.Contains("probe", StringComparison.OrdinalIgnoreCase)
+                ? new FollowUpDecision(true, FollowUpReason.Vague, "Could you explain that more precisely?")
+                : new FollowUpDecision(false, FollowUpReason.Sufficient, null));
         }
     }
 

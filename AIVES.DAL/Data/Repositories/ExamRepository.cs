@@ -66,6 +66,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     {
         var exam = await context.Exams.AsNoTracking()
             .Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
+            .Include(item => item.Candidates).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns)
             .AsSplitQuery()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (exam is null)
@@ -84,12 +85,15 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 start, start.AddMinutes(exam.SlotMinutes),
                 candidate.Questions.OrderBy(question => question.Order)
                     .Select(question => new ExamAssignedQuestion(question.Order, question.QuestionId, question.Content, question.ExpectedAnswer, question.BloomLevelName))
-                    .ToList());
+                    .ToList(),
+                candidate.Id,
+                candidate.Attempt is null ? null : ToRecord(candidate.Attempt));
         }).ToList();
 
         return new ExamDetailsDto(exam.Id, exam.Title, exam.SubjectId, exam.SubjectName, exam.TopicId, exam.TopicName,
             exam.StartsAtUtc, exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * candidates.Count), exam.SlotMinutes,
-            exam.MainQuestionCount, exam.MaxFollowUpQuestions, exam.CreatedById, candidates);
+            exam.MainQuestionCount, exam.MaxFollowUpQuestions, exam.CreatedById, candidates,
+            exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage());
     }
 
     public async Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default)
@@ -99,6 +103,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             .Where(candidate => candidate.Email == normalized)
             .Select(candidate => new
             {
+                CandidateId = candidate.Id,
+                Status = candidate.Attempt == null ? (InterviewStatus?)null : candidate.Attempt.Status,
                 candidate.Order,
                 candidate.Exam.Id,
                 candidate.Exam.Title,
@@ -115,7 +121,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             {
                 var start = row.StartsAtUtc.AddMinutes(row.SlotMinutes * (row.Order - 1));
                 return new StudentExamDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.Order, row.Count,
-                    start, start.AddMinutes(row.SlotMinutes), row.MainQuestionCount, row.MaxFollowUpQuestions);
+                    start, start.AddMinutes(row.SlotMinutes), row.MainQuestionCount, row.MaxFollowUpQuestions,
+                    row.CandidateId, row.Status ?? InterviewStatus.NotStarted);
             })
             .OrderBy(exam => exam.StartsAtUtc)
             .ToList();
@@ -134,7 +141,15 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         exam.SlotMinutes = draft.SlotMinutes;
         exam.MainQuestionCount = draft.MainQuestionCount;
         exam.MaxFollowUpQuestions = draft.MaxFollowUpQuestions;
+        exam.AnswerTimeLimitSeconds = draft.AnswerTimeLimitSeconds;
+        exam.MaxFollowUpsPerQuestion = draft.MaxFollowUpsPerQuestion;
+        exam.Language = draft.Language.ToSpeechLocale();
     }
+
+    internal static InterviewRecordDto ToRecord(ExamAttempt attempt) => new(attempt.Status, attempt.StartedAtUtc, attempt.CompletedAtUtc,
+        attempt.Turns.OrderBy(turn => turn.Order).Select(turn => new InterviewTurnRecordDto(turn.Order, turn.Kind, turn.MainIndex,
+            turn.QuestionText, turn.Answer, turn.InputMode, turn.AskedAtUtc, turn.AnsweredAtUtc, turn.TimedOut, turn.Decision,
+            turn.Id, turn.FollowUpIndex)).ToList());
 
     private static ExamCandidate ToEntity(ExamCandidateDraft draft) => new()
     {

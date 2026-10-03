@@ -630,6 +630,100 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("value=\"Too many questions\"", html); // the form keeps what was typed
     }
 
+    [SqlFact]
+    public async Task StudentTakesTheAiVivaAndTheLecturerSeesTheTranscript()
+    {
+        using var lecturer = app.Browser();
+        await SignIn(lecturer);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        var (subjectId, topicId) = await CreateCatalogTopic("Viva topic");
+        await AddQuestions(subjectId, topicId, 4);
+
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        {
+            ["Title"] = "AI viva flow",
+            ["SubjectId"] = subjectId.ToString(),
+            ["TopicId"] = topicId.ToString(),
+            ["StartsAtLocal"] = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd") + "T09:00",
+            ["SlotMinutes"] = "20",
+            ["MainQuestionCount"] = "2",
+            ["MaxFollowUpQuestions"] = "2",
+            ["MaxFollowUpsPerQuestion"] = "1",
+            ["AnswerTimeLimitSeconds"] = "90",
+            ["Language"] = "En",
+            ["CandidateEmails"] = studentEmail
+        });
+        var detailsUrl = created.Headers.Location!.OriginalString;
+        int candidateId;
+        using (var scope = app.Services.CreateScope())
+        {
+            // The form only accepts future starts; open the slot now for the test.
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var exam = await db.Exams.Include(item => item.Candidates).SingleAsync(item => item.Title == "AI viva flow");
+            Assert.Equal(90, exam.AnswerTimeLimitSeconds);
+            Assert.Equal(1, exam.MaxFollowUpsPerQuestion);
+            Assert.Equal("en-US", exam.Language);
+            exam.StartsAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+            candidateId = exam.Candidates.Single().Id;
+        }
+
+        Assert.Contains($"href=\"/Interview/{candidateId}\"", await Html(await student.GetAsync("/MyExams")));
+        var page = await student.GetAsync($"/Interview/{candidateId}");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var token = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+
+        // JSON endpoints need the antiforgery token in a header.
+        Assert.Equal(HttpStatusCode.BadRequest, (await student.PostAsync($"/Interview/{candidateId}/Start", null)).StatusCode);
+
+        var state = await InterviewCall(student, token, $"/Interview/{candidateId}/Start");
+        Assert.Equal("InProgress", state.GetProperty("status").GetString());
+        var turn = state.GetProperty("currentTurn");
+        Assert.Equal("Main", turn.GetProperty("kind").GetString());
+        Assert.EndsWith("Z", turn.GetProperty("askedAtUtc").GetString());   // UTC, so the browser timer is right
+        Assert.Equal(90, turn.GetProperty("timeLimitSeconds").GetInt32());
+
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "Please probe this answer", inputMode = 0 });
+        turn = state.GetProperty("currentTurn");
+        Assert.Equal("FollowUp", turn.GetProperty("kind").GetString());
+        Assert.Equal("Could you explain that more precisely?", turn.GetProperty("questionText").GetString());
+
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "A clearer answer", inputMode = 1 });
+        turn = state.GetProperty("currentTurn");
+        Assert.Equal("Main", turn.GetProperty("kind").GetString());
+        Assert.Equal(2, turn.GetProperty("mainIndex").GetInt32());
+
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "Final answer", inputMode = 0 });
+        Assert.Equal("Completed", state.GetProperty("status").GetString());
+        Assert.Contains(app.FollowUps.Requests, request => request.Language == AppLanguage.En && request.Exchanges[^1].Answer == "Please probe this answer");
+
+        // Someone else cannot open or drive this slot.
+        using var other = app.Browser();
+        await SignIn(other, AppRoles.Student);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/Interview/{candidateId}")).StatusCode);
+
+        // The lecturer sees the whole exchange with the examiner's reasons.
+        var details = await Html(await lecturer.GetAsync(detailsUrl));
+        Assert.Contains("Please probe this answer", details);
+        Assert.Contains("Could you explain that more precisely?", details);
+        Assert.Contains("A clearer answer", details);
+        Assert.Contains("answer vague", details);
+        Assert.Contains("Typed", details);
+        Assert.Contains("Completed", await Html(await student.GetAsync("/MyExams")));
+    }
+
+    private static async Task<System.Text.Json.JsonElement> InterviewCall(HttpClient browser, string token, string url, object? body = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
+        if (body is not null)
+            request.Content = System.Net.Http.Json.JsonContent.Create(body);
+        var response = await browser.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
+    }
+
     /// <summary>Adds active questions to a subject/topic and returns their texts.</summary>
     private async Task<List<string>> AddQuestions(int subjectId, int topicId, int count)
     {

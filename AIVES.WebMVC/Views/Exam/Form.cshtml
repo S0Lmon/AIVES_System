@@ -57,6 +57,25 @@
                 <div class="col-md-6">
                     <label asp-for="MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label>
                     <input asp-for="MaxFollowUpQuestions" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxFollowUpQuestions" class="form-control" />
+                    <div class="form-text">@L10n.T("In total for one candidate.")</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="MaxFollowUpsPerQuestion" class="form-label">@L10n.T("Follow-ups per question")</label>
+                    <input asp-for="MaxFollowUpsPerQuestion" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxFollowUpsPerQuestionLimit" class="form-control" />
+                    <div class="form-text">@L10n.T("How many times the AI may probe one main question.")</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="AnswerTimeLimitSeconds" class="form-label">@L10n.T("Answer time limit (seconds)")</label>
+                    <input asp-for="AnswerTimeLimitSeconds" type="number" min="@AIVES.DTO.ExamLimits.MinAnswerSeconds" max="@AIVES.DTO.ExamLimits.MaxAnswerSeconds" class="form-control" />
+                    <div class="form-text">@L10n.T("For each question, including follow-ups. The answer is submitted automatically when time runs out.")</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Language" class="form-label">@L10n.T("Interview language")</label>
+                    <select asp-for="Language" class="form-select">
+                        <option value="@AIVES.DTO.AppLanguage.Vi">Tiếng Việt</option>
+                        <option value="@AIVES.DTO.AppLanguage.En">English</option>
+                    </select>
+                    <div class="form-text">@L10n.T("Used to read questions aloud, recognise answers and write follow-ups.")</div>
                 </div>
             </div>
         </section>

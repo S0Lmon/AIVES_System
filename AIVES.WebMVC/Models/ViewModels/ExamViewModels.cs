@@ -29,6 +29,15 @@ public sealed class ExamFormViewModel
     [Range(0, ExamLimits.MaxFollowUpQuestions)]
     public int MaxFollowUpQuestions { get; set; } = 2;
 
+    [Range(0, ExamLimits.MaxFollowUpsPerQuestionLimit)]
+    public int MaxFollowUpsPerQuestion { get; set; } = ExamLimits.DefaultFollowUpsPerQuestion;
+
+    [Range(ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds)]
+    public int AnswerTimeLimitSeconds { get; set; } = ExamLimits.DefaultAnswerSeconds;
+
+    /// <summary>Language the AI examiner speaks and listens in.</summary>
+    public AppLanguage Language { get; set; } = AppLanguage.Vi;
+
     /// <summary>One email per line (commas and semicolons also work), in sitting order.</summary>
     public string CandidateEmails { get; set; } = string.Empty;
 
