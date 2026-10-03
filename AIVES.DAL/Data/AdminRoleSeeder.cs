@@ -1,6 +1,7 @@
 using AIVES.DAL.Entities;
 using AIVES.DTO;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,23 @@ public static class AdminRoleSeeder
             var roleResult = await roleManager.CreateAsync(new IdentityRole(role));
             if (!roleResult.Succeeded)
                 throw new InvalidOperationException($"Could not create the {role} role: {string.Join("; ", roleResult.Errors.Select(error => error.Description))}");
+        }
+    }
+
+    /// <summary>
+    /// Accounts created before roles existed have none; give them Student so they get the same
+    /// (least privileged) treatment as a new registration and show a real role on the Users page.
+    /// </summary>
+    public static async Task AssignDefaultRoleToRolelessUsersAsync(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
+    {
+        var roleless = await dbContext.Users
+            .Where(user => !dbContext.UserRoles.Any(link => link.UserId == user.Id))
+            .ToListAsync();
+        foreach (var user in roleless)
+        {
+            var result = await userManager.AddToRoleAsync(user, AppRoles.Default);
+            if (!result.Succeeded)
+                throw new InvalidOperationException($"Could not give {user.Email} the {AppRoles.Default} role: {string.Join("; ", result.Errors.Select(error => error.Description))}");
         }
     }
 

@@ -272,6 +272,27 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(AppRoles.Admin, (await store.GetProfileAsync(adminId))!.Roles);
     }
 
+    [SqlFact]
+    public async Task AccountsWithoutARoleBecomeStudentsAtStartup()
+    {
+        string id;
+        using (var scope = app.Services.CreateScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<AIVES.DAL.Entities.ApplicationUser>>();
+            var email = Email();
+            var legacy = new AIVES.DAL.Entities.ApplicationUser { UserName = email, Email = email, DisplayName = "Legacy", EmailConfirmed = true };
+            Assert.True((await users.CreateAsync(legacy)).Succeeded);
+            Assert.Empty(await users.GetRolesAsync(legacy));
+            id = legacy.Id;
+        }
+
+        // The same initialisation the migrate container runs on every deploy.
+        await AIVES.BLL.DependencyInjection.InitializeAivesAsync(app.Services, app.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(), isDevelopment: false);
+
+        using var check = app.Services.CreateScope();
+        Assert.Equal([AppRoles.Student], (await check.ServiceProvider.GetRequiredService<IAccountStore>().GetProfileAsync(id))!.Roles);
+    }
+
     /// <summary>Creates a confirmed administrator directly and signs it in; returns its user id.</summary>
     private async Task<string> SignInAsAdmin(HttpClient browser)
     {
