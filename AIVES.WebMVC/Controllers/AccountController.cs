@@ -26,10 +26,11 @@ public sealed class AccountController(IAccountService accounts, ILogger<AccountC
         return View(model);
     }
     [HttpGet]
-    public IActionResult Register() => View(new RegisterViewModel());
+    public IActionResult Register() => View(new RegisterViewModel { AllowedEmailDomains = accounts.AllowedEmailDomains });
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model, CancellationToken cancellationToken)
     {
+        model.AllowedEmailDomains = accounts.AllowedEmailDomains;
         if (!ModelState.IsValid)
             return View(model);
         try

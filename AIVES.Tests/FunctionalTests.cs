@@ -167,6 +167,31 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     [SqlFact]
+    public async Task UniversityEmailRegistersVerifiesAndSignsInWhileOtherDomainsAreRejected()
+    {
+        using var browser = app.Browser();
+        var form = await Html(await browser.GetAsync("/Account/Register"));
+        // The form names the allowed domains from appsettings.json.
+        Assert.Contains("@gmail.com, @fpt.edu.vn", form);
+
+        var email = "student." + Guid.NewGuid().ToString("N")[..8] + "@fpt.edu.vn";
+        await Register(browser, email);
+        var verified = await Post(browser, "/Account/VerifyEmail?email=" + email, "/Account/VerifyEmail", new()
+        {
+            ["Email"] = email,
+            ["Code"] = app.Mail.Codes[email]
+        });
+        Assert.Equal(HttpStatusCode.Redirect, verified.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/Profile")).StatusCode);
+
+        var rejectedEmail = "someone." + Guid.NewGuid().ToString("N")[..8] + "@yahoo.com";
+        var rejected = await Post(browser, "/Account/Register", "/Account/Register", Registration(rejectedEmail));
+        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+        Assert.Contains("Please use an email address ending in @gmail.com, @fpt.edu.vn.", await Html(rejected));
+        Assert.False(app.Mail.Codes.ContainsKey(rejectedEmail));
+    }
+
+    [SqlFact]
     public async Task UnverifiedAccountCannotLoginAndDuplicateEmailCannotRegister()
     {
         using var browser = app.Browser();

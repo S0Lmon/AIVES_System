@@ -10,8 +10,8 @@ namespace AIVES.Tests;
 
 public sealed class AccountTests
 {
-    private static AccountService Service(FakeStore store, FakeVerification verification) => new(store, verification,
-        new FakeSender(), new ConfigurationBuilder().Build(), NullLogger<AccountService>.Instance);
+    private static AccountService Service(FakeStore store, FakeVerification verification, Dictionary<string, string?>? settings = null) => new(store, verification,
+        new FakeSender(), new ConfigurationBuilder().AddInMemoryCollection(settings ?? []).Build(), NullLogger<AccountService>.Instance);
 
     [Fact]
     public async Task NonGmailRegistrationDoesNotCreateAnAccount()
@@ -20,6 +20,49 @@ public sealed class AccountTests
         var result = await Service(store, new()).RegisterAsync(new("test@example.com", "password", "Test"));
         Assert.False(result.Succeeded);
         Assert.False(store.Created);
+        Assert.Contains("@gmail.com", result.Errors.Single());
+    }
+
+    [Theory]
+    [InlineData("student@fpt.edu.vn")]
+    [InlineData("Student@FPT.EDU.VN")]
+    [InlineData("someone@gmail.com")]
+    public async Task ConfiguredDomainsCanRegister(string email)
+    {
+        var store = new FakeStore();
+        var result = await Service(store, new(), new()
+        {
+            ["Registration:AllowedEmailDomains:0"] = "gmail.com",
+            ["Registration:AllowedEmailDomains:1"] = "@fpt.edu.vn"
+        }).RegisterAsync(new(email, "password", "Test"));
+        Assert.True(result.Succeeded);
+        Assert.True(store.Created);
+    }
+
+    [Theory]
+    [InlineData("user@notgmail.com")]
+    [InlineData("user@gmail.com.example.org")]
+    [InlineData("user@mail.fpt.edu.vn")]
+    [InlineData("fpt.edu.vn")]
+    public async Task LookalikeDomainsAreRejected(string email)
+    {
+        var store = new FakeStore();
+        var result = await Service(store, new(), new()
+        {
+            ["Registration:AllowedEmailDomains"] = "gmail.com, fpt.edu.vn"
+        }).RegisterAsync(new(email, "password", "Test"));
+        Assert.False(result.Succeeded);
+        Assert.False(store.Created);
+    }
+
+    [Fact]
+    public void AllowedDomainsAcceptACommaSeparatedValueAndDefaultToGmail()
+    {
+        Assert.Equal(["gmail.com"], Service(new(), new()).AllowedEmailDomains);
+        Assert.Equal(["fpt.edu.vn", "gmail.com"], Service(new(), new(), new()
+        {
+            ["Registration:AllowedEmailDomains"] = " FPT.edu.vn ,@gmail.com,,fpt.edu.vn"
+        }).AllowedEmailDomains);
     }
 
     [Fact]
