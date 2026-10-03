@@ -2,7 +2,7 @@ namespace AIVES.DTO;
 
 public static class AdminRoles
 {
-    public const string RoleName = "Admin";
+    public const string RoleName = AppRoles.Admin;
 }
 
 public enum SystemCheckStatus

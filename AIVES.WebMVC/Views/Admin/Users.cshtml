@@ -1,0 +1,87 @@
+@model AIVES.WebMVC.Models.ViewModels.UserManagementViewModel
+@using AIVES.WebMVC.Controllers
+@{ ViewData["Title"] = @L10n.T("Users"); }
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Admin / Users</span>
+        <h1>@L10n.T("User management")</h1>
+        <p>@L10n.T("New accounts start as students. Promote lecturers here so they can manage the question bank, rubrics and catalogue.")</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert alert-success" role="status">@Model.Message</div>
+}
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+<section class="panel overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th scope="col">@L10n.T("Account")</th>
+                    <th scope="col">@L10n.T("Verified")</th>
+                    <th scope="col">@L10n.T("Created")</th>
+                    <th scope="col">@L10n.T("Role")</th>
+                    <th scope="col" class="text-end">@L10n.T("Change role")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>
+                            <strong>@user.DisplayName</strong>
+                            <div class="small text-muted">@user.Email</div>
+                        </td>
+                        <td>
+                            @if (user.EmailConfirmed)
+                            {
+                                <span class="badge text-bg-success">@L10n.T("Yes")</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-light">@L10n.T("No")</span>
+                            }
+                        </td>
+                        <td class="small">@user.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            @if (user.IsAdmin)
+                            {
+                                <span class="badge text-bg-dark">@AdminController.RoleLabel(AIVES.DTO.AppRoles.Admin)</span>
+                            }
+                            <span class="badge text-bg-light">@AdminController.RoleLabel(user.Role)</span>
+                        </td>
+                        <td class="text-end">
+                            @if (user.IsCurrentUser)
+                            {
+                                <span class="small text-muted">@L10n.T("Your account")</span>
+                            }
+                            else
+                            {
+                                <form method="post" asp-action="SetRole" class="d-inline-flex gap-2 align-items-center">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <label class="visually-hidden" for="role-@user.Id">@L10n.T("Role")</label>
+                                    <select id="role-@user.Id" name="role" class="form-select form-select-sm">
+                                        @foreach (var role in AIVES.DTO.AppRoles.Assignable)
+                                        {
+                                            <option value="@role" selected="@(role == user.Role)">@AdminController.RoleLabel(role)</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary">@L10n.T("Save")</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<p class="small text-muted">@L10n.T("Administrators are set with AdminAccess:Emails (ADMIN_EMAIL in .env) and also have lecturer access. A role change applies to the user's open sessions within a minute.")</p>

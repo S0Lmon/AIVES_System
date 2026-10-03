@@ -25,6 +25,9 @@ public sealed class AccountController(IAccountService accounts, ILogger<AccountC
         catch (Exception ex) { ReportError(ex); }
         return View(model);
     }
+    /// <summary>Shown when a signed-in user opens a page their role does not allow.</summary>
+    [Authorize, HttpGet]
+    public IActionResult AccessDenied() => View();
     [HttpGet]
     public IActionResult Register() => View(new RegisterViewModel { AllowedEmailDomains = accounts.AllowedEmailDomains });
     [HttpPost, ValidateAntiForgeryToken]

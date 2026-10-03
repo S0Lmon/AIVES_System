@@ -127,6 +127,8 @@ public sealed class GoogleAccountTests
             Created = true;
             return Task.FromResult(AccountResult.Success(new("user", request.Email, request.DisplayName, true)));
         }
+        public Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync() => throw new NotSupportedException();
+        public Task<AccountResult> SetAssignableRoleAsync(string userId, string role) => throw new NotSupportedException();
         public Task<AccountResult> AddLoginAsync(string userId, ExternalLoginDto info)
         {
             Linked = true;

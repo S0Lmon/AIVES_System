@@ -13,7 +13,7 @@ namespace AIVES.WebMVC.Controllers;
 /// Rubric bank with its own tabs: the list of stored matrices, the editor for defining rows and
 /// columns by hand, and the AI tab that proposes a whole matrix to start from.
 /// </summary>
-[Authorize]
+[Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class RubricController : Controller
 {
     private readonly IRubricService _rubrics;

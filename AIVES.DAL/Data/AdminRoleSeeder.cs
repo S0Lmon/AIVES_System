@@ -9,23 +9,39 @@ namespace AIVES.DAL.Data;
 
 public static class AdminRoleSeeder
 {
+    /// <summary>Creates every role up front so registration and the Users page never meet a missing role.</summary>
+    public static async Task EnsureRolesAsync(RoleManager<IdentityRole> roleManager)
+    {
+        foreach (var role in AppRoles.All)
+        {
+            if (await roleManager.RoleExistsAsync(role))
+                continue;
+            var roleResult = await roleManager.CreateAsync(new IdentityRole(role));
+            if (!roleResult.Succeeded)
+                throw new InvalidOperationException($"Could not create the {role} role: {string.Join("; ", roleResult.Errors.Select(error => error.Description))}");
+        }
+    }
+
+    /// <summary>Gives a seeded account the Lecturer role so it can use the question and rubric banks.</summary>
+    public static async Task EnsureLecturerAsync(UserManager<ApplicationUser> userManager, ApplicationUser user)
+    {
+        if (await userManager.IsInRoleAsync(user, AppRoles.Lecturer))
+            return;
+        var result = await userManager.AddToRoleAsync(user, AppRoles.Lecturer);
+        if (!result.Succeeded)
+            throw new InvalidOperationException($"Could not make {user.Email} a lecturer: {string.Join("; ", result.Errors.Select(error => error.Description))}");
+    }
+
     public static async Task SyncAsync(IServiceProvider services, IConfiguration configuration, ILogger logger)
     {
         var adminEmails = configuration.GetSection(AdminAccessOptions.SectionName).Get<AdminAccessOptions>()?.Emails ?? [];
         var emails = adminEmails.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (emails.Count == 0)
-            return;
 
         using var scope = services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        if (!await roleManager.RoleExistsAsync(AdminRoles.RoleName))
-        {
-            var roleResult = await roleManager.CreateAsync(new IdentityRole(AdminRoles.RoleName));
-            if (!roleResult.Succeeded)
-                throw new InvalidOperationException($"Could not create the admin role: {string.Join("; ", roleResult.Errors.Select(error => error.Description))}");
-        }
+        await EnsureRolesAsync(roleManager);
 
         foreach (var email in emails)
         {

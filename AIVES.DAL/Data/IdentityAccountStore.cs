@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 namespace AIVES.DAL.Data;
 
-public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : IAccountStore
+public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn, RoleManager<IdentityRole> roles) : IAccountStore
 {
     private static UserDto ToDto(ApplicationUser user) => new(user.Id, user.Email!, user.DisplayName, user.EmailConfirmed);
     private async Task<ApplicationUser> GetAsync(string id) => await users.FindByIdAsync(id) ?? throw new InvalidOperationException(L10n.T("The account was not found."));
@@ -32,7 +32,12 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
     {
         var user = new ApplicationUser { UserName = request.Email, Email = request.Email, DisplayName = request.DisplayName, EmailConfirmed = confirmed };
         var result = confirmed ? await users.CreateAsync(user) : await users.CreateAsync(user, request.Password);
-        return result.Succeeded ? AccountResult.Success(ToDto(user)) : new(false, result.Errors.Select(e => e.Description).ToList());
+        if (!result.Succeeded)
+            return new(false, result.Errors.Select(e => e.Description).ToList());
+        // Every new account, password or Google, starts with the least privileged role.
+        await EnsureRoleExistsAsync(AppRoles.Default);
+        EnsureSuccess(await users.AddToRoleAsync(user, AppRoles.Default));
+        return AccountResult.Success(ToDto(user));
     }
     public async Task DeleteAsync(string userId) => EnsureSuccess(await users.DeleteAsync(await GetAsync(userId)));
     public async Task ConfirmEmailAsync(string userId)
@@ -73,5 +78,34 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
     {
         var result = await users.AddLoginAsync(await GetAsync(userId), new UserLoginInfo(info.Provider, info.ProviderKey, info.Provider));
         return result.Succeeded ? AccountResult.Success() : new(false, result.Errors.Select(e => e.Code).ToList());
+    }
+    public async Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync()
+    {
+        var all = users.Users.OrderBy(user => user.CreatedAtUtc).ToList();
+        var summaries = new List<UserSummaryDto>(all.Count);
+        foreach (var user in all)
+            summaries.Add(new(user.Id, user.Email ?? string.Empty, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc, [.. await users.GetRolesAsync(user)]));
+        return summaries;
+    }
+    public async Task<AccountResult> SetAssignableRoleAsync(string userId, string role)
+    {
+        var user = await users.FindByIdAsync(userId);
+        if (user is null)
+            return AccountResult.Failure(L10n.T("The account was not found."));
+        await EnsureRoleExistsAsync(role);
+        var current = await users.GetRolesAsync(user);
+        var stale = current.Where(name => AppRoles.Assignable.Contains(name) && name != role).ToList();
+        if (stale.Count > 0)
+            EnsureSuccess(await users.RemoveFromRolesAsync(user, stale));
+        if (!current.Contains(role))
+            EnsureSuccess(await users.AddToRoleAsync(user, role));
+        // A new stamp makes the cookie validator rebuild (or reject) the user's existing sign-ins.
+        EnsureSuccess(await users.UpdateSecurityStampAsync(user));
+        return AccountResult.Success(ToDto(user));
+    }
+    private async Task EnsureRoleExistsAsync(string role)
+    {
+        if (!await roles.RoleExistsAsync(role))
+            EnsureSuccess(await roles.CreateAsync(new IdentityRole(role)));
     }
 }

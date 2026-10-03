@@ -12,7 +12,7 @@ namespace AIVES.WebMVC.Controllers;
 /// <c>material</c> tab manages material, and both read the same counts so the header never
 /// disagrees with the tables underneath it.
 /// </summary>
-[Authorize]
+[Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogController> logger) : Controller
 {
     private const long MaxUploadBytes = 2 * 1024 * 1024;
