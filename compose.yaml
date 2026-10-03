@@ -155,6 +155,20 @@ services:
     depends_on:
       - caddy
 
+  # Optional: a temporary https://<random>.trycloudflare.com address with no domain or Cloudflare
+  # account. Enabled by COMPOSE_PROFILES=quicktunnel; the address changes whenever this container
+  # restarts (read it with: docker compose logs quicktunnel | grep trycloudflare.com).
+  quicktunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: aives-quicktunnel
+    profiles: ["quicktunnel"]
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--url", "http://caddy:80"]
+    networks:
+      - aives-network
+    depends_on:
+      - caddy
+
   # Optional local model: docker compose --profile ollama up -d, then set OLLAMA_ENABLED=true.
   ollama:
     image: ollama/ollama:latest
