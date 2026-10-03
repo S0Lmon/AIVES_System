@@ -54,6 +54,7 @@ public static class DependencyInjection
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             dbContext.Database.Migrate();
             await AdminRoleSeeder.EnsureRolesAsync(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
+            await AdminRoleSeeder.AssignDefaultRoleToRolelessUsersAsync(dbContext, scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>());
             if (isDevelopment)
             {
                 await DevelopmentDataSeeder.SeedAsync(dbContext);

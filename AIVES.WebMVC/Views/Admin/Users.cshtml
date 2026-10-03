@@ -70,7 +70,7 @@
                                     <select id="role-@user.Id" name="role" class="form-select form-select-sm">
                                         @foreach (var role in AIVES.DTO.AppRoles.Assignable)
                                         {
-                                            <option value="@role" selected="@(role == user.Role)">@AdminController.RoleLabel(role)</option>
+                                            <option value="@role" selected="@(role == (user.Role ?? AIVES.DTO.AppRoles.Default))">@AdminController.RoleLabel(role)</option>
                                         }
                                     </select>
                                     <button type="submit" class="btn btn-sm btn-primary">@L10n.T("Save")</button>
