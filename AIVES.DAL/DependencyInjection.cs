@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using AIVES.DAL.Data;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DAL.Entities;
@@ -18,9 +19,18 @@ public static class DependencyInjection
         services.AddIdentity<ApplicationUser, IdentityRole>(configureIdentity)
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
-        services.AddDataProtection()
+        var dataProtection = services.AddDataProtection()
             .PersistKeysToDbContext<ApplicationDbContext>()
             .SetApplicationName("AIVES");
+        // With a certificate configured, keys are encrypted before they reach the database, so a
+        // leaked backup alone cannot forge auth cookies. A missing or unreadable file fails startup.
+        var certificatePath = configuration["DataProtection:CertificatePath"];
+        if (!string.IsNullOrWhiteSpace(certificatePath))
+        {
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, configuration["DataProtection:CertificatePassword"]);
+            // Linux has no certificate store lookup for decryption, so name the certificate explicitly too.
+            dataProtection.ProtectKeysWithCertificate(certificate).UnprotectKeysWithAnyCertificate(certificate);
+        }
         services.AddHealthChecks()
             .AddDbContextCheck<ApplicationDbContext>("database");
 

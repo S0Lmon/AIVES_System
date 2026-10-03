@@ -14,3 +14,4 @@
 secrets.json
 appsettings.Production.json
 skills-lock.json
+secrets/

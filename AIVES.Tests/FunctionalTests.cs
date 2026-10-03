@@ -350,25 +350,41 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         using var browser = app.Browser();
         await SignIn(browser);
         var page = "/Question/GenerateQuestions";
-        var fields = new Dictionary<string, string> { ["Subject"] = "Software engineering", ["Topic"] = "Three layers", ["QuestionCount"] = "2", ["Difficulty"] = "Balanced" };
+        // The panel resolves subject and topic names from catalogue ids and asks for one question per run.
+        var (subjectId, topicId) = await CreateCatalogTopic("Three layers");
+        var fields = new Dictionary<string, string> { ["SubjectId"] = subjectId.ToString(), ["TopicId"] = topicId.ToString(), ["UseMaterials"] = "false" };
         var success = await Post(browser, "/Question/Create", page, fields);
         Assert.Equal(HttpStatusCode.OK, success.StatusCode);
         var html = await Html(success);
         Assert.Contains("Generated question 1", html);
-        Assert.Contains("Generated question 2", html);
+        Assert.DoesNotContain("Generated question 2", html);
         Assert.Contains("First follow up", html);
         Assert.Contains("Expected test answer", html);
         Assert.DoesNotContain("Q1.ToString", html);
         Assert.Contains("ai-result-index\">Q01", html);
-        Assert.Contains("ai-result-index\">Q02", html);
+        Assert.DoesNotContain("ai-result-index\">Q02", html);
         // Each result carries the values the panel copies into the question form.
         Assert.Contains("data-content=\"Generated question 1 for Three layers\"", html);
         Assert.Contains("ai-result-actions", html);
         Assert.Contains("ai-use", html);
-        fields["Topic"] = "simulate-failure";
+        var (failSubjectId, failTopicId) = await CreateCatalogTopic("simulate-failure");
+        fields["SubjectId"] = failSubjectId.ToString();
+        fields["TopicId"] = failTopicId.ToString();
         var failureHtml = await Html(await Post(browser, "/Question/Create", page, fields));
         Assert.Contains("Could not generate questions right now. Please try again later.", failureHtml);
         Assert.DoesNotContain("AI test failure", failureHtml);
+    }
+
+    /// <summary>Adds a subject with one topic straight to the database; names are unique per call.</summary>
+    private async Task<(int SubjectId, int TopicId)> CreateCatalogTopic(string topicName)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var subject = new AIVES.DAL.Entities.Subject { Name = $"Subject {Guid.NewGuid():N}" };
+        subject.Topics.Add(new AIVES.DAL.Entities.Topic { Name = topicName });
+        db.Subjects.Add(subject);
+        await db.SaveChangesAsync();
+        return (subject.Id, subject.Topics.Single().Id);
     }
 
     [SqlFact]
@@ -410,13 +426,18 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("tab=bulk", html);
 
         var ai = await Html(await browser.GetAsync("/Question?tab=ai"));
-        Assert.Contains("name=\"QuestionCount\"", ai);
+        // One question per run, aimed at a catalogue subject/topic rather than free text.
+        Assert.Contains("name=\"SubjectId\"", ai);
+        Assert.Contains("name=\"TopicId\"", ai);
+        Assert.DoesNotContain("name=\"QuestionCount\"", ai);
         Assert.Contains("action=\"/Question/GenerateReview\"", ai);
 
         var bulk = await Html(await browser.GetAsync("/Question?tab=bulk"));
         Assert.Contains("action=\"/Question/GenerateBulk\"", bulk);
-        // One planned count per Bloom level.
-        Assert.Contains("data-plan-count", bulk);
+        // A total plus a lowest/highest range per Bloom level.
+        Assert.Contains("name=\"TotalAmount\"", bulk);
+        Assert.Contains("data-plan-min", bulk);
+        Assert.Contains("data-plan-max", bulk);
     }
 
     [SqlFact]
