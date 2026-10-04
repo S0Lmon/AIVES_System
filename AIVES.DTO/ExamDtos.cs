@@ -12,7 +12,8 @@ public sealed record ExamInput(
     IReadOnlyList<string> CandidateEmails,
     int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
     int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
-    AppLanguage Language = AppLanguage.Vi);
+    AppLanguage Language = AppLanguage.Vi,
+    RecordingMode Recording = RecordingMode.Audio);
 
 /// <summary>Limits shared by validation and the form.</summary>
 public static class ExamLimits
@@ -31,10 +32,10 @@ public static class ExamLimits
 }
 
 /// <summary>An active question that may be drawn for an exam.</summary>
-public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer);
+public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer, string? RubricJson = null);
 
 /// <summary>A question handed to one candidate; the text is a snapshot taken when it was assigned.</summary>
-public sealed record ExamAssignedQuestion(int Order, int? QuestionId, string Content, string ExpectedAnswer, string BloomLevelName);
+public sealed record ExamAssignedQuestion(int Order, int? QuestionId, string Content, string ExpectedAnswer, string BloomLevelName, string? RubricJson = null);
 
 /// <summary>One candidate as stored: the order fixes their time slot.</summary>
 public sealed record ExamCandidateDraft(int Order, string Email, IReadOnlyList<ExamAssignedQuestion> Questions);
@@ -54,7 +55,8 @@ public sealed record ExamDraft(
     IReadOnlyList<ExamCandidateDraft> Candidates,
     int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
     int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
-    AppLanguage Language = AppLanguage.Vi);
+    AppLanguage Language = AppLanguage.Vi,
+    RecordingMode Recording = RecordingMode.Audio);
 
 public sealed record ExamSummaryDto(
     int Id,
@@ -93,7 +95,8 @@ public sealed record ExamDetailsDto(
     IReadOnlyList<ExamCandidateDto> Candidates,
     int AnswerTimeLimitSeconds = ExamLimits.DefaultAnswerSeconds,
     int MaxFollowUpsPerQuestion = ExamLimits.DefaultFollowUpsPerQuestion,
-    AppLanguage Language = AppLanguage.Vi)
+    AppLanguage Language = AppLanguage.Vi,
+    RecordingMode Recording = RecordingMode.Audio)
 {
     public bool HasStarted(DateTime nowUtc) => nowUtc >= StartsAtUtc;
 }
@@ -111,10 +114,12 @@ public sealed record StudentExamDto(
     int MainQuestionCount,
     int MaxFollowUpQuestions,
     int CandidateId = 0,
-    InterviewStatus? InterviewStatus = null);
+    InterviewStatus? InterviewStatus = null,
+    bool ResultAvailable = false,
+    decimal? FinalScore = null);
 
 /// <summary>Who is acting on an exam: lecturers manage their own exams, administrators every exam.</summary>
-public sealed record ExamActor(string UserId, bool IsAdmin);
+public sealed record ExamActor(string UserId, bool IsAdmin, string? Email = null);
 
 /// <summary>Outcome of saving an exam: its id plus how often consecutive candidates still share a question.</summary>
 public sealed record ExamSaveResult(int ExamId, int ConsecutiveOverlaps);

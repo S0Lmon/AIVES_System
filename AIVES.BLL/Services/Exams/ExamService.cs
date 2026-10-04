@@ -1,4 +1,6 @@
 using System.Net.Mail;
+using AIVES.BLL.Services.Operations;
+using AIVES.BLL.Services.Recordings;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
@@ -10,6 +12,9 @@ public sealed class ExamService(
     IExamRepository exams,
     ISubjectRepository subjects,
     ITopicRepository topics,
+    ISubjectAccessService access,
+    IAuditService audit,
+    IRecordingService recordings,
     TimeProvider clock,
     ILogger<ExamService> logger) : IExamService
 {
@@ -26,18 +31,20 @@ public sealed class ExamService(
 
     public async Task<ExamSaveResult> CreateAsync(ExamInput input, ExamActor actor, CancellationToken cancellationToken = default)
     {
-        var (draft, overlaps) = await BuildDraftAsync(input, actor.UserId, cancellationToken);
+        var (draft, overlaps) = await BuildDraftAsync(input, actor.UserId, actor, cancellationToken);
         var id = await exams.AddAsync(draft, cancellationToken);
         logger.LogInformation("User {UserId} created exam {ExamId} with {Candidates} candidates", actor.UserId, id, draft.Candidates.Count);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamCreated, actor.UserId, actor.Email, id, null, Describe(draft)), cancellationToken);
         return new ExamSaveResult(id, overlaps);
     }
 
     public async Task<ExamSaveResult> UpdateAsync(int id, ExamInput input, ExamActor actor, CancellationToken cancellationToken = default)
     {
         var existing = await GetEditableAsync(id, actor, cancellationToken);
-        var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, cancellationToken);
+        var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, actor, cancellationToken);
         await exams.UpdateAsync(id, draft, cancellationToken);
         logger.LogInformation("User {UserId} updated exam {ExamId}", actor.UserId, id);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamUpdated, actor.UserId, actor.Email, id, null, Describe(draft)), cancellationToken);
         return new ExamSaveResult(id, overlaps);
     }
 
@@ -48,10 +55,11 @@ public sealed class ExamService(
             throw new InvalidOperationException(L10n.T("The subject of this exam was deleted, so new questions cannot be drawn."));
         var input = new ExamInput(existing.Title, subjectId, existing.TopicId, existing.StartsAtUtc, existing.SlotMinutes,
             existing.MainQuestionCount, existing.MaxFollowUpQuestions, existing.Candidates.Select(candidate => candidate.Email).ToList(),
-            existing.AnswerTimeLimitSeconds, existing.MaxFollowUpsPerQuestion, existing.Language);
-        var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, cancellationToken);
+            existing.AnswerTimeLimitSeconds, existing.MaxFollowUpsPerQuestion, existing.Language, existing.Recording);
+        var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, actor, cancellationToken);
         await exams.UpdateAsync(id, draft, cancellationToken);
         logger.LogInformation("User {UserId} redrew the questions of exam {ExamId}", actor.UserId, id);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamQuestionsRedrawn, actor.UserId, actor.Email, id, null, Describe(draft)), cancellationToken);
         return new ExamSaveResult(id, overlaps);
     }
 
@@ -63,8 +71,12 @@ public sealed class ExamService(
         // A started exam is a record of what was asked; only an administrator may remove it.
         if (exam.HasStarted(clock.GetUtcNow().UtcDateTime) && !actor.IsAdmin)
             throw new InvalidOperationException(L10n.T("This exam has already started, so it can no longer be deleted."));
+        // Recordings live outside the database; remove them with the exam so no evidence is orphaned.
+        await recordings.DeleteForExamAsync(id, cancellationToken);
         await exams.DeleteAsync(id, cancellationToken);
         logger.LogInformation("User {UserId} deleted exam {ExamId}", actor.UserId, id);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamDeleted, actor.UserId, actor.Email, id, null,
+            $"{exam.Title} ({exam.SubjectName}), {exam.Candidates.Count} candidate(s)"), cancellationToken);
     }
 
     public async Task<int> CountPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default) =>
@@ -91,7 +103,11 @@ public sealed class ExamService(
         return exam;
     }
 
-    private async Task<(ExamDraft Draft, int Overlaps)> BuildDraftAsync(ExamInput input, string ownerId, CancellationToken cancellationToken)
+    private static string Describe(ExamDraft draft) =>
+        $"{draft.Title} | {draft.SubjectName}{(draft.TopicName is null ? "" : " / " + draft.TopicName)} | start {draft.StartsAtUtc:yyyy-MM-dd HH:mm} UTC | " +
+        $"{draft.SlotMinutes} min/candidate | {draft.MainQuestionCount} main, {draft.MaxFollowUpQuestions} follow-ups | {draft.Language} | recording {draft.Recording} | {draft.Candidates.Count} candidate(s)";
+
+    private async Task<(ExamDraft Draft, int Overlaps)> BuildDraftAsync(ExamInput input, string ownerId, ExamActor actor, CancellationToken cancellationToken)
     {
         var title = (input.Title ?? string.Empty).Trim();
         if (title.Length is < 2 or > ExamLimits.TitleMaxLength)
@@ -110,6 +126,8 @@ public sealed class ExamService(
             throw new ArgumentException(L10n.Format("Follow-ups per question must be between 0 and {0}.", ExamLimits.MaxFollowUpsPerQuestionLimit), nameof(input));
         if (!Enum.IsDefined(input.Language))
             throw new ArgumentException(L10n.T("Choose the interview language."), nameof(input));
+        if (!Enum.IsDefined(input.Recording))
+            throw new ArgumentException(L10n.T("Choose what is recorded."), nameof(input));
         if (input.StartsAtUtc <= clock.GetUtcNow().UtcDateTime)
             throw new ArgumentException(L10n.T("The exam must start in the future."), nameof(input));
 
@@ -124,6 +142,8 @@ public sealed class ExamService(
 
         var subject = await subjects.GetByIdAsync(input.SubjectId, cancellationToken)
             ?? throw new ArgumentException(L10n.T("Pick a subject from the catalogue."), nameof(input));
+        if (!await access.CanUseAsync(subject.Id, actor, cancellationToken))
+            throw new ArgumentException(L10n.T("You are not assigned to this subject. Ask an administrator to assign you."), nameof(input));
         TopicDto? topic = null;
         if (input.TopicId is int topicId)
         {
@@ -139,12 +159,12 @@ public sealed class ExamService(
         var allocation = ExamQuestionAllocator.Allocate(pool, emails.Count, input.MainQuestionCount, Random.Shared);
         var candidates = emails.Select((email, index) => new ExamCandidateDraft(index + 1, email,
             allocation.Sets[index].Select((question, order) =>
-                new ExamAssignedQuestion(order + 1, question.Id, question.Content, question.ExpectedAnswer, question.BloomLevelName)).ToList()))
+                new ExamAssignedQuestion(order + 1, question.Id, question.Content, question.ExpectedAnswer, question.BloomLevelName, question.RubricJson)).ToList()))
             .ToList();
 
         var draft = new ExamDraft(title, subject.Id, subject.Name, topic?.Id, topic?.Name, input.StartsAtUtc, input.SlotMinutes,
             input.MainQuestionCount, input.MaxFollowUpQuestions, ownerId, candidates,
-            input.AnswerTimeLimitSeconds, input.MaxFollowUpsPerQuestion, input.Language);
+            input.AnswerTimeLimitSeconds, input.MaxFollowUpsPerQuestion, input.Language, input.Recording);
         return (draft, allocation.ConsecutiveOverlaps);
     }
 

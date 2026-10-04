@@ -55,7 +55,8 @@ public sealed class SqlIntegrationTests
         {
             await db.Database.MigrateAsync();
             var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-            Assert.Equal(10, applied.Count);
+            Assert.Equal(11, applied.Count);
+            Assert.Contains(applied, name => name.EndsWith("AddGradingRecordingAudit", StringComparison.Ordinal));
             Assert.Contains(applied, name => name.EndsWith("AddRubricMatrix", StringComparison.Ordinal));
             Assert.Contains(applied, name => name.EndsWith("LinkQuestionsToSubjectAndTopic", StringComparison.Ordinal));
             Assert.Contains(applied, name => name.EndsWith("AddDataProtectionKeys", StringComparison.Ordinal));

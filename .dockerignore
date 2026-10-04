@@ -33,3 +33,5 @@ README.md
 **/appsettings.Production.json
 **/TestResults
 secrets/
+
+**/App_Data/

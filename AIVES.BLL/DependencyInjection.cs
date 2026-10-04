@@ -8,6 +8,9 @@ using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
+using AIVES.BLL.Services.Grading;
+using AIVES.BLL.Services.Operations;
+using AIVES.BLL.Services.Recordings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +45,30 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
         services.AddSingleton(TimeProvider.System);
+        services.AddMemoryCache();
+        services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        services.AddScoped<IGlossaryService, GlossaryService>();
+        services.AddScoped<ISubjectAccessService, SubjectAccessService>();
+        services.Configure<RecordingOptions>(configuration.GetSection(RecordingOptions.SectionName));
+        services.AddSingleton<IRecordingStore>(provider =>
+        {
+            var path = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<RecordingOptions>>().Value.Path;
+            var root = Path.IsPathRooted(path)
+                ? path
+                : Path.Combine(provider.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>().ContentRootPath, path);
+            return new FileRecordingStore(root);
+        });
+        services.AddScoped<IRecordingService, RecordingService>();
+        services.Configure<GradingOptions>(configuration.GetSection(GradingOptions.SectionName));
+        services.AddScoped<IGradingService, GradingService>();
+        services.Configure<ReportOptions>(configuration.GetSection(ReportOptions.SectionName));
+        services.AddHttpClient<IAnswerGrader, GeminiAnswerGrader>(nameof(GeminiAnswerGrader), client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(150);
+        }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddHostedService<GradingWorker>();
         // Role changes bump the security stamp; re-check it every minute so a demoted lecturer
         // loses access promptly instead of after the 30 minute default.
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(1));

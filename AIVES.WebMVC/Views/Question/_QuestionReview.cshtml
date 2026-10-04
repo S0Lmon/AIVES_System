@@ -26,7 +26,7 @@
     <div class="panel-header mb-3">
         <div>
             <h2>@L10n.T("Review before saving")</h2>
-            <small class="text-muted">@L10n.Format("{0} questions generated. Untick anything you do not want in the bank.", Model.Results.Count)</small>
+            <small class="text-muted">@L10n.Format("{0} questions generated. Untick anything you do not want in the bank.", Model.Results.Count) @L10n.T("Edit the wording, expected answer or Bloom level before saving.")</small>
         </div>
         @if (Model.Sources.Count > 0)
         {
@@ -45,7 +45,7 @@
         var result = Model.Results[position];
         <div class="review-row" data-review-row>
             <div class="review-head">
-                <p class="review-content">@result.Content</p>
+                <textarea name="content" class="form-control review-content" rows="2" aria-label="@L10n.T("Question")">@result.Content</textarea>
                 <div class="form-check mt-1">
                     <input class="form-check-input" type="checkbox" name="pick" value="@position" id="pick-@position" checked
                            data-review-toggle />
@@ -57,7 +57,12 @@
                    because when it was left blank the model guessed it, and a wrong guess is cheaper to
                    correct now than after it is in the bank. One select per row, in row order, so the
                    save action can zip the values back onto the generated batch by index. *@
-                <span><strong>@result.BloomLevel</strong></span>
+                <select name="bloom" class="form-select form-select-sm review-difficulty" aria-label="@L10n.T("Bloom level")">
+                    @foreach (var level in AIVES.DTO.BloomLevels.All)
+                    {
+                        <option value="@level" selected="@(string.Equals(level, result.BloomLevel, StringComparison.OrdinalIgnoreCase))">@level</option>
+                    }
+                </select>
                 <select name="difficulty" class="form-select form-select-sm review-difficulty" aria-label="@L10n.T("Difficulty")">
                     <option value="">@L10n.T("Not set")</option>
                     @foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered)
@@ -66,10 +71,7 @@
                     }
                 </select>
             </div>
-            @if (!string.IsNullOrWhiteSpace(result.ExpectedAnswer))
-            {
-                <p class="review-answer">@result.ExpectedAnswer</p>
-            }
+            <textarea name="expectedAnswer" class="form-control form-control-sm review-answer mt-2" rows="2" placeholder="@L10n.T("Expected answer")" aria-label="@L10n.T("Expected answer")">@result.ExpectedAnswer</textarea>
             @if (result.FollowUpQuestions.Count > 0)
             {
                 <ul class="review-followups">

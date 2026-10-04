@@ -33,7 +33,10 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
             ["DemoAccount:Enabled"] = "false",
             ["Authentication:Google:ClientId"] = "",
             ["Authentication:Google:ClientSecret"] = "",
-            ["Logging:LogLevel:Default"] = "Error"
+            ["Logging:LogLevel:Default"] = "Error",
+            // Tests drive grading themselves instead of racing a background worker.
+            ["Grading:WorkerEnabled"] = "false",
+            ["Recordings:Path"] = Path.Combine(Path.GetTempPath(), "aives-test-recordings", Guid.NewGuid().ToString("N"))
         }));
         builder.ConfigureTestServices(services =>
         {
@@ -49,6 +52,8 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddSingleton<IQuestionGeneratorRouter>(Generator);
             services.RemoveAll<IFollowUpGenerator>();
             services.AddSingleton<IFollowUpGenerator>(FollowUps);
+            services.RemoveAll<AIVES.BLL.Services.Grading.IAnswerGrader>();
+            services.AddSingleton<AIVES.BLL.Services.Grading.IAnswerGrader>(new TestAnswerGrader());
         });
     }
 
@@ -132,4 +137,15 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
             }).ToList());
         }
     }
+}
+
+
+/// <summary>Proposes 6 of the question's points for every answer.</summary>
+public sealed class TestAnswerGrader : AIVES.BLL.Services.Grading.IAnswerGrader
+{
+    public bool IsConfigured => true;
+    public string ModelName => "test-grader";
+
+    public Task<GradeSuggestion> GradeAsync(GradingRequest request, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new GradeSuggestion(Math.Min(6, request.MaxScore), [], ["Named the layers"], ["No example"], ["Dependency direction"], "Partly correct.", ModelName));
 }

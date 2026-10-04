@@ -19,4 +19,6 @@ public interface IAccountStore
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync();
     /// <summary>Makes <paramref name="role"/> the user's only assignable role and invalidates their sign-in cookie.</summary>
     Task<AccountResult> SetAssignableRoleAsync(string userId, string role);
+    /// <summary>Disables (or re-enables) sign-in for an account and ends its existing sessions.</summary>
+    Task<AccountResult> SetDisabledAsync(string userId, bool disabled);
 }

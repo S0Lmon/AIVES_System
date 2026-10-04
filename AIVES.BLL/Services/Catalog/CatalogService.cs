@@ -9,7 +9,8 @@ namespace AIVES.BLL.Services.Catalog;
 public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository topics, IMaterialRepository materials,
     IOptions<OllamaOptions> ollamaOptions) : ICatalogService
 {
-    private const int MaxRagDocuments = 6;
+    /// <summary>Materials searched per request; passages, not whole documents, go into the prompt.</summary>
+    private const int MaxRagDocuments = 40;
 
     public Task<IReadOnlyList<SubjectDto>> GetSubjectsAsync(CancellationToken cancellationToken = default) => subjects.GetAllAsync(cancellationToken);
 
@@ -46,58 +47,9 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
     public async Task<RagContext> BuildRagContextAsync(int? topicId, int? subjectId, string query, CancellationToken cancellationToken = default)
     {
         var budget = Math.Max(1000, ollamaOptions.Value.MaxContextCharacters);
-        var candidates = await materials.GetActiveForRagAsync(topicId, subjectId, MaxRagDocuments * 4, cancellationToken);
-        if (candidates.Count == 0)
-            return RagContext.Empty;
-
-        var terms = Tokenize(query);
-        var ranked = candidates
-            .Select(material => new { Material = material, Score = Score(material, terms) })
-            .OrderByDescending(entry => entry.Score)
-            .ThenByDescending(entry => entry.Material.ModifiedDate)
-            .Take(MaxRagDocuments)
-            .ToList();
-
-        // Only ground the model in material that actually matched the request.
-        var relevant = ranked.Where(entry => entry.Score > 0).Take(MaxRagDocuments).ToList();
-        if (relevant.Count == 0)
-            return RagContext.Empty;
-
-        var builder = new System.Text.StringBuilder();
-        var sources = new List<MaterialExcerpt>();
-        foreach (var entry in relevant)
-        {
-            var remaining = budget - builder.Length;
-            if (remaining <= 0)
-                break;
-
-            var content = entry.Material.Content.Length > remaining
-                ? entry.Material.Content[..remaining]
-                : entry.Material.Content;
-            builder.AppendLine($"### {entry.Material.Title}");
-            builder.AppendLine(content);
-            builder.AppendLine();
-            sources.Add(new MaterialExcerpt(entry.Material.Id, entry.Material.Title, content));
-        }
-
-        return sources.Count == 0 ? RagContext.Empty : new RagContext(builder.ToString().Trim(), sources);
+        var candidates = await materials.GetActiveForRagAsync(topicId, subjectId, MaxRagDocuments, cancellationToken);
+        return MaterialRetriever.Retrieve(candidates, query, budget);
     }
-
-    private static int Score(MaterialDto material, HashSet<string> terms)
-    {
-        if (terms.Count == 0)
-            return 1;
-
-        var haystack = $"{material.Title} {material.Content}";
-        var hits = terms.Count(term => haystack.Contains(term, StringComparison.OrdinalIgnoreCase));
-        return hits;
-    }
-
-    private static HashSet<string> Tokenize(string query) => query
-        .Split([' ', ',', '.', ';', ':', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Where(token => token.Length >= 3)
-        .Select(token => token.ToLowerInvariant())
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static SubjectInput Validate(SubjectInput input)
     {

@@ -84,7 +84,8 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
         var all = users.Users.OrderBy(user => user.CreatedAtUtc).ToList();
         var summaries = new List<UserSummaryDto>(all.Count);
         foreach (var user in all)
-            summaries.Add(new(user.Id, user.Email ?? string.Empty, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc, [.. await users.GetRolesAsync(user)]));
+            summaries.Add(new(user.Id, user.Email ?? string.Empty, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc, [.. await users.GetRolesAsync(user)],
+                user.LockoutEnd is { } end && end > DateTimeOffset.UtcNow.AddYears(50)));
         return summaries;
     }
     public async Task<AccountResult> SetAssignableRoleAsync(string userId, string role)
@@ -100,6 +101,19 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
         if (!current.Contains(role))
             EnsureSuccess(await users.AddToRoleAsync(user, role));
         // A new stamp makes the cookie validator rebuild (or reject) the user's existing sign-ins.
+        EnsureSuccess(await users.UpdateSecurityStampAsync(user));
+        return AccountResult.Success(ToDto(user));
+    }
+    public async Task<AccountResult> SetDisabledAsync(string userId, bool disabled)
+    {
+        var user = await users.FindByIdAsync(userId);
+        if (user is null)
+            return AccountResult.Failure(L10n.T("The account was not found."));
+        // A lockout ending far in the future is how Identity disables an account; sign-in checks it.
+        EnsureSuccess(await users.SetLockoutEnabledAsync(user, true));
+        EnsureSuccess(await users.SetLockoutEndDateAsync(user, disabled ? DateTimeOffset.MaxValue : null));
+        if (!disabled)
+            EnsureSuccess(await users.ResetAccessFailedCountAsync(user));
         EnsureSuccess(await users.UpdateSecurityStampAsync(user));
         return AccountResult.Success(ToDto(user));
     }

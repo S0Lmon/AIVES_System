@@ -1,0 +1,114 @@
+@model AIVES.DTO.ExamReportDto
+@inject AIVES.WebMVC.DisplayTimeZone TimeZone
+@using AIVES.WebMVC
+@{
+    ViewData["Title"] = L10n.T("Class report") + " – " + Model.Title;
+    var maxBucket = Math.Max(1, Model.Distribution.Max(bucket => bucket.Count));
+}
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Reports / Exam</span>
+        <h1>@Model.Title</h1>
+        <p>@Model.SubjectName@(Model.TopicName is null ? "" : " / " + Model.TopicName) · @TimeZone.ToLocal(Model.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" asp-action="Export" asp-route-id="@Model.ExamId">@L10n.T("Grade sheet (.xlsx)")</a>
+        <a class="btn btn-light" asp-action="Exam" asp-route-id="@Model.ExamId">@L10n.T("Grading")</a>
+    </div>
+</div>
+
+<div class="metric-grid mb-4">
+    <div class="panel metric-card"><strong>@Model.CompletedCount / @Model.CandidateCount</strong><p>@L10n.T("Vivas finished")</p></div>
+    <div class="panel metric-card"><strong>@Model.FinalizedCount</strong><p>@L10n.T("Grades confirmed")</p></div>
+    <div class="panel metric-card"><strong>@ViewText.Score(Model.Average)</strong><p>@L10n.Format("Average (median {0}, min {1}, max {2})", ViewText.Score(Model.Median), ViewText.Score(Model.Minimum), ViewText.Score(Model.Maximum))</p></div>
+    <div class="panel metric-card"><strong>@(Model.PassRate is { } pass ? pass.ToString("0.#") + "%" : "—")</strong><p>@L10n.T("Scored 5 or more")</p></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <section class="panel p-4 h-100">
+            <h2 class="h6">@L10n.T("Distribution of confirmed grades")</h2>
+            @if (Model.FinalizedCount == 0)
+            {
+                <p class="small text-muted mb-0">@L10n.T("No grade has been confirmed yet.")</p>
+            }
+            else
+            {
+                <div class="score-histogram" role="img" aria-label="@L10n.T("Distribution of confirmed grades")">
+                    @foreach (var bucket in Model.Distribution)
+                    {
+                        var label = bucket.To >= 10 ? $"{bucket.From:0}–10" : $"{bucket.From:0}–<{bucket.To:0}";
+                        <div class="histogram-col" title="@L10n.Format("{0}: {1} student(s)", label, bucket.Count)">
+                            <span class="histogram-value">@(bucket.Count > 0 ? bucket.Count.ToString() : "")</span>
+                            <span class="histogram-bar" style="height:@((bucket.Count * 100.0 / maxBucket).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+                            <span class="histogram-label">@bucket.From.ToString("0")</span>
+                        </div>
+                    }
+                </div>
+                <p class="small text-muted mt-2 mb-0">@L10n.T("Grade on the 10-point scale; each column is one point wide.")</p>
+            }
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel p-4 h-100">
+            <h2 class="h6">@L10n.T("By Bloom level")</h2>
+            @if (Model.BloomLevels.Count == 0)
+            {
+                <p class="small text-muted mb-0">@L10n.T("No answers yet.")</p>
+            }
+            @foreach (var bloom in Model.BloomLevels)
+            {
+                <div class="meter-row" title="@L10n.Format("{0}: {1}% of points over {2} question(s)", bloom.BloomLevelName, ViewText.Score(bloom.AveragePercent), bloom.TimesAsked)">
+                    <span class="meter-name">@bloom.BloomLevelName</span>
+                    <span class="meter-track"><span class="meter-fill" style="width:@((bloom.AveragePercent ?? 0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                    <span class="meter-value">@(bloom.AveragePercent is { } percent ? percent.ToString("0") + "%" : "—")</span>
+                </div>
+            }
+            <hr />
+            <div class="small">
+                <div>@L10n.Format("Follow-ups per main answer: {0}", Model.FollowUpsPerAnswer?.ToString("0.##") ?? "—")</div>
+                <div>@L10n.Format("Examiner response time after an answer: average {0} ms, 95th percentile {1} ms", Model.AverageAiLatencyMs?.ToString("0") ?? "—", Model.P95AiLatencyMs?.ToString("0") ?? "—")</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="panel overflow-hidden mb-4">
+    <div class="panel-header"><h2>@L10n.T("Questions, hardest first")</h2>
+        <small class="text-muted">@L10n.T("Share of points earned, using your confirmed score where set and the AI proposal otherwise. Good answer: at least 70% of the points.")</small></div>
+    <div class="table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th scope="col">@L10n.T("Question")</th>
+                    <th scope="col">@L10n.T("Bloom")</th>
+                    <th scope="col">@L10n.T("Asked")</th>
+                    <th scope="col">@L10n.T("Average score")</th>
+                    <th scope="col">@L10n.T("Good answers")</th>
+                    <th scope="col">@L10n.T("Follow-ups per ask")</th>
+                    <th scope="col">@L10n.T("Sufficient at once")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var question in Model.Questions)
+                {
+                    <tr>
+                        <td style="min-width:280px">@question.Content</td>
+                        <td><span class="badge text-bg-light">@question.BloomLevelName</span></td>
+                        <td>@question.TimesAsked</td>
+                        <td>
+                            <div class="meter-row compact">
+                                <span class="meter-track"><span class="meter-fill" style="width:@((question.AveragePercent ?? 0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                                <span class="meter-value">@(question.AveragePercent is { } percent ? percent.ToString("0") + "%" : "—")</span>
+                            </div>
+                        </td>
+                        <td>@(question.GoodAnswerRate is { } good ? good.ToString("0") + "%" : "—")</td>
+                        <td>@question.FollowUpsPerAsk.ToString("0.##")</td>
+                        <td>@question.SufficientFirstTime / @question.TimesAsked</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

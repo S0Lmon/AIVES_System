@@ -1,0 +1,79 @@
+@model AIVES.WebMVC.Models.ViewModels.QuestionBankViewModel
+@{
+    var import = Model.Import;
+    var subjects = Model.Ai.Subjects;
+    var topics = Model.Ai.AllTopics;
+    ViewData["ReviewReturnTab"] = "import";
+}
+
+<div class="panel form-panel mb-3">
+    <form method="post" asp-action="ImportQuestions" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">1</span><div>
+                <h2>@L10n.T("Import questions from a file")</h2>
+                <p>@L10n.T("Upload a .csv, .xlsx or .json file. Imported questions are shown for review first; nothing enters the bank until you save.")</p>
+            </div></div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="importSubject">@L10n.T("Subject")</label>
+                    <select id="importSubject" name="subjectId" class="form-select" required>
+                        <option value="">@L10n.T("Choose a subject")</option>
+                        @foreach (var subject in subjects)
+                        {
+                            <option value="@subject.Id" selected="@(subject.Id == import.SubjectId)">@subject.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="importTopic">@L10n.T("Topic")</label>
+                    <select id="importTopic" name="topicId" class="form-select">
+                        <option value="">@L10n.T("Any topic")</option>
+                        @foreach (var topic in topics)
+                        {
+                            <option value="@topic.Id" data-subject="@topic.SubjectId" selected="@(topic.Id == import.TopicId)">@topic.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="importFile">@L10n.T("File")</label>
+                    <input id="importFile" type="file" name="file" class="form-control" accept=".csv,.xlsx,.json" required />
+                </div>
+            </div>
+            <div class="form-text mt-2">
+                @L10n.T("Columns (first row): content, expected answer, bloom, difficulty, follow-up 1, follow-up 2. Vietnamese headers work too (câu hỏi, đáp án, mức bloom, độ khó). Bloom accepts Remember…Create, Nhớ/Hiểu/Vận dụng/Phân tích/Đánh giá/Sáng tạo, or 1–6.")
+                <a href="data:text/csv;charset=utf-8,%EF%BB%BFcontent,expected answer,bloom,difficulty,follow-up 1,follow-up 2%0A&quot;Giải thích mô hình 3 lớp (3-layer)?&quot;,&quot;Presentation, Business, Data Access; mỗi lớp chỉ gọi lớp dưới&quot;,Hiểu,Basic,&quot;Vì sao không gọi thẳng DAL từ UI?&quot;,%0A" download="aives-questions-template.csv">@L10n.T("Download a template")</a>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">@L10n.T("Read the file")</button>
+        </section>
+    </form>
+</div>
+
+@if (Model.ImportProblems.Count > 0)
+{
+    <div class="alert alert-warning">
+        <strong>@L10n.T("Some rows were skipped")</strong>
+        <ul class="mb-0">@foreach (var problem in Model.ImportProblems.Take(30)) { <li>@problem</li> }</ul>
+    </div>
+}
+
+@if (import.HasResult)
+{
+    <partial name="_QuestionReview" model="import" />
+}
+
+<script>
+    (function () {
+        var subject = document.getElementById('importSubject');
+        var topic = document.getElementById('importTopic');
+        function filter() {
+            Array.prototype.forEach.call(topic.options, function (option) {
+                if (!option.dataset.subject) return;
+                option.hidden = option.dataset.subject !== subject.value;
+                if (option.hidden && option.selected) topic.value = '';
+            });
+        }
+        subject.addEventListener('change', filter);
+        filter();
+    })();
+</script>
