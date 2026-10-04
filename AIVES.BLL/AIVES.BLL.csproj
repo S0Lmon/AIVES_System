@@ -9,4 +9,8 @@
     <ProjectReference Include="../AIVES.DAL/AIVES.DAL.csproj" />
     <ProjectReference Include="../AIVES.DTO/AIVES.DTO.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+  </ItemGroup>
 </Project>

@@ -11,12 +11,14 @@ public static class QuestionTabs
     public const string Create = "create";
     public const string Ai = "ai";
     public const string Bulk = "bulk";
+    public const string Import = "import";
 
     public static string Normalize(string? tab) => tab switch
     {
         Create => Create,
         Ai => Ai,
         Bulk => Bulk,
+        Import => Import,
         _ => Bank
     };
 }
@@ -48,6 +50,10 @@ public sealed class QuestionBankViewModel
     public QuestionViewModel Editor { get; set; } = new();
     public AiReviewViewModel Ai { get; set; } = new();
     public BulkGenerationViewModel Bulk { get; set; } = new();
+
+    /// <summary>Questions read from an uploaded file, waiting for review like AI drafts.</summary>
+    public AiReviewViewModel Import { get; set; } = new();
+    public IReadOnlyList<string> ImportProblems { get; set; } = [];
 }
 
 /// <summary>

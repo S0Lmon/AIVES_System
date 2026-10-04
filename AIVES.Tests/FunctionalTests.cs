@@ -652,6 +652,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["MaxFollowUpsPerQuestion"] = "1",
             ["AnswerTimeLimitSeconds"] = "90",
             ["Language"] = "En",
+            ["Recording"] = "Audio",
             ["CandidateEmails"] = studentEmail
         });
         var detailsUrl = created.Headers.Location!.OriginalString;
@@ -677,14 +678,34 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         // JSON endpoints need the antiforgery token in a header.
         Assert.Equal(HttpStatusCode.BadRequest, (await student.PostAsync($"/Interview/{candidateId}/Start", null)).StatusCode);
 
-        var state = await InterviewCall(student, token, $"/Interview/{candidateId}/Start");
+        // A recorded viva does not start without the candidate's consent.
+        using (var refused = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{candidateId}/Start"))
+        {
+            refused.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
+            refused.Content = System.Net.Http.Json.JsonContent.Create(new { recordingConsent = false });
+            Assert.Equal(HttpStatusCode.Conflict, (await student.SendAsync(refused)).StatusCode);
+        }
+        var state = await InterviewCall(student, token, $"/Interview/{candidateId}/Start", new { recordingConsent = true });
         Assert.Equal("InProgress", state.GetProperty("status").GetString());
+        Assert.Equal("Audio", state.GetProperty("recording").GetString());
         var turn = state.GetProperty("currentTurn");
         Assert.Equal("Main", turn.GetProperty("kind").GetString());
         Assert.EndsWith("Z", turn.GetProperty("askedAtUtc").GetString());   // UTC, so the browser timer is right
         Assert.Equal(90, turn.GetProperty("timeLimitSeconds").GetInt32());
 
-        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "Please probe this answer", inputMode = 0 });
+        var firstTurnId = turn.GetProperty("turnId").GetInt32();
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = firstTurnId, transcript = "Please probe this answer", inputMode = 0, responseDelayMs = 1500, speakingMs = 8000 });
+        // The answer's audio is uploaded after it is submitted.
+        using (var upload = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{candidateId}/Recording/{firstTurnId}"))
+        {
+            upload.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
+            var form = new MultipartFormDataContent();
+            var audio = new ByteArrayContent([26, 69, 223, 163, 1, 2, 3, 4]);
+            audio.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("audio/webm");
+            form.Add(audio, "file", "answer.webm");
+            upload.Content = form;
+            Assert.Equal(HttpStatusCode.NoContent, (await student.SendAsync(upload)).StatusCode);
+        }
         turn = state.GetProperty("currentTurn");
         Assert.Equal("FollowUp", turn.GetProperty("kind").GetString());
         Assert.Equal("Could you explain that more precisely?", turn.GetProperty("questionText").GetString());
@@ -711,6 +732,53 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("answer vague", details);
         Assert.Contains("Typed", details);
         Assert.Contains("Completed", await Html(await student.GetAsync("/MyExams")));
+
+        // The AI proposes; the lecturer reviews, can play the recording, and confirms.
+        List<int> questionIds;
+        int recordingId;
+        using (var scope = app.Services.CreateScope())
+        {
+            Assert.True(await scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Grading.IGradingService>().ProcessNextAsync());
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            questionIds = await db.ExamCandidateQuestions.Where(question => question.ExamCandidateId == candidateId).OrderBy(question => question.Order).Select(question => question.Id).ToListAsync();
+            recordingId = (await db.TurnRecordings.SingleAsync(recording => recording.ExamTurnId == firstTurnId)).Id;
+        }
+        var grading = await Html(await lecturer.GetAsync($"/Grading/Candidate/{candidateId}"));
+        Assert.Contains("Named the layers", grading);
+        Assert.Contains($"/Grading/Recording/{recordingId}", grading);
+        var played = await lecturer.GetAsync($"/Grading/Recording/{recordingId}");
+        Assert.Equal(HttpStatusCode.OK, played.StatusCode);
+        Assert.Equal("audio/webm", played.Content.Headers.ContentType!.MediaType);
+        Assert.Equal(new byte[] { 26, 69, 223, 163, 1, 2, 3, 4 }, await played.Content.ReadAsByteArrayAsync());
+        Assert.NotEqual(HttpStatusCode.OK, (await student.GetAsync($"/Grading/Recording/{recordingId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await student.GetAsync($"/MyExams/Result/{candidateId}")).StatusCode);
+
+        var saved = await Post(lecturer, $"/Grading/Candidate/{candidateId}", $"/Grading/Candidate/{candidateId}", new()
+        {
+            ["Questions[0].Id"] = questionIds[0].ToString(),
+            ["Questions[0].Score"] = "8,5",
+            ["Questions[0].Comment"] = "Good layering",
+            ["Questions[1].Id"] = questionIds[1].ToString(),
+            ["Questions[1].Score"] = "7",
+            ["Comment"] = "Solid viva",
+            ["Finalize"] = "true"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+        var result = await Html(await student.GetAsync($"/MyExams/Result/{candidateId}"));
+        Assert.Contains("7.75", result);
+        Assert.Contains("Good layering", result);
+        Assert.Contains("Dependency direction", result);
+        Assert.Contains("Result: 7.75/10", await Html(await student.GetAsync("/MyExams")));
+
+        var sheet = await lecturer.GetAsync($"/Grading/Export/{created.Headers.Location!.OriginalString.Split('/')[^1]}");
+        Assert.Equal(HttpStatusCode.OK, sheet.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sheet.Content.Headers.ContentType!.MediaType);
+        var examId = created.Headers.Location!.OriginalString.Split('/')[^1];
+        Assert.Contains("Hardest", await Html(await lecturer.GetAsync($"/Grading/Report/{examId}")), StringComparison.OrdinalIgnoreCase);
+        var audit = await Html(await lecturer.GetAsync($"/Grading/Audit/{examId}"));
+        Assert.Contains("Grade confirmed", audit);
+        Assert.Contains("Recording played", audit);
+        Assert.Contains("AI proposed a grade", audit);
     }
 
     private static async Task<System.Text.Json.JsonElement> InterviewCall(HttpClient browser, string token, string url, object? body = null)

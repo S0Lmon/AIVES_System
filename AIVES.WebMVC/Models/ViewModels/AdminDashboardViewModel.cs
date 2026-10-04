@@ -50,4 +50,5 @@ public sealed class UserRowViewModel
     /// <summary>Lecturer or Student; null for accounts created before roles existed.</summary>
     public string? Role { get; set; }
     public bool IsCurrentUser { get; set; }
+    public bool IsDisabled { get; set; }
 }

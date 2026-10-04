@@ -1,4 +1,5 @@
 using AIVES.BLL.Services.Catalog;
+using AIVES.BLL.Services.Import;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebMVC.Models.ViewModels;
@@ -15,8 +16,8 @@ namespace AIVES.WebMVC.Controllers;
 [Authorize(Policy = AuthorizationPolicies.Staff)]
 public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogController> logger) : Controller
 {
-    private const long MaxUploadBytes = 2 * 1024 * 1024;
-    private static readonly string[] AllowedExtensions = [".txt", ".md", ".markdown", ".csv", ".json"];
+    // Slide decks and PDFs carry images, so the file limit is far above the text it yields.
+    private const long MaxUploadBytes = 20 * 1024 * 1024;
 
     [HttpGet]
     public async Task<IActionResult> Index(string? tab, string? subjectFilter, string? materialFilter,
@@ -102,23 +103,29 @@ public sealed class CatalogController(ICatalogService catalog, ILogger<CatalogCo
         }, CatalogTabs.Material, L10n.T("The material was deleted."), subjectId, topicId);
 
     [HttpPost, ValidateAntiForgeryToken]
-    [RequestSizeLimit(4 * 1024 * 1024)]
+    [RequestSizeLimit(22 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 22 * 1024 * 1024)]
     public async Task<IActionResult> ImportMaterial(int topicId, IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
             return await FailMaterial(L10n.T("Choose a file to import."), subjectId: null, topicId: topicId);
 
         if (file.Length > MaxUploadBytes)
-            return await FailMaterial(L10n.T("The file is larger than 2 MB."), subjectId: null, topicId: topicId);
+            return await FailMaterial(L10n.T("The file is larger than 20 MB."), subjectId: null, topicId: topicId);
 
-        if (!AllowedExtensions.Contains(Path.GetExtension(file.FileName).ToLowerInvariant()))
-            return await FailMaterial(L10n.T("Supported formats: .txt, .md, .csv, .json"), subjectId: null, topicId: topicId);
+        if (!MaterialTextExtractor.Extensions.Contains(Path.GetExtension(file.FileName).ToLowerInvariant()))
+            return await FailMaterial(L10n.T("Supported formats: .txt, .md, .csv, .json, .pdf, .docx, .pptx"), subjectId: null, topicId: topicId);
 
         string content;
         try
         {
-            using var reader = new StreamReader(file.OpenReadStream(), System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            content = (await reader.ReadToEndAsync(cancellationToken)).Trim();
+            await using var stream = file.OpenReadStream();
+            content = await MaterialTextExtractor.ExtractAsync(stream, file.FileName, cancellationToken);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Could not read the uploaded material file {FileName}", file.FileName);
+            return await FailMaterial(ex.Message, subjectId: null, topicId: topicId);
         }
         catch (IOException ex)
         {

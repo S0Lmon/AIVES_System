@@ -1,0 +1,212 @@
+@model AIVES.DTO.CandidateGradingDto
+@inject AIVES.WebMVC.DisplayTimeZone TimeZone
+@using AIVES.DTO
+@using AIVES.WebMVC
+@{
+    ViewData["Title"] = Model.DisplayName ?? Model.Email;
+    var finalized = Model.FinalizedAtUtc is not null;
+    var completed = Model.Interview?.Status == InterviewStatus.Completed;
+    var signals = Model.Signals;
+}
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Grading / Candidate</span>
+        <h1>@(Model.DisplayName ?? Model.Email)</h1>
+        <p>@Model.Email@(Model.StudentCode is null ? "" : " · " + Model.StudentCode) · @Model.ExamTitle (@Model.SubjectName) · @L10n.Format("Candidate {0}", Model.Order)</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        @if (finalized)
+        {
+            <span class="status-label ready">@L10n.Format("Confirmed {0}/10", ViewText.Score(Model.FinalScore))</span>
+        }
+        @if (completed)
+        {
+            <form method="post" asp-action="RequestAi" asp-route-id="@Model.CandidateId" class="d-inline">
+                <button type="submit" class="btn btn-light">@L10n.T("Ask the AI to grade again")</button>
+            </form>
+        }
+        <a class="btn btn-light" asp-action="Exam" asp-route-id="@Model.ExamId">@L10n.T("Back to the class")</a>
+    </div>
+</div>
+
+@if (TempData["GradeMessage"] is string message)
+{
+    <div class="alert alert-success" role="status">@message</div>
+}
+@if (TempData["GradeError"] is string error)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
+}
+@if (!completed)
+{
+    <div class="alert alert-warning" role="status">@L10n.T("The viva is not finished yet. You can look at the answers so far; the grade can be confirmed once it is finished.")</div>
+}
+else if (Model.GradingStatus == GradingStatus.Pending)
+{
+    <div class="alert alert-info" role="status">@L10n.T("The AI is preparing its proposal. Reload the page in a minute, or grade without it.")</div>
+}
+else if (Model.GradingStatus == GradingStatus.AiFailed)
+{
+    <div class="alert alert-warning" role="status">@L10n.T("The AI could not grade every question"): @Model.GradingError</div>
+}
+
+<section class="panel p-4 mb-3">
+    <div class="d-flex flex-wrap gap-4">
+        <div><div class="small text-muted">@L10n.T("AI proposal")</div><strong class="fs-4">@ViewText.Score(Model.AiScore10)</strong> / 10</div>
+        <div><div class="small text-muted">@L10n.T("Final grade")</div><strong class="fs-4">@(finalized ? ViewText.Score(Model.FinalScore) : "—")</strong> / 10</div>
+        <div><div class="small text-muted">@L10n.T("Answers")</div><strong>@signals.Answers</strong> @if (signals.Unanswered > 0) { <span class="text-muted small">(@L10n.Format("{0} unanswered", signals.Unanswered))</span> }</div>
+        <div><div class="small text-muted">@L10n.T("Follow-ups asked")</div><strong>@signals.FollowUps</strong></div>
+        <div><div class="small text-muted">@L10n.T("Average time to start answering")</div><strong>@ViewText.Seconds(signals.AverageResponseDelaySeconds)</strong></div>
+        <div><div class="small text-muted">@L10n.T("Average answer length")</div><strong>@ViewText.Seconds(signals.AverageAnswerSeconds)</strong></div>
+        <div><div class="small text-muted">@L10n.T("Speaking pace")</div><strong>@(signals.WordsPerMinute is { } wpm ? L10n.Format("{0} words/min", wpm) : "—")</strong></div>
+        <div><div class="small text-muted">@L10n.T("Hesitations")</div><strong>@signals.FillerWords</strong>@if (signals.FillerRatio is { } ratio) { <span class="small text-muted"> (@((ratio * 100).ToString("0.#"))%)</span> }</div>
+        <div><div class="small text-muted">@L10n.T("Over time / typed")</div><strong>@signals.TimedOut / @signals.Typed</strong></div>
+    </div>
+    <p class="small text-muted mb-0 mt-2">@L10n.T("Timing and fluency are shown for context only; they are not part of the AI score.")
+        @if (Model.RecordingConsentAtUtc is { } consent) { <span>@L10n.Format("Recording agreed at {0}.", TimeZone.ToLocal(consent).ToString("yyyy-MM-dd HH:mm"))</span> }</p>
+</section>
+
+<form method="post" asp-action="Candidate" asp-route-id="@Model.CandidateId">
+    @for (var i = 0; i < Model.Questions.Count; i++)
+    {
+        var question = Model.Questions[i];
+        var prefill = question.LecturerScore ?? question.AiScore;
+        <section class="panel p-4 mb-3">
+            <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                <h2 class="h5 mb-0">@L10n.Format("Question {0}", question.Order) <span class="badge text-bg-light ms-1">@question.BloomLevelName</span></h2>
+                <span class="small text-muted">@(question.Rubric is null ? L10n.T("No rubric: holistic score") : L10n.Format("Rubric: {0}", question.Rubric.Name))</span>
+            </div>
+            <p class="mb-2">@question.Content</p>
+            <details class="mb-3">
+                <summary class="small">@L10n.T("Expected answer")</summary>
+                <p class="small mt-2 mb-0">@question.ExpectedAnswer</p>
+            </details>
+
+            <h3 class="h6">@L10n.T("Transcript")</h3>
+            @if (question.Turns.Count == 0)
+            {
+                <p class="small text-muted">@L10n.T("This question was not reached.")</p>
+            }
+            <ol class="small ps-3">
+                @foreach (var turn in question.Turns)
+                {
+                    <li class="mb-2">
+                        <strong>@(turn.Kind == TurnKind.FollowUp ? L10n.T("Follow-up") : L10n.T("Main question")):</strong> @turn.QuestionText
+                        <div class="mt-1">
+                            @if (string.IsNullOrEmpty(turn.Answer))
+                            {
+                                <em class="text-muted">@(turn.AnsweredAtUtc is null ? L10n.T("Waiting for the answer") : L10n.T("No answer"))</em>
+                            }
+                            else
+                            {
+                                <span>@turn.Answer</span>
+                            }
+                        </div>
+                        @if (turn.RawAnswer is { Length: > 0 } raw)
+                        {
+                            <div class="text-muted"><small>@L10n.T("As recognised before term correction"): @raw</small></div>
+                        }
+                        <div class="text-muted">
+                            @if (turn.InputMode == AnswerInputMode.Typed) { <span class="badge text-bg-light">@L10n.T("Typed")</span> }
+                            @if (turn.TimedOut) { <span class="badge text-bg-warning">@L10n.T("Over time")</span> }
+                            @if (turn.Decision is { } decision) { <span class="badge text-bg-light">@L10n.T("Examiner"): @ViewText.Reason(decision)</span> }
+                            @if (turn.AnsweredAtUtc is { } answeredAt) { <span class="badge text-bg-light">@L10n.Format("{0} s to answer", Math.Round((answeredAt - turn.AskedAtUtc).TotalSeconds))</span> }
+                        </div>
+                        @if (turn.RecordingId is { } recordingId)
+                        {
+                            @if (turn.RecordingHasVideo)
+                            {
+                                <video class="mt-2 d-block" controls preload="none" width="320" src="@Url.Action("Recording", new { id = recordingId })"></video>
+                            }
+                            else
+                            {
+                                <audio class="mt-2 d-block" controls preload="none" src="@Url.Action("Recording", new { id = recordingId })"></audio>
+                            }
+                        }
+                    </li>
+                }
+            </ol>
+
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <div class="border rounded-3 p-3 h-100">
+                        <div class="d-flex justify-content-between">
+                            <h3 class="h6 mb-2">@L10n.T("AI proposal")</h3>
+                            <span><strong>@ViewText.Score(question.AiScore)</strong> / @ViewText.Score(question.MaxScore)</span>
+                        </div>
+                        @if (question.AiScore is null)
+                        {
+                            <p class="small text-muted mb-0">@L10n.T("No AI proposal for this question.")</p>
+                        }
+                        else
+                        {
+                            @if (question.AiCriteria.Count > 0)
+                            {
+                                <table class="table table-sm small mb-2">
+                                    <thead><tr><th>@L10n.T("Criterion")</th><th>@L10n.T("Level")</th><th class="text-end">@L10n.T("Points")</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var criterion in question.AiCriteria)
+                                        {
+                                            <tr>
+                                                <td>@criterion.Criterion<div class="text-muted">@criterion.Rationale</div></td>
+                                                <td>@criterion.Level</td>
+                                                <td class="text-end text-nowrap">@ViewText.Score(criterion.Points) / @ViewText.Score(criterion.MaxPoints)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(question.AiSummary)) { <p class="small mb-2">@question.AiSummary</p> }
+                            <div class="row small">
+                                <div class="col-md-4"><strong>@L10n.T("Strengths")</strong><ul class="ps-3 mb-0">@foreach (var item in question.Strengths) { <li>@item</li> }</ul></div>
+                                <div class="col-md-4"><strong>@L10n.T("Weaknesses")</strong><ul class="ps-3 mb-0">@foreach (var item in question.Weaknesses) { <li>@item</li> }</ul></div>
+                                <div class="col-md-4"><strong>@L10n.T("Missing points")</strong><ul class="ps-3 mb-0">@foreach (var item in question.MissingPoints) { <li>@item</li> }</ul></div>
+                            </div>
+                            @if (question.AiModel is { } model) { <p class="small text-muted mt-2 mb-0">@L10n.Format("Proposed by {0}", model)</p> }
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="border rounded-3 p-3 h-100">
+                        <h3 class="h6 mb-2">@L10n.T("Your decision")</h3>
+                        <input type="hidden" name="Questions[@i].Id" value="@question.Id" />
+                        <label class="form-label small" for="score-@question.Id">@L10n.Format("Score (0 – {0})", ViewText.Score(question.MaxScore))</label>
+                        <input id="score-@question.Id" name="Questions[@i].Score" class="form-control mb-2" inputmode="decimal" value="@ViewText.Score(prefill).Replace("—", "")" disabled="@finalized" />
+                        @if (question.LecturerScore is null && question.AiScore is not null)
+                        {
+                            <div class="form-text mb-2">@L10n.T("Pre-filled with the AI proposal. Change it if you disagree.")</div>
+                        }
+                        <label class="form-label small" for="comment-@question.Id">@L10n.T("Comment for the student (optional)")</label>
+                        <textarea id="comment-@question.Id" name="Questions[@i].Comment" class="form-control" rows="2" maxlength="2000" disabled="@finalized">@question.LecturerComment</textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <section class="panel p-4 mb-3">
+        <label class="form-label" for="overallComment">@L10n.T("Overall comment for the student (optional)")</label>
+        <textarea id="overallComment" name="Comment" class="form-control mb-3" rows="3" maxlength="2000" disabled="@finalized">@Model.LecturerComment</textarea>
+        @if (finalized)
+        {
+            <p class="small text-muted">@L10n.Format("Confirmed by {0} at {1}.", Model.FinalizedByEmail ?? "—", TimeZone.ToLocal(Model.FinalizedAtUtc!.Value).ToString("yyyy-MM-dd HH:mm"))</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" name="Finalize" value="false" class="btn btn-light">@L10n.T("Save draft")</button>
+                <button type="submit" name="Finalize" value="true" class="btn btn-primary" disabled="@(!completed)"
+                        onclick="return confirm('@L10n.T("Confirm this grade? The student will see the scores and comments.")');">@L10n.T("Confirm the grade")</button>
+            </div>
+            <p class="small text-muted mt-2 mb-0">@L10n.T("You decide the final grade. The total is converted to a 10-point scale from your question scores.")</p>
+        }
+    </section>
+</form>
+
+@if (finalized)
+{
+    <form method="post" asp-action="Reopen" asp-route-id="@Model.CandidateId" class="mb-4" onsubmit="return confirm('@L10n.T("Reopen this grade? The student will not see it until you confirm again.")');">
+        <button type="submit" class="btn btn-outline-secondary">@L10n.T("Reopen to change")</button>
+    </form>
+}

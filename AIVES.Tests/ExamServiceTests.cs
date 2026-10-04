@@ -40,7 +40,8 @@ public sealed class ExamServiceTests
         db.Questions.Add(new Question { Content = "Other subject", BloomLevelId = 1, Subject = other, Topic = otherTopic });
         db.SaveChanges();
         var clock = new FixedClock(Now);
-        var service = new ExamService(new ExamRepository(db), new SubjectRepository(db), new TopicRepository(db), clock, NullLogger<ExamService>.Instance);
+        var service = new ExamService(new ExamRepository(db), new SubjectRepository(db), new TopicRepository(db),
+            TestServices.SubjectAccess(db), TestServices.Audit(db, clock), TestServices.Recordings(db, clock), clock, NullLogger<ExamService>.Instance);
         return (service, db, clock, subject.Id, topic.Id, otherTopic.Id);
     }
 

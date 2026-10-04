@@ -61,9 +61,21 @@ public sealed record InterviewStateDto(
     DateTime SlotStartsAtUtc,
     DateTime SlotEndsAtUtc,
     InterviewTurnDto? CurrentTurn,
-    DateTime ServerNowUtc = default);
+    DateTime ServerNowUtc = default,
+    RecordingMode Recording = RecordingMode.None,
+    bool RecordingConsentGiven = false,
+    SpeechSettingsDto? Speech = null,
+    IReadOnlyList<string>? Phrases = null);
 
-public sealed record InterviewAnswerInput(int TurnId, string Transcript, AnswerInputMode InputMode);
+/// <summary>What is recorded of each answer as evidence.</summary>
+public enum RecordingMode
+{
+    None = 0,
+    Audio = 1,
+    AudioVideo = 2
+}
+
+public sealed record InterviewAnswerInput(int TurnId, string Transcript, AnswerInputMode InputMode, int? ResponseDelayMs = null, int? SpeakingMs = null);
 
 /// <summary>What the follow-up generator gets: one main question and the exchange so far about it.</summary>
 public sealed record FollowUpRequest(
@@ -72,7 +84,8 @@ public sealed record FollowUpRequest(
     string MainQuestion,
     string ExpectedAnswer,
     IReadOnlyList<InterviewExchange> Exchanges,
-    int FollowUpsLeft);
+    int FollowUpsLeft,
+    IReadOnlyList<string>? Glossary = null);
 
 public sealed record InterviewExchange(string Question, string Answer);
 
@@ -91,7 +104,13 @@ public sealed record InterviewTurnRecordDto(
     bool TimedOut,
     FollowUpReason? Decision,
     int TurnId = 0,
-    int FollowUpIndex = 0);
+    int FollowUpIndex = 0,
+    string? RawAnswer = null,
+    int? ResponseDelayMs = null,
+    int? SpeakingMs = null,
+    int? DecisionLatencyMs = null,
+    int? RecordingId = null,
+    bool RecordingHasVideo = false);
 
 public sealed record InterviewRecordDto(
     InterviewStatus Status,
@@ -113,7 +132,14 @@ public sealed record InterviewContext(
     AppLanguage Language,
     IReadOnlyList<ExamAssignedQuestion> Questions,
     int? AttemptId,
-    InterviewRecordDto? Record);
+    InterviewRecordDto? Record,
+    int ExamId = 0,
+    RecordingMode Recording = RecordingMode.None,
+    DateTime? RecordingConsentAtUtc = null,
+    int? SubjectId = null);
 
 /// <summary>A question about to be asked, before it has an id.</summary>
 public sealed record NewInterviewTurn(TurnKind Kind, int MainIndex, int FollowUpIndex, string QuestionText, DateTime AskedAtUtc);
+
+/// <summary>Measurements stored with an answer: the transcript before glossary correction and browser timings.</summary>
+public sealed record AnswerMetrics(string? RawTranscript, int? ResponseDelayMs, int? SpeakingMs);

@@ -235,6 +235,14 @@ Không chạy `docker compose down -v` trên server đang có dữ liệu vì t�
 
 Bản backup chứa khóa cookie đã mã hóa; để khôi phục sang server khác, mang theo cả `secrets/dataprotection.pfx` và `DATAPROTECTION_CERT_PASSWORD`, nếu không người dùng sẽ phải đăng nhập lại.
 
+**Bản ghi vấn đáp** nằm trong volume `aives-recordings` (dùng chung cho mọi replica `web`), đã được mã hóa bằng chính các khóa Data Protection trong database. Sao lưu volume này cùng lúc với database, ví dụ:
+
+```bash
+docker run --rm -v aives-recordings:/data -v "$PWD/backups:/backup" alpine tar czf /backup/recordings.tgz -C /data .
+```
+
+Mất database (khóa) thì không giải mã được bản ghi; mất volume thì chỉ mất bản ghi, điểm và transcript vẫn còn. Bản ghi quá hạn lưu (cấu hình ở **Admin → Cấu hình giọng nói & ghi âm**) được worker nền tự xóa.
+
 ## Google OAuth khi có tên miền
 
 Google OAuth trên server công khai cần HTTPS; Caddy đã cung cấp HTTPS khi `AIVES_DOMAIN` là tên miền thật. Đặt redirect URI trong Google Cloud Console:

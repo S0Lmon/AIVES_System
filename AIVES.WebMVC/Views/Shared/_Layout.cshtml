@@ -32,15 +32,18 @@
                     <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">RB</span> @L10n.T("Rubric bank")</a>
                     <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index"><span class="nav-icon">SJ</span> @L10n.T("Catalog")</a>
                     <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index"><span class="nav-icon">EX</span> @L10n.T("Exams")</a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Grading" && ViewContext.RouteData.Values["action"]?.ToString() != "Report" ? "active" : "")" asp-controller="Grading" asp-action="Index"><span class="nav-icon">GR</span> @L10n.T("Grading")</a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" || ViewContext.RouteData.Values["action"]?.ToString() == "Report" ? "active" : "")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">RP</span> @L10n.T("Reports")</a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Glossary" ? "active" : "")" asp-controller="Glossary" asp-action="Index"><span class="nav-icon">TM</span> @L10n.T("Subject terms")</a>
                 }
                 <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyExams" ? "active" : "")" asp-controller="MyExams" asp-action="Index"><span class="nav-icon">ME</span> @L10n.T("My exams")</a>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">AI</span> @L10n.T("AI exam room") <small>@L10n.T("Disabled")</small></span>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">GR</span> @L10n.T("Grading") <small>@L10n.T("Under construction")</small></span>
-                <span class="side-link is-disabled" aria-disabled="true"><span class="nav-icon">RP</span> @L10n.T("Reports") <small>@L10n.T("Under construction")</small></span>
                 <span class="nav-label nav-label-spaced">@L10n.T("System")</span>
                 @if (User.IsInRole(AIVES.DTO.AppRoles.Admin))
                 {
                     <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Users" ? "active" : "")" asp-controller="Admin" asp-action="Users"><span class="nav-icon">US</span> @L10n.T("Users") <small>@L10n.T("Admin")</small></a>
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Subjects" ? "active" : "")" asp-controller="Admin" asp-action="Subjects"><span class="nav-icon">LS</span> @L10n.T("Lecturers per subject") <small>@L10n.T("Admin")</small></a>
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Settings" ? "active" : "")" asp-controller="Admin" asp-action="Settings"><span class="nav-icon">SP</span> @L10n.T("Speech settings") <small>@L10n.T("Admin")</small></a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Audit" ? "active" : "")" asp-controller="Admin" asp-action="Audit"><span class="nav-icon">LG</span> @L10n.T("Audit log") <small>@L10n.T("Admin")</small></a>
                 }
                 @if (User.IsInRole(AIVES.DTO.AdminRoles.RoleName))
                 {

@@ -8,6 +8,7 @@
     <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Create ? "is-active" : "")" asp-action="Index" asp-route-tab="create">@L10n.T("Create")</a>
     <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Ai ? "is-active" : "")" asp-action="Index" asp-route-tab="ai">@L10n.T("AI generation")</a>
     <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Bulk ? "is-active" : "")" asp-action="Index" asp-route-tab="bulk">@L10n.T("Bulk generation")</a>
+    <a class="bank-tab @(Model.ActiveTab == AIVES.WebMVC.Models.ViewModels.QuestionTabs.Import ? "is-active" : "")" asp-action="Index" asp-route-tab="import">@L10n.T("Import")</a>
 </nav>
 
 @if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div> }
@@ -29,6 +30,9 @@
 
     case AIVES.WebMVC.Models.ViewModels.QuestionTabs.Bulk:
         <partial name="_QuestionBulkTab" model="Model" />
+        break;
+    case AIVES.WebMVC.Models.ViewModels.QuestionTabs.Import:
+        <partial name="_QuestionImportTab" model="Model" />
         break;
 
     default:

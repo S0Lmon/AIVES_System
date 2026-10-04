@@ -95,6 +95,51 @@ namespace AIVES.DAL.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.AuditEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ActorEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ActorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CandidateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("ExamId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("AtUtc");
+
+                    b.HasIndex("ExamId", "AtUtc");
+
+                    b.ToTable("AuditEntries");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.BloomLevel", b =>
                 {
                     b.Property<int>("Id")
@@ -250,6 +295,12 @@ namespace AIVES.DAL.Migrations
                     b.Property<DateTime>("ModifiedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("RecordAudio")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RecordVideo")
+                        .HasColumnType("bit");
+
                     b.Property<int>("SlotMinutes")
                         .HasColumnType("int");
 
@@ -303,6 +354,35 @@ namespace AIVES.DAL.Migrations
                     b.Property<int>("ExamCandidateId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("FinalScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("FinalizedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinalizedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("GradingClaimedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GradingError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("GradingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LecturerComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("RecordingConsentAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("StartedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -313,6 +393,8 @@ namespace AIVES.DAL.Migrations
 
                     b.HasIndex("ExamCandidateId")
                         .IsUnique();
+
+                    b.HasIndex("Status", "GradingStatus");
 
                     b.ToTable("ExamAttempts");
                 });
@@ -379,6 +461,9 @@ namespace AIVES.DAL.Migrations
                     b.Property<int?>("QuestionId")
                         .HasColumnType("int");
 
+                    b.Property<string>("RubricJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("QuestionId");
@@ -410,6 +495,9 @@ namespace AIVES.DAL.Migrations
                     b.Property<int?>("Decision")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DecisionLatencyMs")
+                        .HasColumnType("int");
+
                     b.Property<int>("ExamAttemptId")
                         .HasColumnType("int");
 
@@ -432,6 +520,15 @@ namespace AIVES.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RawAnswer")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ResponseDelayMs")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SpeakingMs")
+                        .HasColumnType("int");
+
                     b.Property<bool>("TimedOut")
                         .HasColumnType("bit");
 
@@ -441,6 +538,35 @@ namespace AIVES.DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("ExamTurns");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.GlossaryTerm", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("SpokenForms")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId", "Term")
+                        .IsUnique();
+
+                    b.ToTable("GlossaryTerms");
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Material", b =>
@@ -554,6 +680,70 @@ namespace AIVES.DAL.Migrations
                     b.HasIndex("TopicId");
 
                     b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.QuestionGrade", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AiCriteriaJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AiGradedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AiMissingPoints")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AiModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("AiScore")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("AiStrengths")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AiSummary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AiWeaknesses")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ExamCandidateQuestionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LecturerComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal?>("LecturerScore")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("MaxScore")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedById")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamCandidateQuestionId")
+                        .IsUnique();
+
+                    b.ToTable("QuestionGrades");
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Rubric", b =>
@@ -723,6 +913,41 @@ namespace AIVES.DAL.Migrations
                     b.ToTable("Subjects");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.SubjectLecturer", b =>
+                {
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("SubjectId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SubjectLecturers");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SystemSettings");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.Topic", b =>
                 {
                     b.Property<int>("Id")
@@ -756,6 +981,46 @@ namespace AIVES.DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("Topics");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.TurnRecording", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ExamTurnId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HasVideo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("ExamTurnId")
+                        .IsUnique();
+
+                    b.ToTable("TurnRecordings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -989,6 +1254,17 @@ namespace AIVES.DAL.Migrations
                     b.Navigation("Attempt");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.GlossaryTerm", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.Material", b =>
                 {
                     b.HasOne("AIVES.DAL.Entities.Topic", "Topic")
@@ -1032,6 +1308,17 @@ namespace AIVES.DAL.Migrations
                     b.Navigation("Topic");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.QuestionGrade", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.ExamCandidateQuestion", "Question")
+                        .WithOne("Grade")
+                        .HasForeignKey("AIVES.DAL.Entities.QuestionGrade", "ExamCandidateQuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.RubricCriterion", b =>
                 {
                     b.HasOne("AIVES.DAL.Entities.Rubric", "Rubric")
@@ -1073,6 +1360,23 @@ namespace AIVES.DAL.Migrations
                     b.Navigation("Rubric");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.SubjectLecturer", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIVES.DAL.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.Topic", b =>
                 {
                     b.HasOne("AIVES.DAL.Entities.Subject", "Subject")
@@ -1082,6 +1386,17 @@ namespace AIVES.DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.TurnRecording", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.ExamTurn", "Turn")
+                        .WithOne("Recording")
+                        .HasForeignKey("AIVES.DAL.Entities.TurnRecording", "ExamTurnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Turn");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1155,6 +1470,16 @@ namespace AIVES.DAL.Migrations
                     b.Navigation("Attempt");
 
                     b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.ExamCandidateQuestion", b =>
+                {
+                    b.Navigation("Grade");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.ExamTurn", b =>
+                {
+                    b.Navigation("Recording");
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.Rubric", b =>

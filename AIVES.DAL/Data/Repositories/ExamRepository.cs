@@ -5,12 +5,48 @@ namespace AIVES.DAL.Data.Repositories;
 
 public sealed class ExamRepository(ApplicationDbContext context) : IExamRepository
 {
-    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default) =>
-        await context.Questions.AsNoTracking()
+    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default)
+    {
+        var questions = await context.Questions.AsNoTracking()
             .Where(question => question.IsActive && question.SubjectId == subjectId && (topicId == null || question.TopicId == topicId))
             .OrderBy(question => question.Id)
-            .Select(question => new ExamPoolQuestion(question.Id, question.BloomLevelId, question.BloomLevel.Name, question.Content, question.ExpectedAnswer))
+            .Select(question => new { question.Id, question.BloomLevelId, BloomName = question.BloomLevel.Name, question.Content, question.ExpectedAnswer, question.RubricId })
             .ToListAsync(cancellationToken);
+        var rubricIds = questions.Where(question => question.RubricId != null).Select(question => question.RubricId!.Value).Distinct().ToList();
+        var rubrics = rubricIds.Count == 0
+            ? new Dictionary<int, string?>()
+            : (await context.Rubrics.AsNoTracking()
+                .Include(rubric => rubric.Levels)
+                .Include(rubric => rubric.Criteria).ThenInclude(criterion => criterion.Levels)
+                .AsSplitQuery()
+                .Where(rubric => rubricIds.Contains(rubric.Id))
+                .ToListAsync(cancellationToken))
+                .ToDictionary(rubric => rubric.Id, rubric => Snapshot(rubric)?.ToJson());
+        return questions.Select(question => new ExamPoolQuestion(question.Id, question.BloomLevelId, question.BloomName, question.Content, question.ExpectedAnswer,
+            question.RubricId is { } rubricId ? rubrics.GetValueOrDefault(rubricId) : null)).ToList();
+    }
+
+    /// <summary>Freezes a rubric matrix as it is now; null when it has nothing to grade against.</summary>
+    internal static RubricSnapshot? Snapshot(Rubric rubric)
+    {
+        var levels = rubric.Levels.OrderBy(level => level.Order).ToList();
+        var criteria = rubric.Criteria.OrderBy(criterion => criterion.Order).ToList();
+        if (levels.Count == 0 || criteria.Count == 0)
+            return null;
+        var snapshot = new RubricSnapshot(
+            rubric.Name,
+            levels.Select(level => new RubricSnapshotLevel(level.Name, level.Points)).ToList(),
+            criteria.Select(criterion => new RubricSnapshotCriterion(
+                criterion.Criterion,
+                criterion.Description,
+                criterion.MaxPoints,
+                levels.Select(level =>
+                {
+                    var cell = criterion.Levels.FirstOrDefault(item => item.RubricLevelId == level.Id);
+                    return new RubricSnapshotCell(level.Name, cell?.Descriptor ?? string.Empty, cell?.Points ?? level.Points);
+                }).ToList())).ToList());
+        return snapshot.TotalPoints > 0 ? snapshot : null;
+    }
 
     public async Task<int> AddAsync(ExamDraft draft, CancellationToken cancellationToken = default)
     {
@@ -66,7 +102,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     {
         var exam = await context.Exams.AsNoTracking()
             .Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
-            .Include(item => item.Candidates).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns)
+            .Include(item => item.Candidates).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns).ThenInclude(turn => turn.Recording)
             .AsSplitQuery()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (exam is null)
@@ -84,7 +120,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 names.GetValueOrDefault(candidate.Email.ToUpperInvariant()),
                 start, start.AddMinutes(exam.SlotMinutes),
                 candidate.Questions.OrderBy(question => question.Order)
-                    .Select(question => new ExamAssignedQuestion(question.Order, question.QuestionId, question.Content, question.ExpectedAnswer, question.BloomLevelName))
+                    .Select(question => new ExamAssignedQuestion(question.Order, question.QuestionId, question.Content, question.ExpectedAnswer, question.BloomLevelName, question.RubricJson))
                     .ToList(),
                 candidate.Id,
                 candidate.Attempt is null ? null : ToRecord(candidate.Attempt));
@@ -93,8 +129,11 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         return new ExamDetailsDto(exam.Id, exam.Title, exam.SubjectId, exam.SubjectName, exam.TopicId, exam.TopicName,
             exam.StartsAtUtc, exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * candidates.Count), exam.SlotMinutes,
             exam.MainQuestionCount, exam.MaxFollowUpQuestions, exam.CreatedById, candidates,
-            exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage());
+            exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage(), RecordingOf(exam));
     }
+
+    internal static RecordingMode RecordingOf(Exam exam) =>
+        exam.RecordVideo ? RecordingMode.AudioVideo : exam.RecordAudio ? RecordingMode.Audio : RecordingMode.None;
 
     public async Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default)
     {
@@ -105,6 +144,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             {
                 CandidateId = candidate.Id,
                 Status = candidate.Attempt == null ? (InterviewStatus?)null : candidate.Attempt.Status,
+                FinalizedAtUtc = candidate.Attempt == null ? null : candidate.Attempt.FinalizedAtUtc,
+                FinalScore = candidate.Attempt == null ? null : candidate.Attempt.FinalScore,
                 candidate.Order,
                 candidate.Exam.Id,
                 candidate.Exam.Title,
@@ -122,7 +163,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 var start = row.StartsAtUtc.AddMinutes(row.SlotMinutes * (row.Order - 1));
                 return new StudentExamDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.Order, row.Count,
                     start, start.AddMinutes(row.SlotMinutes), row.MainQuestionCount, row.MaxFollowUpQuestions,
-                    row.CandidateId, row.Status ?? InterviewStatus.NotStarted);
+                    row.CandidateId, row.Status ?? InterviewStatus.NotStarted, row.FinalizedAtUtc != null, row.FinalizedAtUtc != null ? row.FinalScore : null);
             })
             .OrderBy(exam => exam.StartsAtUtc)
             .ToList();
@@ -144,12 +185,15 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         exam.AnswerTimeLimitSeconds = draft.AnswerTimeLimitSeconds;
         exam.MaxFollowUpsPerQuestion = draft.MaxFollowUpsPerQuestion;
         exam.Language = draft.Language.ToSpeechLocale();
+        exam.RecordAudio = draft.Recording != RecordingMode.None;
+        exam.RecordVideo = draft.Recording == RecordingMode.AudioVideo;
     }
 
     internal static InterviewRecordDto ToRecord(ExamAttempt attempt) => new(attempt.Status, attempt.StartedAtUtc, attempt.CompletedAtUtc,
         attempt.Turns.OrderBy(turn => turn.Order).Select(turn => new InterviewTurnRecordDto(turn.Order, turn.Kind, turn.MainIndex,
             turn.QuestionText, turn.Answer, turn.InputMode, turn.AskedAtUtc, turn.AnsweredAtUtc, turn.TimedOut, turn.Decision,
-            turn.Id, turn.FollowUpIndex)).ToList());
+            turn.Id, turn.FollowUpIndex, turn.RawAnswer, turn.ResponseDelayMs, turn.SpeakingMs, turn.DecisionLatencyMs,
+            turn.Recording?.Id, turn.Recording?.HasVideo ?? false)).ToList());
 
     private static ExamCandidate ToEntity(ExamCandidateDraft draft) => new()
     {
@@ -161,7 +205,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             QuestionId = question.QuestionId,
             Content = question.Content,
             ExpectedAnswer = question.ExpectedAnswer,
-            BloomLevelName = question.BloomLevelName
+            BloomLevelName = question.BloomLevelName,
+            RubricJson = question.RubricJson
         }).ToList()
     };
 }

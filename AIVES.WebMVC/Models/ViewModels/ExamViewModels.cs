@@ -38,6 +38,12 @@ public sealed class ExamFormViewModel
     /// <summary>Language the AI examiner speaks and listens in.</summary>
     public AppLanguage Language { get; set; } = AppLanguage.Vi;
 
+    /// <summary>What is recorded of each answer as evidence for grade appeals.</summary>
+    public RecordingMode Recording { get; set; } = RecordingMode.Audio;
+
+    /// <summary>Interview languages the administrator enabled.</summary>
+    public IReadOnlyList<AppLanguage> EnabledLanguages { get; set; } = [AppLanguage.Vi, AppLanguage.En];
+
     /// <summary>One email per line (commas and semicolons also work), in sitting order.</summary>
     public string CandidateEmails { get; set; } = string.Empty;
 
