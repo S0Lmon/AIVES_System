@@ -17,7 +17,8 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             return null;
 
         var exam = candidate.Exam;
-        var start = exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * (candidate.Order - 1));
+        // Stored slot for scheduled candidates; the derived layout covers rows saved before slots were stored.
+        var start = candidate.SlotStartsAtUtc ?? ExamSchedule.LegacySlotStart(exam.StartsAtUtc, exam.SlotMinutes, candidate.Order);
         return new InterviewContext(
             candidate.Id,
             exam.Title,
@@ -37,7 +38,8 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             exam.Id,
             ExamRepository.RecordingOf(exam),
             candidate.Attempt?.RecordingConsentAtUtc,
-            exam.SubjectId);
+            exam.SubjectId,
+            candidate.StatusOverride);
     }
 
     public async Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false, CancellationToken cancellationToken = default)
@@ -119,7 +121,8 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
     {
         var rows = await context.ExamAttempts.AsNoTracking()
             .Where(attempt => attempt.Status == InterviewStatus.InProgress
-                && attempt.Candidate.Exam.StartsAtUtc.AddMinutes(attempt.Candidate.Exam.SlotMinutes * attempt.Candidate.Order) < cutoffUtc)
+                && (attempt.Candidate.SlotStartsAtUtc ?? attempt.Candidate.Exam.StartsAtUtc.AddMinutes(attempt.Candidate.Exam.SlotMinutes * (attempt.Candidate.Order - 1)))
+                    .AddMinutes(attempt.Candidate.Exam.SlotMinutes) < cutoffUtc)
             .OrderBy(attempt => attempt.Id)
             .Select(attempt => new { attempt.ExamCandidateId, attempt.Candidate.Email })
             .Take(take)

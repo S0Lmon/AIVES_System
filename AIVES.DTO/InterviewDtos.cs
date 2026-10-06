@@ -136,7 +136,9 @@ public sealed record InterviewContext(
     int ExamId = 0,
     RecordingMode Recording = RecordingMode.None,
     DateTime? RecordingConsentAtUtc = null,
-    int? SubjectId = null);
+    int? SubjectId = null,
+    /// <summary>Lecturer-set status (absent, cancelled, unscheduled); blocks starting the viva.</summary>
+    CandidateStatus? StatusOverride = null);
 
 /// <summary>A question about to be asked, before it has an id.</summary>
 public sealed record NewInterviewTurn(TurnKind Kind, int MainIndex, int FollowUpIndex, string QuestionText, DateTime AskedAtUtc);
