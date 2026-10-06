@@ -19,7 +19,8 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
         var checks = new List<SystemCheckItemDto>
         {
             CheckDatabase(database),
-            CheckAiProviders(gemini.Value, ollama.Value, generator.ActiveProvider),
+            CheckGemini(gemini.Value),
+            CheckOllama(ollama.Value, generator.ActiveProvider),
             CheckSmtp(smtp.Value, emailSender.IsConfigured),
             CheckGoogleOAuth(),
             CheckProductionSecrets()
@@ -53,38 +54,35 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
             SystemCheckStatus.Ok);
     }
 
-    private static SystemCheckItemDto CheckAiProviders(GeminiOptions gemini, OllamaOptions ollama, AiProvider? active)
+    private static SystemCheckItemDto CheckGemini(GeminiOptions gemini)
     {
-        var geminiReady = !string.IsNullOrWhiteSpace(gemini.ApiKey);
-        var ollamaReady = ollama.Enabled;
-
-        if (!geminiReady && !ollamaReady)
+        if (string.IsNullOrWhiteSpace(gemini.ApiKey))
         {
-            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
-                L10n.T("Neither Gemini nor Ollama is configured, so AI question generation is blocked."),
+            return new SystemCheckItemDto("Gemini", L10n.T("Gemini"),
+                L10n.T("Gemini has no API key, so AI question generation via Gemini is blocked."),
                 SystemCheckStatus.Critical,
-                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebMVC, or start Ollama and set Ollama:Enabled");
-        }
-
-        if (!geminiReady)
-        {
-            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
-                L10n.Format("Gemini has no API key, so the local Ollama model ({0}) serves every request.", ollama.Model),
-                SystemCheckStatus.Warning,
-                L10n.T("Optional. Set Gemini:ApiKey to use Gemini and keep Ollama as a fallback."));
+                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebMVC");
         }
 
         var model = string.IsNullOrWhiteSpace(gemini.Model) ? L10n.T("(model not set)") : gemini.Model;
-        if (!ollamaReady)
+        return new SystemCheckItemDto("Gemini", L10n.T("Gemini"),
+            L10n.Format("Gemini is active with model {0}.", model),
+            SystemCheckStatus.Ok);
+    }
+
+    private static SystemCheckItemDto CheckOllama(OllamaOptions ollama, AiProvider? active = null)
+    {
+        if (!ollama.Enabled)
         {
-            return new SystemCheckItemDto("ai", L10n.T("AI providers"),
-                L10n.Format("Gemini is active with model {0}. Ollama is disabled, so there is no fallback.", model),
+            return new SystemCheckItemDto("Ollama", L10n.T("Ollama"),
+                L10n.T("Ollama is disabled, so there is no local fallback when Gemini is unavailable."),
                 SystemCheckStatus.Warning,
                 L10n.T("Optional. Set Ollama:Enabled to true so requests fall back to a local model when Gemini fails."));
         }
 
-        return new SystemCheckItemDto("ai", L10n.T("AI providers"),
-            L10n.Format("Gemini (model {0}) is active and Ollama ({1}) is the fallback. Active now: {2}.", model, ollama.Model, active?.ToString() ?? "none"),
+        var activeInfo = active?.ToString() ?? "none";
+        return new SystemCheckItemDto("Ollama", L10n.T("Ollama"),
+            L10n.Format("Ollama (model {0}) is running. Active now: {1}.", ollama.Model, activeInfo),
             SystemCheckStatus.Ok);
     }
 
@@ -92,13 +90,13 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
     {
         if (!isConfigured)
         {
-            return new SystemCheckItemDto("smtp", "Gmail SMTP",
+            return new SystemCheckItemDto("SMTP", "Gmail SMTP",
                 L10n.T("GmailSmtp:Username or GmailSmtp:AppPassword is not set, so verification codes cannot be sent and new accounts cannot be registered."),
                 SystemCheckStatus.Critical,
                 "dotnet user-secrets set \"GmailSmtp:Username\" \"<GMAIL_ADDRESS>\" --project AIVES.WebMVC (and GmailSmtp:AppPassword)");
         }
 
-        return new SystemCheckItemDto("smtp", "Gmail SMTP", L10n.Format("Mail is configured through {0}:{1} with the sender name {2}.", options.Host, options.Port, options.SenderName), SystemCheckStatus.Ok);
+        return new SystemCheckItemDto("SMTP", "Gmail SMTP", L10n.Format("Mail is configured through {0}:{1} with the sender name {2}.", options.Host, options.Port, options.SenderName), SystemCheckStatus.Ok);
     }
 
     private SystemCheckItemDto CheckGoogleOAuth()

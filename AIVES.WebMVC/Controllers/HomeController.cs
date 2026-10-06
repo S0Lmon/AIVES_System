@@ -1,17 +1,42 @@
+using AIVES.BLL.Services.Dashboard;
+using AIVES.BLL.Services.Exams;
 using AIVES.DTO;
 using AIVES.WebMVC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace AIVES.WebMVC.Controllers
 {
     [Authorize]
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private readonly IDashboardService _dashboard;
+
+        public HomeController(IDashboardService dashboard)
         {
-            return View();
+            _dashboard = dashboard;
+        }
+
+        public async Task<IActionResult> Index(CancellationToken cancellationToken)
+        {
+            if (User.IsInRole(AppRoles.Admin))
+            {
+                var adminDashboard = await _dashboard.GetAdminDashboardAsync(cancellationToken);
+                return View("Index", adminDashboard);
+            }
+
+            if (User.IsInRole(AppRoles.Lecturer))
+            {
+                var actor = User.ToExamActor();
+                var lecturerDashboard = await _dashboard.GetLecturerDashboardAsync(actor, cancellationToken);
+                return View("Index", lecturerDashboard);
+            }
+
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
+            var studentDashboard = await _dashboard.GetStudentDashboardAsync(email, cancellationToken);
+            return View("Index", studentDashboard);
         }
 
         public IActionResult Privacy()

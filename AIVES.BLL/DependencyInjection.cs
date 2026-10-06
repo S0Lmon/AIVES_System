@@ -8,6 +8,7 @@ using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
+using AIVES.BLL.Services.Dashboard;
 using AIVES.BLL.Services.Grading;
 using AIVES.BLL.Services.Operations;
 using AIVES.BLL.Services.Recordings;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IRubricService, RubricService>();
         services.AddScoped<ISystemCheckService, SystemCheckService>();
         services.AddScoped<ICatalogService, CatalogService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.Configure<GeminiOptions>(configuration.GetSection(GeminiOptions.SectionName));
         services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
         // Each generator needs its own client name: AddHttpClient<TClient, TImpl> otherwise names the

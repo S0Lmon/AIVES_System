@@ -1,9 +1,421 @@
-@{ ViewData["Title"] = @L10n.T("Overview"); }
-<section class="welcome-row"><div><span class="page-kicker">AIVES / Workbench</span><h1>@L10n.T("Viva exam orchestration")</h1><p>@L10n.T("Prepare questions, run adaptive interviews and approve results in one auditable workflow.")</p></div>@if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Lecturer)) { <div class="d-flex flex-wrap gap-2"><a asp-controller="Question" asp-action="Index" class="btn btn-light">@L10n.T("Open bank")</a><a asp-controller="Question" asp-action="Create" class="btn btn-primary">@L10n.T("Create question")</a></div> }</section>
-<div class="workbench-grid"><section class="panel" aria-labelledby="workflow-title"><div class="panel-header"><div><span class="page-kicker">@L10n.T("Operating workflow")</span><h2 id="workflow-title">@L10n.T("From course material to grade decision")</h2></div><span class="status-label ready">@L10n.T("1 module ready")</span></div><ol class="workflow-list">
-<li class="workflow-item"><span class="workflow-code">01</span><div><h3>@L10n.T("Question & rubric preparation")</h3><p>@L10n.T("Create, classify Bloom level and approve questions before use.")</p></div><span class="status-label ready">@L10n.T("Ready")</span></li>
-<li class="workflow-item"><span class="workflow-code">02</span><div><h3>@L10n.T("Exam & scheduling")</h3><p>@L10n.T("Attach a subject, the participant list and a time limit.")</p></div><span class="status-label">@L10n.T("Planned")</span></li>
-<li class="workflow-item"><span class="workflow-code">03</span><div><h3>@L10n.T("Adaptive interview")</h3><p>@L10n.T("STT, TTS and follow-up questions driven by the answer.")</p></div><span class="status-label">@L10n.T("Planned")</span></li>
-<li class="workflow-item"><span class="workflow-code">04</span><div><h3>@L10n.T("Grade review & evidence")</h3><p>@L10n.T("Reconcile transcript, rubric and the lecturer decision.")</p></div><span class="status-label">@L10n.T("Planned")</span></li></ol></section>
-<aside class="panel ai-map" aria-labelledby="ai-loop-title"><span class="page-kicker">AI interview loop</span><h2 id="ai-loop-title">@L10n.T("The lecturer always decides")</h2><div class="ai-loop"><div class="ai-node"><strong>01 · @L10n.T("Main question")</strong><span>@L10n.T("Choose by subject, Bloom level and rubric.")</span></div><div class="ai-arrow">↓</div><div class="ai-node"><strong>02 · @L10n.T("Answer recognition")</strong><span>@L10n.T("Turn speech into an auditable transcript.")</span></div><div class="ai-arrow">↓</div><div class="ai-node"><strong>03 · @L10n.T("Adaptive probing")</strong><span>@L10n.T("Clarify missing, vague or contradictory ideas.")</span></div><div class="ai-arrow">↓</div><div class="ai-node"><strong>04 · @L10n.T("Rubric suggestions")</strong><span>@L10n.T("AI proposes; the lecturer approves and finalises the grade.")</span></div></div></aside></div>
-<section class="module-strip" aria-label="@L10n.T("AIVES feature groups")"><article class="module"><b>01 / LIVE</b><h3>@L10n.T("Question bank")</h3><p>@L10n.T("CRUD for questions, Bloom levels and rubrics.")</p></article><article class="module"><b>02 / ROADMAP</b><h3>@L10n.T("Exams & scheduling")</h3><p>@L10n.T("Sessions, participants and question selection.")</p></article><article class="module"><b>03 / ROADMAP</b><h3>@L10n.T("AI interview core")</h3><p>@L10n.T("STT, TTS and adaptive follow-up.")</p></article><article class="module"><b>04 / ROADMAP</b><h3>@L10n.T("Grading support")</h3><p>@L10n.T("Reconcile transcripts against rubrics.")</p></article><article class="module"><b>05 / ROADMAP</b><h3>@L10n.T("Supervision")</h3><p>@L10n.T("Recordings, logs and change history.")</p></article><article class="module"><b>06 / ROADMAP</b><h3>@L10n.T("Feedback & reports")</h3><p>@L10n.T("Per question scores and class statistics.")</p></article><article class="module"><b>07 / ROADMAP</b><h3>@L10n.T("Administration")</h3><p>@L10n.T("Accounts, permissions and language.")</p></article></section>
+@model dynamic
+@inject AIVES.WebMVC.DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = @L10n.T("Dashboard");
+    var now = DateTime.UtcNow;
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    var isLecturer = User.IsInRole(AppRoles.Lecturer);
+}
+
+@if (isAdmin)
+{
+    var dto = (AdminDashboardDto)Model;
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">AIVES / Dashboard</span>
+            <h1>@L10n.T("System overview")</h1>
+            <p>@L10n.T("System-wide counts and service health.")</p>
+        </div>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon indigo">US</span>
+                <span class="trend up">@L10n.T("Total users")</span>
+            </div>
+            <strong>@dto.TotalUsers</strong>
+            <p>@L10n.T("Total users")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon cyan">EX</span>
+                <span class="trend up">@L10n.T("Exams")</span>
+            </div>
+            <strong>@dto.TotalExams</strong>
+            <p>@L10n.T("Total exams")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon amber">Q</span>
+                <span class="trend up">@L10n.T("Question bank")</span>
+            </div>
+            <strong>@dto.TotalQuestions</strong>
+            <p>@L10n.T("Total questions")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon green">R</span>
+                <span class="trend up">@L10n.T("Rubrics")</span>
+            </div>
+            <strong>@dto.TotalRubrics</strong>
+            <p>@L10n.T("Total rubrics")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon indigo">SJ</span>
+                <span class="trend up">@L10n.T("Subjects")</span>
+            </div>
+            <strong>@dto.TotalSubjects</strong>
+            <p>@L10n.T("Total subjects")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon cyan">LIVE</span>
+                <span class="trend up">@L10n.T("Active now")</span>
+            </div>
+            <strong>@dto.ActiveExamsNow</strong>
+            <p>@L10n.T("Active exams now")</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="panel" aria-labelledby="health-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("System health")</span><h2 id="health-title">@L10n.T("Service status")</h2></div>
+            </div>
+            <div class="panel-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <small>@L10n.T("Database")</small>
+                        <strong>@(dto.Health.DbOk ? L10n.T("OK") : L10n.T("Not configured"))</strong>
+                    </div>
+                    <div class="detail-item">
+                        <small>@L10n.T("Gemini")</small>
+                        <strong>@(dto.Health.GeminiOk ? L10n.T("OK") : L10n.T("Not configured"))</strong>
+                    </div>
+                    <div class="detail-item">
+                        <small>@L10n.T("Ollama")</small>
+                        <strong>@(dto.Health.OllamaOk ? L10n.T("OK") : L10n.T("Not configured"))</strong>
+                    </div>
+                    <div class="detail-item">
+                        <small>@L10n.T("SMTP")</small>
+                        <strong>@(dto.Health.SmtpOk ? L10n.T("OK") : L10n.T("Not configured"))</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="panel" aria-labelledby="admin-links-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("System")</span><h2 id="admin-links-title">@L10n.T("Administration")</h2></div>
+            </div>
+            <div class="panel-body">
+                <div class="d-grid gap-2">
+                    <a asp-controller="Admin" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("System check")</a>
+                    <a asp-controller="Admin" asp-action="Users" class="btn btn-light btn-sm">@L10n.T("Users")</a>
+                    <a asp-controller="Admin" asp-action="Subjects" class="btn btn-light btn-sm">@L10n.T("Subjects")</a>
+                    <a asp-controller="Admin" asp-action="Settings" class="btn btn-light btn-sm">@L10n.T("Speech settings")</a>
+                </div>
+            </div>
+        </section>
+    </div>
+}
+else if (isLecturer)
+{
+    var dto = (LecturerDashboardDto)Model;
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">AIVES / Dashboard</span>
+            <h1>@L10n.T("Dashboard")</h1>
+            <p>@L10n.T("Your exams and question bank status.")</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="Exam" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("Exams")</a>
+            <a asp-controller="Question" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("Question bank")</a>
+            <a asp-controller="Rubric" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("Rubrics")</a>
+            <a asp-controller="Catalog" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("Catalog")</a>
+        </div>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon indigo">Q</span>
+                <span class="trend up">@L10n.T("Total questions")</span>
+            </div>
+            <strong>@dto.QuestionBank.Total</strong>
+            <p>@L10n.T("Total questions")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon cyan">A</span>
+                <span class="trend up">@L10n.T("Active questions")</span>
+            </div>
+            <strong>@dto.QuestionBank.Active</strong>
+            <p>@L10n.T("Active questions")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon amber">R</span>
+                <span class="trend up">@L10n.T("Questions with rubric")</span>
+            </div>
+            <strong>@dto.QuestionBank.WithRubric</strong>
+            <p>@L10n.T("Questions with rubric")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon green">B</span>
+                <span class="trend up">@L10n.T("Bloom spread")</span>
+            </div>
+            <strong>@dto.QuestionBank.BloomSpread</strong>
+            <p>@L10n.T("Bloom levels used")</p>
+        </div>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon indigo">R</span>
+                <span class="trend up">@L10n.T("Rubrics")</span>
+            </div>
+            <strong>@dto.Rubrics.Total</strong>
+            <p>@L10n.T("Total rubrics")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon cyan">CR</span>
+                <span class="trend up">@L10n.T("Rubrics with criteria")</span>
+            </div>
+            <strong>@dto.Rubrics.WithCriteria</strong>
+            <p>@L10n.T("Rubrics with criteria")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon amber">SJ</span>
+                <span class="trend up">@L10n.T("Subjects")</span>
+            </div>
+            <strong>@dto.Subjects.Total</strong>
+            <p>@L10n.T("Total subjects")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon green">TM</span>
+                <span class="trend up">@L10n.T("Subjects with topics")</span>
+            </div>
+            <strong>@dto.Subjects.WithTopics</strong>
+            <p>@L10n.T("Subjects with topics")</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="panel" aria-labelledby="upcoming-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("Exams")</span><h2 id="upcoming-title">@L10n.T("Upcoming exams")</h2></div>
+                <span class="status-label">@(dto.MyUpcomingExams.Count) @L10n.T("Upcoming")</span>
+            </div>
+            <div class="panel-body">
+                @if (dto.MyUpcomingExams.Count == 0)
+                {
+                    <p class="text-muted">@L10n.T("No upcoming exams")</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L10n.T("Exam")</th>
+                                    <th scope="col">@L10n.T("Subject")</th>
+                                    <th scope="col">@L10n.T("Time") (@TimeZone.OffsetLabel)</th>
+                                    <th scope="col">@L10n.T("Candidates")</th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var exam in dto.MyUpcomingExams)
+                                {
+                                    <tr>
+                                        <td><a asp-controller="Exam" asp-action="Details" asp-route-id="@exam.Id"><strong>@exam.Title</strong></a></td>
+                                        <td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td>
+                                        <td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td>
+                                        <td>@exam.CandidateCount</td>
+                                        <td><span class="status-label ready">@L10n.T("Upcoming")</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+        <section class="panel" aria-labelledby="past-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("Exams")</span><h2 id="past-title">@L10n.T("Past exams")</h2></div>
+                <span class="status-label">@(dto.MyPastExams.Count) @L10n.T("Past")</span>
+            </div>
+            <div class="panel-body">
+                @if (dto.MyPastExams.Count == 0)
+                {
+                    <p class="text-muted">@L10n.T("No past exams")</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L10n.T("Exam")</th>
+                                    <th scope="col">@L10n.T("Subject")</th>
+                                    <th scope="col">@L10n.T("Time") (@TimeZone.OffsetLabel)</th>
+                                    <th scope="col">@L10n.T("Candidates")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var exam in dto.MyPastExams)
+                                {
+                                    <tr>
+                                        <td><a asp-controller="Exam" asp-action="Details" asp-route-id="@exam.Id"><strong>@exam.Title</strong></a></td>
+                                        <td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td>
+                                        <td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td>
+                                        <td>@exam.CandidateCount</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+}
+else
+{
+    var dto = (StudentDashboardDto)Model;
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">AIVES / Dashboard</span>
+            <h1>@L10n.T("Dashboard")</h1>
+            <p>@L10n.T("Your exams and overall performance.")</p>
+        </div>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon indigo">UP</span>
+                <span class="trend up">@L10n.T("Upcoming exams")</span>
+            </div>
+            <strong>@dto.UpcomingCount</strong>
+            <p>@L10n.T("Upcoming exams")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon cyan">DN</span>
+                <span class="trend up">@L10n.T("Past exams")</span>
+            </div>
+            <strong>@dto.CompletedCount</strong>
+            <p>@L10n.T("Completed exams")</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-top">
+                <span class="metric-icon amber">SC</span>
+                <span class="trend up">@L10n.T("Average score")</span>
+            </div>
+            <strong>@(dto.AverageScore?.ToString("0.#") ?? L10n.T("N/A"))</strong>
+            <p>@L10n.T("Average score")</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="panel" aria-labelledby="student-upcoming-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("Exams")</span><h2 id="student-upcoming-title">@L10n.T("Upcoming exams")</h2></div>
+                <span class="status-label">@dto.UpcomingCount</span>
+            </div>
+            <div class="panel-body">
+                @if (dto.UpcomingExams.Count == 0)
+                {
+                    <p class="text-muted">@L10n.T("No upcoming exams")</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L10n.T("Exam")</th>
+                                    <th scope="col">@L10n.T("Subject")</th>
+                                    <th scope="col">@L10n.T("Time") (@TimeZone.OffsetLabel)</th>
+                                    <th scope="col">@L10n.T("Slot")</th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var exam in dto.UpcomingExams)
+                                {
+                                    <tr>
+                                        <td><strong>@exam.Title</strong></td>
+                                        <td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td>
+                                        <td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td>
+                                        <td class="small">@L10n.Format("{0} of {1}", exam.Order, exam.CandidateCount)</td>
+                                        <td>
+                                            @if (now >= exam.StartsAtUtc && now < exam.EndsAtUtc)
+                                            {
+                                                <a class="btn btn-sm btn-primary" asp-controller="Interview" asp-action="Index" asp-route-id="@exam.CandidateId">@L10n.T("Start the viva")</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="small text-muted">@L10n.T("Opens at your slot")</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+        <section class="panel" aria-labelledby="student-past-title">
+            <div class="panel-header">
+                <div><span class="page-kicker">@L10n.T("Exams")</span><h2 id="student-past-title">@L10n.T("Past exams")</h2></div>
+                <span class="status-label">@dto.CompletedCount</span>
+            </div>
+            <div class="panel-body">
+                @if (dto.PastExams.Count == 0)
+                {
+                    <p class="text-muted">@L10n.T("No past exams")</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L10n.T("Exam")</th>
+                                    <th scope="col">@L10n.T("Subject")</th>
+                                    <th scope="col">@L10n.T("Time") (@TimeZone.OffsetLabel)</th>
+                                    <th scope="col">@L10n.T("Score")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var exam in dto.PastExams)
+                                {
+                                    <tr>
+                                        <td><strong>@exam.Title</strong></td>
+                                        <td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td>
+                                        <td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>
+                                            @if (exam.ResultAvailable && exam.FinalScore.HasValue)
+                                            {
+                                                <span class="font-weight-bold">@exam.FinalScore.Value.ToString("0.#")/10</span>
+                                            }
+                                            else if (exam.InterviewStatus == InterviewStatus.Completed)
+                                            {
+                                                <span class="status-label">@L10n.T("Grade not confirmed")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">@L10n.T("Not finished")</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+}
