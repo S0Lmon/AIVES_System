@@ -15,13 +15,16 @@ namespace AIVES.BLL.Services.Exams;
 /// <item>random order among the rest.</item>
 /// </list>
 /// The first rule is a preference, not a guarantee: with too small a pool some overlap is unavoidable,
-/// and <see cref="ExamAllocation.ConsecutiveOverlaps"/> reports it.
+/// and <see cref="ExamAllocation.ConsecutiveOverlaps"/> reports it. With
+/// <see cref="QuestionSelectionStrategy.Random"/> the first three rules are skipped: every candidate's
+/// set is a uniform random draw (a candidate still never gets the same question twice).
 /// </summary>
 public static class ExamQuestionAllocator
 {
     public const int MaxAvoidWindow = 3;
 
-    public static ExamAllocation Allocate(IReadOnlyList<ExamPoolQuestion> pool, int candidateCount, int questionsPerCandidate, Random random)
+    public static ExamAllocation Allocate(IReadOnlyList<ExamPoolQuestion> pool, int candidateCount, int questionsPerCandidate, Random random,
+        QuestionSelectionStrategy strategy = QuestionSelectionStrategy.Balanced)
     {
         ArgumentNullException.ThrowIfNull(pool);
         ArgumentNullException.ThrowIfNull(random);
@@ -48,9 +51,9 @@ public static class ExamQuestionAllocator
             {
                 var next = pool
                     .Where(question => !chosen.Contains(question))
-                    .OrderBy(question => recent.Contains(question.Id) ? 1 : 0)
-                    .ThenBy(question => usage[question.Id])
-                    .ThenBy(question => levels.Contains(question.BloomLevelId) ? 1 : 0)
+                    .OrderBy(question => strategy == QuestionSelectionStrategy.Random ? 0 : recent.Contains(question.Id) ? 1 : 0)
+                    .ThenBy(question => strategy == QuestionSelectionStrategy.Random ? 0 : usage[question.Id])
+                    .ThenBy(question => strategy == QuestionSelectionStrategy.Random ? 0 : levels.Contains(question.BloomLevelId) ? 1 : 0)
                     .ThenBy(question => tieBreak[question.Id])
                     .First();
                 chosen.Add(next);

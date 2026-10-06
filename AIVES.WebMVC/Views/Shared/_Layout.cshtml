@@ -31,7 +31,7 @@
                     {
                         <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index" asp-route-tab="bank">@L10n.T("Question bank")</a></li>
                         <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank">@L10n.T("Rubric bank")</a></li>
-                        <li class="nav-item"><a class="nav-link @(ViewContext.RouteData VALUES["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index">@L10n.T("Catalog")</a></li>
+                        <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index">@L10n.T("Catalog")</a></li>
                         <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index">@L10n.T("Exams")</a></li>
                         <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Grading" && ViewContext.RouteData.Values["action"]?.ToString() != "Report" ? "active" : "")" asp-controller="Grading" asp-action="Index">@L10n.T("Grading")</a></li>
                         <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" || ViewContext.RouteData.Values["action"]?.ToString() == "Report" ? "active" : "")" asp-controller="Reports" asp-action="Index">@L10n.T("Reports")</a></li>

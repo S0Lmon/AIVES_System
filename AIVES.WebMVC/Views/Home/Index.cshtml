@@ -10,12 +10,10 @@
 @if (isAdmin)
 {
     var dto = (AdminDashboardDto)Model;
-    @{
-        var health = dto.Health;
-        var totalServices = 4;
-        var passed = (health.DbOk ? 1 : 0) + (health.GeminiOk ? 1 : 0) + (health.OllamaOk ? 1 : 0) + (health.SmtpOk ? 1 : 0);
-        var failed = totalServices - passed;
-    }
+    var health = dto.Health;
+    var totalServices = 4;
+    var passed = (health.DbOk ? 1 : 0) + (health.GeminiOk ? 1 : 0) + (health.OllamaOk ? 1 : 0) + (health.SmtpOk ? 1 : 0);
+    var failed = totalServices - passed;
     <div class="page-heading">
         <div>
             <span class="page-kicker">AIVES / Dashboard</span>

@@ -164,4 +164,152 @@ public sealed class ExamServiceTests
         Assert.Equal(Now.AddDays(1).AddMinutes(45), mine.EndsAtUtc);
         Assert.Empty(await service.ListForCandidateAsync("nobody@fpt.edu.vn"));
     }
+
+    [Fact]
+    public async Task TheScheduleUsesBufferAndBreaksAndStoresEverySlot()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+        var input = Input(subjectId, topicId) with { BufferMinutes = 5, BreakMinutes = 15, BreakEveryCount = 2 };
+
+        var id = (await service.CreateAsync(input, Lecturer)).ExamId;
+        var exam = (await service.GetAsync(id, Lecturer))!;
+
+        // 15 min slots with a 5 min buffer, plus a 15 min break after candidate #2.
+        Assert.Equal(new[] { 0, 20, 55, 75 }.Select(minutes => input.StartsAtUtc.AddMinutes(minutes)),
+            exam.Candidates.Select(candidate => candidate.StartsAtUtc));
+        // No end time given: the window follows the schedule, which ends 90 minutes in.
+        Assert.Equal(input.StartsAtUtc.AddMinutes(90), exam.EndsAtUtc);
+        Assert.Equal(input.StartsAtUtc.AddMinutes(90), exam.ScheduleEndsAtUtc);
+        Assert.Equal(5, exam.BufferMinutes);
+        Assert.Equal(15, exam.BreakMinutes);
+        Assert.Equal(2, exam.BreakEveryCount);
+    }
+
+    [Fact]
+    public async Task TheScheduleMustFitTheWindowUnlessTheLecturerAllowsTheOverflow()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+        var input = Input(subjectId, topicId) with { BufferMinutes = 5, BreakMinutes = 15, BreakEveryCount = 2 };
+        var tooSmall = input with { EndsAtUtc = input.StartsAtUtc.AddMinutes(60) }; // the schedule needs 90
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(tooSmall, Lecturer));
+        Assert.Contains("does not fit the exam window", error.Message);
+
+        var allowed = await service.CreateAsync(tooSmall with { ScheduleOverflowAllowed = true }, Lecturer);
+        var exam = (await service.GetAsync(allowed.ExamId, Lecturer))!;
+        Assert.Equal(input.StartsAtUtc.AddMinutes(60), exam.EndsAtUtc);          // the window the lecturer chose
+        Assert.Equal(input.StartsAtUtc.AddMinutes(90), exam.ScheduleEndsAtUtc);  // where the schedule really ends
+
+        var endsBeforeStart = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(input with { EndsAtUtc = input.StartsAtUtc.AddMinutes(-5) }, Lecturer));
+        Assert.Contains("must end after it starts", endsBeforeStart.Message);
+    }
+
+    [Fact]
+    public async Task BreakSettingsThatContradictEachOtherAreRejected()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+
+        var lengthWithoutCount = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Input(subjectId, topicId) with { BreakMinutes = 15 }, Lecturer));
+        Assert.Contains("after how many candidates", lengthWithoutCount.Message);
+
+        var countWithoutLength = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Input(subjectId, topicId) with { BreakEveryCount = 3 }, Lecturer));
+        Assert.Contains("break length in minutes", countWithoutLength.Message);
+    }
+
+    [Fact]
+    public async Task SlotsCanBeMovedByHandButNotIntoAnotherSlotOrAfterTheStart()
+    {
+        var (service, _, clock, subjectId, topicId, _) = Build();
+        var id = (await service.CreateAsync(Input(subjectId, topicId), Lecturer)).ExamId;
+        var start = Now.AddDays(1);
+
+        // #4 moved into #2's slot: rejected with the candidate it clashes with.
+        var overlap = await Assert.ThrowsAsync<ArgumentException>(() => service.AdjustSlotAsync(id, 4, start.AddMinutes(15), Lecturer));
+        Assert.Contains("overlaps candidate #2", overlap.Message);
+        // Before the exam start: rejected as well.
+        await Assert.ThrowsAsync<ArgumentException>(() => service.AdjustSlotAsync(id, 4, start.AddMinutes(-5), Lecturer));
+        // An unknown candidate is not found.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.AdjustSlotAsync(id, 9, start.AddMinutes(60), Lecturer));
+
+        // Into the free gap after the last slot: accepted and stored.
+        await service.AdjustSlotAsync(id, 4, start.AddMinutes(60), Lecturer);
+        var exam = (await service.GetAsync(id, Lecturer))!;
+        Assert.Equal(start.AddMinutes(60), exam.Candidates[3].StartsAtUtc);
+
+        // Once the exam has started, the schedule is locked like the rest of the record.
+        clock.Current = start.AddMinutes(1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.AdjustSlotAsync(id, 3, start.AddMinutes(120), Lecturer));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ResetScheduleAsync(id, Lecturer));
+    }
+
+    [Fact]
+    public async Task ResetScheduleRegeneratesEverySlotFromTheSettings()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+        var input = Input(subjectId, topicId) with { BufferMinutes = 5 };
+        var id = (await service.CreateAsync(input, Lecturer)).ExamId;
+        var start = input.StartsAtUtc;
+
+        await service.AdjustSlotAsync(id, 1, start.AddMinutes(120), Lecturer);
+        await service.ResetScheduleAsync(id, Lecturer);
+
+        var exam = (await service.GetAsync(id, Lecturer))!;
+        Assert.Equal(new[] { 0, 20, 40, 60 }.Select(minutes => start.AddMinutes(minutes)),
+            exam.Candidates.Select(candidate => candidate.StartsAtUtc));
+    }
+
+    [Fact]
+    public async Task CandidateStatusesCanBeOverriddenAndDerivedFromTheSchedule()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+        var id = (await service.CreateAsync(Input(subjectId, topicId), Lecturer)).ExamId;
+
+        var exam = (await service.GetAsync(id, Lecturer))!;
+        Assert.Equal(CandidateStatus.Scheduled, exam.Candidates[1].StatusAt(Now.AddDays(1)));
+
+        // The lecturer marks candidate #2 absent; clearing the override returns to the derived status.
+        await service.SetCandidateStatusAsync(id, 2, CandidateStatus.Absent, Lecturer);
+        exam = (await service.GetAsync(id, Lecturer))!;
+        Assert.Equal(CandidateStatus.Absent, exam.Candidates[1].StatusOverride);
+        Assert.Equal(CandidateStatus.Absent, exam.Candidates[1].StatusAt(Now.AddDays(1)));
+
+        await service.SetCandidateStatusAsync(id, 2, null, Lecturer);
+        exam = (await service.GetAsync(id, Lecturer))!;
+        Assert.Null(exam.Candidates[1].StatusOverride);
+
+        // Derived from the clock: scheduled before the slot, waiting during it, absent afterwards.
+        Assert.Equal(CandidateStatus.Scheduled, exam.Candidates[1].StatusAt(Now.AddDays(1)));
+        Assert.Equal(CandidateStatus.Waiting, exam.Candidates[1].StatusAt(Now.AddDays(1).AddMinutes(16)));
+        Assert.Equal(CandidateStatus.Absent, exam.Candidates[1].StatusAt(Now.AddDays(1).AddMinutes(60)));
+
+        // Only the settable statuses may be written by hand, and only for candidates on the exam.
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SetCandidateStatusAsync(id, 2, CandidateStatus.InProgress, Lecturer));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SetCandidateStatusAsync(id, 9, CandidateStatus.Absent, Lecturer));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SetCandidateStatusAsync(999, 1, CandidateStatus.Absent, Lecturer));
+    }
+
+    [Fact]
+    public async Task SessionDetailsAndQuestionStrategyAreStored()
+    {
+        var (service, _, _, subjectId, topicId, _) = Build();
+        var input = Input(subjectId, topicId) with
+        {
+            Term = "Fall 2026",
+            ExamType = "Final",
+            Instructions = "Bring your student ID.",
+            Strategy = QuestionSelectionStrategy.Random
+        };
+
+        var id = (await service.CreateAsync(input, Lecturer)).ExamId;
+        var exam = (await service.GetAsync(id, Lecturer))!;
+
+        Assert.Equal("Fall 2026", exam.Term);
+        Assert.Equal("Final", exam.ExamType);
+        Assert.Equal("Bring your student ID.", exam.Instructions);
+        Assert.Equal(QuestionSelectionStrategy.Random, exam.Strategy);
+        Assert.All(exam.Candidates, candidate => Assert.NotEqual(default, candidate.StartsAtUtc));
+    }
 }

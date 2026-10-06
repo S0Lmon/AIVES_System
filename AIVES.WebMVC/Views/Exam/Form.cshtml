@@ -30,6 +30,14 @@
                 <div class="col-md-6">
                     @await Html.PartialAsync("_CatalogPicker", CatalogPickers.Topic(Model.Topics, "TopicId", L10n.T("Topic"), L10n.T("Any topic"), Model.TopicId, id: "examTopic", subjects: Model.Subjects))
                 </div>
+                <div class="col-md-6">
+                    <label asp-for="Term" class="form-label">@L10n.T("Term / semester")</label>
+                    <input asp-for="Term" class="form-control" maxlength="@AIVES.DTO.ExamLimits.TermMaxLength" placeholder="@L10n.T("e.g. Fall 2026")" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ExamType" class="form-label">@L10n.T("Examination type")</label>
+                    <input asp-for="ExamType" class="form-control" maxlength="@AIVES.DTO.ExamLimits.ExamTypeMaxLength" placeholder="@L10n.T("e.g. Final, Midterm, Competency assessment")" />
+                </div>
             </div>
         </section>
 
@@ -41,8 +49,27 @@
                     <input asp-for="StartsAtLocal" type="datetime-local" class="form-control" value="@(Model.StartsAtLocal?.ToString("yyyy-MM-ddTHH:mm"))" />
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="EndsAtLocal" class="form-label">@L10n.T("Exam ends") (@Model.TimeZoneLabel)</label>
+                    <input asp-for="EndsAtLocal" type="datetime-local" class="form-control" value="@(Model.EndsAtLocal?.ToString("yyyy-MM-ddTHH:mm"))" />
+                    <div class="form-text">@L10n.T("The window all slots must fit into. Leave empty to end with the last slot.")</div>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="SlotMinutes" class="form-label">@L10n.T("Minutes per candidate")</label>
                     <input asp-for="SlotMinutes" type="number" min="@AIVES.DTO.ExamLimits.MinSlotMinutes" max="@AIVES.DTO.ExamLimits.MaxSlotMinutes" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="BufferMinutes" class="form-label">@L10n.T("Buffer between candidates (minutes)")</label>
+                    <input asp-for="BufferMinutes" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxBufferMinutes" class="form-control" />
+                    <div class="form-text">@L10n.T("Quiet time after each slot for notes or a short hand-over.")</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="BreakMinutes" class="form-label">@L10n.T("Break length (minutes)")</label>
+                    <input asp-for="BreakMinutes" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxBreakMinutes" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="BreakEveryCount" class="form-label">@L10n.T("Break after every N candidates")</label>
+                    <input asp-for="BreakEveryCount" type="number" min="0" max="@AIVES.DTO.ExamLimits.MaxBreakEveryCount" class="form-control" />
+                    <div class="form-text">@L10n.T("0 means no scheduled breaks.")</div>
                 </div>
             </div>
         </section>
@@ -50,6 +77,13 @@
         <section class="form-section">
             <div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Questions per candidate")</h2><p>@L10n.T("Main questions are fixed per candidate; follow-up questions are the most the examiner may add.")</p></div></div>
             <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Strategy" class="form-label">@L10n.T("Question selection strategy")</label>
+                    <select asp-for="Strategy" class="form-select">
+                        <option value="@AIVES.DTO.QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option>
+                        <option value="@AIVES.DTO.QuestionSelectionStrategy.Random">@L10n.T("Random: draw each set purely at random")</option>
+                    </select>
+                </div>
                 <div class="col-md-6">
                     <label asp-for="MainQuestionCount" class="form-label">@L10n.T("Main questions")</label>
                     <input asp-for="MainQuestionCount" type="number" min="1" max="@AIVES.DTO.ExamLimits.MaxMainQuestions" class="form-control" />
@@ -93,7 +127,15 @@
             <div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("One email per line, in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
             <label asp-for="CandidateEmails" class="form-label">@L10n.T("Candidate emails")</label>
             <textarea asp-for="CandidateEmails" rows="8" class="form-control" placeholder="student1@fpt.edu.vn&#10;student2@fpt.edu.vn"></textarea>
+            <label asp-for="Instructions" class="form-label mt-3">@L10n.T("Instructions or notes")</label>
+            <textarea asp-for="Instructions" rows="3" class="form-control" maxlength="@AIVES.DTO.ExamLimits.InstructionsMaxLength" placeholder="@L10n.T("Shown with the session for anyone managing the exam.")"></textarea>
         </section>
+
+        <div class="form-check mb-3">
+            <input asp-for="ScheduleOverflowAllowed" class="form-check-input" type="checkbox" />
+            <label asp-for="ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run past the end time")</label>
+            <div class="form-text">@L10n.T("Tick this only if you accept that the last slots end after the chosen end time.")</div>
+        </div>
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>
