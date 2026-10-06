@@ -10,12 +10,27 @@
 @if (isAdmin)
 {
     var dto = (AdminDashboardDto)Model;
+    @{
+        var health = dto.Health;
+        var totalServices = 4;
+        var passed = (health.DbOk ? 1 : 0) + (health.GeminiOk ? 1 : 0) + (health.OllamaOk ? 1 : 0) + (health.SmtpOk ? 1 : 0);
+        var failed = totalServices - passed;
+    }
     <div class="page-heading">
         <div>
             <span class="page-kicker">AIVES / Dashboard</span>
             <h1>@L10n.T("System overview")</h1>
             <p>@L10n.T("System-wide counts and service health.")</p>
         </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="status-label @(failed == 0 ? "ready" : "missing")">@(failed == 0 ? @L10n.T("System healthy") : @L10n.T("Configuration incomplete"))</span>
+            <a asp-controller="Admin" asp-action="Index" class="btn btn-light">@L10n.T("Check again")</a>
+        </div>
+    </div>
+    <div class="check-summary">
+        <article class="check-summary-card is-critical"><span class="check-summary-label">@L10n.T("Missing / errors")</span><strong>@failed</strong><small>@L10n.T("Configuration needed before the feature runs")</small></article>
+        <article class="check-summary-card is-warning"><span class="check-summary-label">@L10n.T("Warnings")</span><strong>0</strong><small>@L10n.T("Optional, but worth reviewing")</small></article>
+        <article class="check-summary-card is-ok"><span class="check-summary-label">@L10n.T("Configured")</span><strong>@passed</strong><small>@L10n.T("Services ready to use")</small></article>
     </div>
 
     <div class="metric-grid">
@@ -105,6 +120,7 @@
                     <a asp-controller="Admin" asp-action="Users" class="btn btn-light btn-sm">@L10n.T("Users")</a>
                     <a asp-controller="Admin" asp-action="Subjects" class="btn btn-light btn-sm">@L10n.T("Subjects")</a>
                     <a asp-controller="Admin" asp-action="Settings" class="btn btn-light btn-sm">@L10n.T("Speech settings")</a>
+                    <a asp-controller="Schedule" asp-action="Index" class="btn btn-light btn-sm">@L10n.T("Schedule")</a>
                 </div>
             </div>
         </section>
@@ -116,7 +132,7 @@ else if (isLecturer)
     <div class="page-heading">
         <div>
             <span class="page-kicker">AIVES / Dashboard</span>
-            <h1>@L10n.T("Dashboard")</h1>
+            <h1>@L10n.T("Lecturer Dashboard")</h1>
             <p>@L10n.T("Your exams and question bank status.")</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -131,7 +147,7 @@ else if (isLecturer)
         <div class="metric-card">
             <div class="metric-top">
                 <span class="metric-icon indigo">Q</span>
-                <span class="trend up">@L10n.T("Total questions")</span>
+                <span class="trend up">@L10n.T("Question bank")</span>
             </div>
             <strong>@dto.QuestionBank.Total</strong>
             <p>@L10n.T("Total questions")</p>
