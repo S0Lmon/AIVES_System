@@ -22,15 +22,51 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         View(new ExamIndexViewModel { Exams = await exams.ListAsync(Actor, cancellationToken), ShowOwner = Actor.IsAdmin });
 
     [HttpGet]
-    public async Task<IActionResult> Create(CancellationToken cancellationToken)
+    public async Task<IActionResult> Calendar(int? year, int? month, CancellationToken cancellationToken)
     {
-        // Default to the next full hour so the form opens with a valid, future start.
+        var now = DateTime.UtcNow;
+        var target = new DateTime(year ?? now.Year, month ?? now.Month, 1);
+        var monthStart = new DateTime(target.Year, target.Month, 1);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var allExams = await exams.ListAsync(Actor, cancellationToken);
+        var monthExams = allExams
+            .Where(exam => exam.StartsAtUtc >= monthStart && exam.StartsAtUtc <= monthEnd)
+            .ToList();
+
+        var days = monthExams
+            .GroupBy(exam => timeZone.ToLocal(exam.StartsAtUtc).Date)
+            .OrderBy(group => group.Key)
+            .Select(group => new ExamCalendarDay
+            {
+                Date = group.Key,
+                Exams = group.ToList()
+            })
+            .ToList();
+
+        var upcoming = allExams
+            .Where(exam => exam.StartsAtUtc > now && exam.StartsAtUtc <= now.AddDays(7))
+            .OrderBy(exam => exam.StartsAtUtc)
+            .ToList();
+
+        return View(new ExamCalendarViewModel
+        {
+            Month = target,
+            Days = days,
+            UpcomingExams = upcoming,
+            ShowOwner = Actor.IsAdmin
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Create(CancellationToken cancellationToken, DateTime? startsAt = null)
+    {
         var now = timeZone.ToLocal(DateTime.UtcNow);
-        var startsAt = now.Date.AddHours(now.Hour + 1);
+        var start = startsAt ?? now.Date.AddHours(now.Hour + 1);
         var model = new ExamFormViewModel
         {
-            StartsAtLocal = startsAt,
-            EndsAtLocal = startsAt.AddHours(4),
+            StartsAtLocal = start,
+            EndsAtLocal = start.AddHours(4),
             Language = (await settings.GetSpeechAsync(cancellationToken)).DefaultLanguage
         };
         return View("Form", await FillAsync(model, cancellationToken));

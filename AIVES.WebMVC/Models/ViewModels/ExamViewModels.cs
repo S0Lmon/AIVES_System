@@ -35,49 +35,36 @@ public sealed class ExamFormViewModel
     [Range(ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds)]
     public int AnswerTimeLimitSeconds { get; set; } = ExamLimits.DefaultAnswerSeconds;
 
-    /// <summary>Language the AI examiner speaks and listens in.</summary>
     public AppLanguage Language { get; set; } = AppLanguage.Vi;
 
-    /// <summary>What is recorded of each answer as evidence for grade appeals.</summary>
     public RecordingMode Recording { get; set; } = RecordingMode.Audio;
 
-    /// <summary>End of the examination window (plan §6). Null lets the schedule itself define the end.</summary>
     public DateTime? EndsAtLocal { get; set; }
 
-    /// <summary>Quiet minutes after each candidate's slot (plan §6, optional).</summary>
     [Range(0, ExamLimits.MaxBufferMinutes)]
     public int BufferMinutes { get; set; }
 
-    /// <summary>Length of the break inserted after every <see cref="BreakEveryCount"/> candidates (plan §6, optional).</summary>
     [Range(0, ExamLimits.MaxBreakMinutes)]
     public int BreakMinutes { get; set; }
 
-    /// <summary>0 means no scheduled breaks.</summary>
     [Range(0, ExamLimits.MaxBreakEveryCount)]
     public int BreakEveryCount { get; set; }
 
-    /// <summary>How main questions are drawn per candidate (plan §8).</summary>
     public QuestionSelectionStrategy Strategy { get; set; } = QuestionSelectionStrategy.Balanced;
 
-    /// <summary>Academic term, e.g. "Fall 2026" (plan §4).</summary>
     [StringLength(ExamLimits.TermMaxLength)]
     public string? Term { get; set; }
 
-    /// <summary>Examination type, e.g. "Final" (plan §4).</summary>
     [StringLength(ExamLimits.ExamTypeMaxLength)]
     public string? ExamType { get; set; }
 
-    /// <summary>Instructions or notes for the session (plan §4).</summary>
     [StringLength(ExamLimits.InstructionsMaxLength)]
     public string? Instructions { get; set; }
 
-    /// <summary>The lecturer's explicit override when the schedule cannot fit the chosen window (plan §14).</summary>
     public bool ScheduleOverflowAllowed { get; set; }
 
-    /// <summary>Interview languages the administrator enabled.</summary>
     public IReadOnlyList<AppLanguage> EnabledLanguages { get; set; } = [AppLanguage.Vi, AppLanguage.En];
 
-    /// <summary>One email per line (commas and semicolons also work), in sitting order.</summary>
     public string CandidateEmails { get; set; } = string.Empty;
 
     public IReadOnlyList<SubjectOption> Subjects { get; set; } = [];
@@ -89,4 +76,18 @@ public sealed class ExamIndexViewModel
 {
     public IReadOnlyList<ExamSummaryDto> Exams { get; set; } = [];
     public bool ShowOwner { get; set; }
+}
+
+public sealed class ExamCalendarDay
+{
+    public DateTime Date { get; init; }
+    public IReadOnlyList<ExamSummaryDto> Exams { get; init; } = [];
+}
+
+public sealed class ExamCalendarViewModel
+{
+    public DateTime Month { get; init; }
+    public IReadOnlyList<ExamCalendarDay> Days { get; init; } = [];
+    public IReadOnlyList<ExamSummaryDto> UpcomingExams { get; init; } = [];
+    public bool ShowOwner { get; init; }
 }
