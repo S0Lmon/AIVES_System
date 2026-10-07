@@ -50,7 +50,8 @@ public sealed record InterviewTurnDto(
     int MainCount,
     int FollowUpIndex,
     DateTime AskedAtUtc,
-    int TimeLimitSeconds);
+    int TimeLimitSeconds,
+    int MaxFollowUpsPerQuestion = 0);
 
 /// <summary>Everything the interview page needs to render the current step.</summary>
 public sealed record InterviewStateDto(
