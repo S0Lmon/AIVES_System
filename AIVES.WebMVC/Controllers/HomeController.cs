@@ -13,10 +13,12 @@ namespace AIVES.WebMVC.Controllers
     public class HomeController : Controller
     {
         private readonly IDashboardService _dashboard;
+        private readonly IExamService _exams;
 
-        public HomeController(IDashboardService dashboard)
+        public HomeController(IDashboardService dashboard, IExamService exams)
         {
             _dashboard = dashboard;
+            _exams = exams;
         }
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -31,11 +33,19 @@ namespace AIVES.WebMVC.Controllers
             {
                 var actor = User.ToExamActor();
                 var lecturerDashboard = await _dashboard.GetLecturerDashboardAsync(actor, cancellationToken);
+                ViewBag.UpcomingExams = (await _exams.ListAsync(actor, cancellationToken))
+                    .Where(e => e.StartsAtUtc > DateTime.UtcNow && e.StartsAtUtc <= DateTime.UtcNow.AddDays(7))
+                    .OrderBy(e => e.StartsAtUtc)
+                    .ToList();
                 return View("Index", lecturerDashboard);
             }
 
             var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
             var studentDashboard = await _dashboard.GetStudentDashboardAsync(email, cancellationToken);
+            ViewBag.UpcomingExams = (await _exams.ListForCandidateAsync(email, cancellationToken))
+                .Where(e => e.StartsAtUtc > DateTime.UtcNow && e.StartsAtUtc <= DateTime.UtcNow.AddDays(7))
+                .OrderBy(e => e.StartsAtUtc)
+                .ToList();
             return View("Index", studentDashboard);
         }
 
