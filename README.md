@@ -51,6 +51,7 @@ Giới hạn đã biết: nhận dạng giọng nói dùng dịch vụ của tr�
 ```text
 AIVES_System/
 ├── AIVES.WebMVC/    # Presentation: Controllers, Views, ViewModels, wwwroot, HTTP
+├── AIVES.WebRazor/  # Presentation (Razor Pages + SignalR): PageModels, Hub real-time
 ├── AIVES.BLL/       # Business: service, validation, quy tắc và điều phối nghiệp vụ
 ├── AIVES.DAL/       # Data Access: EF Core, repository, Identity store, migrations
 ├── AIVES.DTO/       # Đối tượng truyền dữ liệu dùng chung
@@ -67,6 +68,36 @@ Luồng xử lý: **Người dùng → WebMVC → BLL → DAL → SQL Server**, 
 WebMVC xử lý form/HTTP và cấu hình MVC, cookie, Google OAuth. BLL kiểm tra dữ liệu, chính sách tài khoản, OTP và điều phối AI/email. DAL ánh xạ DTO với entity, thực hiện truy vấn/lưu trữ và chứa toàn bộ migrations. Ba layer là phân chia trách nhiệm trong mã nguồn, không yêu cầu ba máy chủ triển khai.
 
 Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md).
+
+## Front end Razor Pages + SignalR (Assignment 2)
+
+`AIVES.WebRazor/` là tầng Presentation thứ hai, viết bằng **ASP.NET Core Razor Pages**. Nó dùng lại nguyên BLL, DAL và DTO, nên vẫn đúng mô hình 3 lớp: **Người dùng → WebRazor (PageModel) → BLL → DAL → SQL Server**. WebRazor chỉ tham chiếu BLL và DTO (có test `RazorPresentationLayerDoesNotReferenceDataAccess` kiểm tra điều này).
+
+| Trang | Nội dung |
+|---|---|
+| `/` | Tổng quan: số liệu cập nhật trực tiếp, nhật ký hoạt động real-time, người đang online |
+| `/Questions` | CRUD ngân hàng câu hỏi: `Index`, `Create`, `Edit/{id}`, `Details/{id}`, `Delete/{id}` |
+| `/Subjects` | Môn học và chủ đề, mỗi form dùng một named handler (`OnPostCreateTopic`, `OnPostDeleteTopic`, `OnPostUpdate`) |
+| `/Rubrics` | Xem rubric dạng ma trận |
+| `/Account/Login`, `/Account/Logout` | Đăng nhập dùng chung tài khoản Identity với site MVC |
+
+Phân quyền khai báo bằng convention trong `RazorPresentation.cs`: mọi trang cần đăng nhập, còn `/Questions`, `/Subjects` và `/Rubrics` cần policy `Staff` (Admin, Lecturer).
+
+**Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
+
+- **Đang online:** `PresenceTracker` đếm người dùng (nhiều tab tính là một người) và đẩy `PresenceChanged` cho mọi client.
+- **Đồng bộ dữ liệu:** sau khi BLL lưu thành công, PageModel gọi `ILiveUpdates.EntityChangedAsync(...)` để gửi `EntityChanged` vào nhóm `staff`. Trang danh sách tự tải lại vùng bảng qua handler `?handler=Rows` / `?handler=Topics`, trang tổng quan cập nhật số liệu qua `?handler=Stats`, và đồng nghiệp nhận toast. Sinh viên không thuộc nhóm `staff` nên không bao giờ nhận được nội dung câu hỏi.
+- **Cùng chỉnh sửa:** trang `Questions/Edit` gọi `JoinQuestion(id)`, nên mọi người đang mở cùng câu hỏi thấy tên nhau (`EditorsChanged`). Khi người khác lưu hoặc xoá câu hỏi đó, trang hiện cảnh báo, và với trường hợp xoá thì khoá luôn nút Lưu.
+
+SignalR thuộc về tầng Presentation; BLL không biết gì về SignalR. `PresenceTracker` lưu trong bộ nhớ, nên đúng với **một** instance web. Nếu chạy nhiều bản sao (như `compose.yaml` của site MVC) thì cần thêm backplane, ví dụ Redis.
+
+Chạy (cùng database với site MVC, cổng 5301):
+
+```powershell
+dotnet run --project AIVES.WebRazor --launch-profile http
+```
+
+Để thấy real-time: mở hai cửa sổ (hoặc một cửa sổ ẩn danh với tài khoản giảng viên khác) ở `/Questions` và `/`, rồi thêm, sửa hoặc xoá câu hỏi ở một cửa sổ.
 
 ## Chạy bằng .NET
 

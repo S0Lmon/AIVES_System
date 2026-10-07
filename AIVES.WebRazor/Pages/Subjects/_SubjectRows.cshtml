@@ -1,0 +1,38 @@
+@model AIVES.WebRazor.Pages.Subjects.IndexModel
+<div class="panel-header"><h2>@Model.Subjects.Count môn học</h2></div>
+@if (Model.Subjects.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon">S</div>
+        <h3>Chưa có môn học</h3>
+        <p>Tạo môn học đầu tiên bằng biểu mẫu bên cạnh.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table data-table">
+            <thead><tr><th>Môn học</th><th>Chủ đề</th><th>Tài liệu</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+                @foreach (var subject in Model.Subjects)
+                {
+                    <tr>
+                        <td>
+                            <a asp-page="/Subjects/Details" asp-route-id="@subject.Id" class="question-title d-block text-decoration-none">@subject.Name</a>
+                            <small class="text-muted">@subject.Description</small>
+                        </td>
+                        <td>@subject.TopicCount</td>
+                        <td>@subject.MaterialCount</td>
+                        <td>
+                            <form method="post" asp-page="/Subjects/Index" asp-page-handler="Delete" asp-route-id="@subject.Id" class="action-group"
+                                  onsubmit="return confirm('Xoá môn học này cùng mọi chủ đề và tài liệu bên trong?');">
+                                <a asp-page="/Subjects/Details" asp-route-id="@subject.Id" class="btn btn-sm btn-info">Mở</a>
+                                <button type="submit" class="btn btn-sm btn-warning">Xoá</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,58 @@
+@page
+@model AIVES.WebRazor.Pages.Questions.IndexModel
+@{
+    ViewData["Title"] = "Ngân hàng câu hỏi";
+}
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Cập nhật real-time</span>
+        <h1>Ngân hàng câu hỏi</h1>
+        <p>Danh sách tự làm mới khi có người thêm, sửa hoặc xoá câu hỏi.</p>
+    </div>
+    <a asp-page="Create" class="btn btn-primary">+ Thêm câu hỏi</a>
+</div>
+
+<form method="get" class="panel panel-body mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-4">
+            <label asp-for="Search" class="form-label">Tìm kiếm</label>
+            <input asp-for="Search" class="form-control" placeholder="Nội dung hoặc đáp án…" />
+        </div>
+        <div class="col-lg-3">
+            <label asp-for="SubjectId" class="form-label">Môn học</label>
+            <select asp-for="SubjectId" asp-items="Model.Subjects" class="form-select"><option value="">Tất cả</option></select>
+        </div>
+        <div class="col-lg-2">
+            <label asp-for="BloomLevelId" class="form-label">Mức Bloom</label>
+            <select asp-for="BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Tất cả</option></select>
+        </div>
+        <div class="col-lg-1">
+            <div class="form-check mb-2">
+                <input asp-for="ActiveOnly" class="form-check-input" />
+                <label asp-for="ActiveOnly" class="form-check-label">Đang dùng</label>
+            </div>
+        </div>
+        <div class="col-lg-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill">Lọc</button>
+            <a asp-page="Index" class="btn btn-light">Bỏ lọc</a>
+        </div>
+    </div>
+</form>
+
+<section class="panel" data-live-region>
+    <partial name="_QuestionRows" model="Model" />
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const region = document.querySelector('[data-live-region]');
+            const refresh = () => window.refreshRegion(region, 'Rows');
+            // Subject and topic renames show up in the table too.
+            document.addEventListener('aives:entity-changed', (event) => {
+                if (['question', 'subject', 'topic'].includes(event.detail.entity)) refresh();
+            });
+            document.addEventListener('aives:reconnected', refresh);
+        })();
+    </script>
+}
