@@ -226,10 +226,10 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
             }));
             builder.ConfigureTestServices(services =>
             {
-                services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.Scheme, null);
+                services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, null);
                 // Read identities from test headers, but keep the cookie challenge so anonymous
                 // page requests still redirect to the login page.
-                services.PostConfigure<AuthenticationOptions>(options => options.DefaultAuthenticateScheme = TestAuthHandler.Scheme);
+                services.PostConfigure<AuthenticationOptions>(options => options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName);
             });
         }
     }
@@ -237,7 +237,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
     private sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        public const string Scheme = "Test";
+        public const string SchemeName = "Test";
         public const string UserHeader = "X-Test-User";
         public const string NameHeader = "X-Test-Name";
         public const string RoleHeader = "X-Test-Role";
@@ -252,8 +252,8 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, Request.Headers[NameHeader].ToString()),
                 new Claim(ClaimTypes.Role, Request.Headers[RoleHeader].ToString())
-            ], Scheme);
-            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme)));
+            ], SchemeName);
+            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
         }
     }
 }
