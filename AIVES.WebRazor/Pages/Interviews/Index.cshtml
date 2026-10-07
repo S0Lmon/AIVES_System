@@ -1,0 +1,55 @@
+@page
+@model AIVES.WebRazor.Pages.Interviews.IndexModel
+@{
+    ViewData["Title"] = "Phòng thi của tôi";
+    string Local(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+}
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Vấn đáp với giám khảo AI</span>
+        <h1>Phòng thi của tôi</h1>
+        <p>Giám khảo AI đọc câu hỏi, bạn trả lời bằng giọng nói. Phòng thi mở trong khung giờ của bạn.</p>
+    </div>
+</div>
+<section class="panel">
+    @if (Model.Exams.Count == 0)
+    {
+        <div class="empty-state"><div class="empty-icon">V</div><h3>Bạn chưa có lịch vấn đáp</h3><p>Giảng viên sẽ thêm email của bạn vào kỳ thi.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead><tr><th>Kỳ thi</th><th>Khung giờ của bạn</th><th>Câu hỏi</th><th>Trạng thái</th><th class="text-end"></th></tr></thead>
+                <tbody>
+                    @foreach (var exam in Model.Exams)
+                    {
+                        <tr>
+                            <td><div class="question-title">@exam.Title</div><small class="text-muted">@exam.SubjectName @(exam.TopicName is null ? "" : "· " + exam.TopicName)</small></td>
+                            <td>@Local(exam.StartsAtUtc) – @DateTime.SpecifyKind(exam.EndsAtUtc, DateTimeKind.Utc).ToLocalTime().ToString("HH:mm")</td>
+                            <td>@exam.MainQuestionCount câu chính</td>
+                            <td>
+                                @switch (exam.InterviewStatus)
+                                {
+                                    case InterviewStatus.Completed: <span class="status-badge active">Đã hoàn thành</span>; break;
+                                    case InterviewStatus.InProgress: <span class="status-badge active">Đang thi</span>; break;
+                                    default:
+                                        if (Model.NowUtc < exam.StartsAtUtc) { <span class="status-badge inactive">Chưa đến giờ</span> }
+                                        else if (Model.NowUtc >= exam.EndsAtUtc) { <span class="status-badge inactive">Đã hết giờ</span> }
+                                        else { <span class="badge-soft">Đang mở</span> }
+                                        break;
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (Model.CanEnter(exam))
+                                {
+                                    <a asp-page="Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@(exam.InterviewStatus == InterviewStatus.InProgress ? "Tiếp tục" : "Vào phòng thi")</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

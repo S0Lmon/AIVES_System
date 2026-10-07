@@ -1,0 +1,133 @@
+@page "{examId:int?}"
+@model AIVES.WebRazor.Pages.Interviews.MonitorModel
+@{
+    ViewData["Title"] = Model.Exam is null ? "Giám sát vấn đáp" : $"Giám sát · {Model.Exam.Title}";
+    string Local(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM HH:mm");
+}
+@if (Model.Exam is not { } exam)
+{
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">Real-time</span>
+            <h1>Giám sát vấn đáp</h1>
+            <p>Chọn một kỳ thi để xem trực tiếp câu hỏi, câu trả lời và các lượt hỏi xoáy của giám khảo AI.</p>
+        </div>
+    </div>
+    <section class="panel">
+        @if (Model.Exams.Count == 0)
+        {
+            <div class="empty-state"><div class="empty-icon">E</div><h3>Chưa có kỳ thi</h3><p>Tạo kỳ thi ở trang AIVES chính.</p></div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table data-table">
+                    <thead><tr><th>Kỳ thi</th><th>Thời gian</th><th>Thí sinh</th><th class="text-end"></th></tr></thead>
+                    <tbody>
+                        @foreach (var item in Model.Exams)
+                        {
+                            <tr>
+                                <td><div class="question-title">@item.Title</div><small class="text-muted">@item.SubjectName</small></td>
+                                <td>@Local(item.StartsAtUtc) – @Local(item.EndsAtUtc)</td>
+                                <td>@item.CandidateCount</td>
+                                <td class="text-end"><a asp-page="Monitor" asp-route-examId="@item.Id" class="btn btn-sm btn-primary">Theo dõi</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">Giám sát trực tiếp · @exam.SubjectName</span>
+            <h1>@exam.Title</h1>
+            <p>@exam.MainQuestionCount câu chính · tối đa @exam.MaxFollowUpsPerQuestion lượt hỏi xoáy mỗi câu · @(exam.AnswerTimeLimitSeconds) giây mỗi lượt trả lời</p>
+        </div>
+        <a asp-page="Monitor" asp-route-examId="" class="btn btn-light">Tất cả kỳ thi</a>
+    </div>
+    <div class="alert alert-danger" data-monitor-error hidden></div>
+    <div class="monitor-grid" data-monitor data-exam-id="@exam.Id" data-hub-url="@InterviewHub.Path">
+        @foreach (var candidate in exam.Candidates.OrderBy(candidate => candidate.StartsAtUtc))
+        {
+            <section class="panel monitor-card" data-candidate="@candidate.CandidateId">
+                <div class="panel-header">
+                    <div>
+                        <h2>@(candidate.DisplayName ?? candidate.Email)</h2>
+                        <small class="text-muted">@candidate.Email · @Local(candidate.StartsAtUtc)</small>
+                    </div>
+                    <span class="status-badge inactive" data-state>@(candidate.Interview?.Status switch
+                    {
+                        InterviewStatus.Completed => "Đã xong",
+                        InterviewStatus.InProgress => "Đang thi",
+                        _ => "Chưa bắt đầu"
+                    })</span>
+                </div>
+                <div class="panel-body">
+                    <div class="monitor-question" data-question>—</div>
+                    <div class="monitor-live" data-live></div>
+                    <ul class="activity-feed monitor-log" data-log></ul>
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Exam is not null)
+    {
+        <script>
+            (() => {
+                const root = document.querySelector('[data-monitor]');
+                const error = document.querySelector('[data-monitor-error]');
+                const examId = Number(root.dataset.examId);
+                const labels = {
+                    started: 'Bắt đầu', question: 'Câu hỏi', followup: 'Hỏi xoáy', answer: 'Trả lời', completed: 'Hoàn thành'
+                };
+                const connection = new signalR.HubConnectionBuilder().withUrl(root.dataset.hubUrl).withAutomaticReconnect().build();
+
+                connection.on('InterviewEvent', (change) => {
+                    const card = root.querySelector(`[data-candidate="${change.candidateId}"]`);
+                    if (!card) return;
+                    const state = card.querySelector('[data-state]');
+                    if (change.kind === 'partial') {
+                        card.querySelector('[data-live]').textContent = change.text;
+                        return;
+                    }
+                    if (change.kind === 'question' || change.kind === 'followup') {
+                        const question = card.querySelector('[data-question]');
+                        question.textContent = change.text;
+                        question.classList.toggle('is-follow-up', change.kind === 'followup');
+                        card.querySelector('[data-live]').textContent = '';
+                    }
+                    if (change.kind === 'started' || change.kind === 'question') { state.textContent = 'Đang thi'; state.className = 'status-badge active'; }
+                    if (change.kind === 'completed') { state.textContent = 'Đã xong'; state.className = 'status-badge active'; }
+
+                    const item = document.createElement('li');
+                    const dot = document.createElement('span');
+                    dot.className = `feed-dot ${change.kind === 'followup' ? 'deleted' : change.kind === 'answer' ? 'created' : ''}`;
+                    const body = document.createElement('div');
+                    const title = document.createElement('strong');
+                    title.textContent = labels[change.kind] || change.kind;
+                    const text = document.createElement('p');
+                    text.textContent = change.text;
+                    body.append(title, text);
+                    const time = document.createElement('time');
+                    time.textContent = new Date(change.atUtc).toLocaleTimeString('vi-VN');
+                    item.append(dot, body, time);
+                    card.querySelector('[data-log]').prepend(item);
+                });
+
+                const watch = () => connection.invoke('WatchExam', examId).catch((e) => {
+                    error.textContent = 'Không theo dõi được kỳ thi này.';
+                    error.hidden = false;
+                });
+                connection.onreconnected(watch);
+                connection.start().then(watch).catch(() => { error.textContent = 'Không kết nối được máy chủ.'; error.hidden = false; });
+            })();
+        </script>
+    }
+}

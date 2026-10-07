@@ -210,7 +210,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         }
     }
 
-    public sealed class RazorApp : WebApplicationFactory<Razor::Program>
+    public class RazorApp : WebApplicationFactory<Razor::Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -230,11 +230,17 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
                 // Read identities from test headers, but keep the cookie challenge so anonymous
                 // page requests still redirect to the login page.
                 services.PostConfigure<AuthenticationOptions>(options => options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName);
+                ConfigureFakes(services);
             });
+        }
+
+        /// <summary>Lets a derived host swap BLL services for fakes.</summary>
+        protected virtual void ConfigureFakes(IServiceCollection services)
+        {
         }
     }
 
-    private sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+    internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
         public const string SchemeName = "Test";

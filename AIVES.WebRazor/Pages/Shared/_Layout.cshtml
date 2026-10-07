@@ -34,9 +34,11 @@
                     <a class="side-link @Active("/Questions")" asp-page="/Questions/Index"><span class="nav-icon">QB</span> Ngân hàng câu hỏi</a>
                     <a class="side-link @Active("/Subjects")" asp-page="/Subjects/Index"><span class="nav-icon">SJ</span> Môn học &amp; chủ đề</a>
                     <a class="side-link @Active("/Rubrics")" asp-page="/Rubrics/Index"><span class="nav-icon">RB</span> Ngân hàng rubric</a>
+                    <a class="side-link @Active("/Interviews/Monitor")" asp-page="/Interviews/Monitor"><span class="nav-icon">LV</span> Giám sát vấn đáp</a>
                 }
                 @if (signedIn)
                 {
+                    <a class="side-link @(page is "/Interviews/Index" or "/Interviews/Room" ? "active" : "")" asp-page="/Interviews/Index"><span class="nav-icon">AI</span> Phòng thi của tôi</a>
                     <span class="nav-label nav-label-spaced">Tài khoản</span>
                     <form method="post" asp-page="/Account/Logout" class="m-0">
                         <button type="submit" class="side-link w-100 border-0 bg-transparent text-start"><span class="nav-icon">↩</span> Đăng xuất</button>
