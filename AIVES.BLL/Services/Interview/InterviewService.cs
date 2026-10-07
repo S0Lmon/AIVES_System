@@ -195,7 +195,7 @@ public sealed class InterviewService(
         InterviewTurnDto? current = null;
         if (record is { Status: InterviewStatus.InProgress } && record.Turns[^1] is { AnsweredAtUtc: null } open)
             current = new InterviewTurnDto(open.TurnId, open.Kind, open.QuestionText, open.MainIndex, context.Questions.Count,
-                open.FollowUpIndex, open.AskedAtUtc, context.AnswerTimeLimitSeconds);
+                open.FollowUpIndex, open.AskedAtUtc, context.AnswerTimeLimitSeconds, context.MaxFollowUpsPerQuestion);
         return new InterviewStateDto(context.CandidateId, context.ExamTitle, context.Language, status, context.SlotStartsAtUtc, context.SlotEndsAtUtc, current, now,
             context.Recording, context.RecordingConsentAtUtc is not null);
     }

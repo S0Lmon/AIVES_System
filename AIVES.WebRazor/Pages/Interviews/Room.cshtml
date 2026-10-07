@@ -1,0 +1,95 @@
+@page "{id:int}"
+@model AIVES.WebRazor.Pages.Interviews.RoomModel
+@{
+    ViewData["Title"] = Model.State.ExamTitle;
+    var state = Model.State;
+}
+<div class="viva-room" data-viva
+     data-candidate-id="@state.CandidateId"
+     data-hub-url="@InterviewHub.Path"
+     data-audio-url="@Url.Page("Room", "QuestionAudio", new { id = state.CandidateId })"
+     data-can-listen="@Model.CanListen.ToString().ToLowerInvariant()"
+     data-can-speak="@Model.CanSpeak.ToString().ToLowerInvariant()"
+     data-worklet-url="@Url.Content("~/js/pcm-worklet.js")">
+    <script type="application/json" data-viva-state>@Html.Raw(Model.StateJson)</script>
+
+    <div class="page-heading">
+        <div>
+            <span class="page-kicker">Giám khảo AI · @(state.Language == AppLanguage.Vi ? "Tiếng Việt" : "English")</span>
+            <h1>@state.ExamTitle</h1>
+            <p data-viva-progress></p>
+        </div>
+        <div class="viva-timer" data-viva-timer hidden><span>Thời gian còn lại</span><strong data-viva-clock>--:--</strong></div>
+    </div>
+
+    <div class="alert alert-danger" data-viva-error hidden role="alert"></div>
+
+    @* Before the start *@
+    <section class="panel panel-body" data-viva-panel="start" hidden>
+        <h2 class="h5">Trước khi bắt đầu</h2>
+        <ul class="viva-rules">
+            <li>Giám khảo AI sẽ đọc từng câu hỏi. Khi nghe xong, micro tự bật để bạn trả lời bằng giọng nói.</li>
+            <li>Chữ bạn nói hiện lên ngay khi bạn đang nói. Bạn có thể sửa trước khi nộp; phần đã sửa sẽ được ghi nhận là <em>gõ tay</em>.</li>
+            <li>Nếu câu trả lời còn mơ hồ, thiếu ý hoặc mâu thuẫn, giám khảo AI sẽ <strong>hỏi xoáy</strong> thêm. Số lượt hỏi xoáy mỗi câu có giới hạn.</li>
+            <li>Mỗi câu có giới hạn thời gian. Hết giờ, câu trả lời được nộp tự động.</li>
+            @if (!Model.CanListen)
+            {
+                <li class="text-danger">Máy chủ chưa cài nhận dạng giọng nói, nên bạn sẽ gõ câu trả lời.</li>
+            }
+        </ul>
+        @if (state.Recording == RecordingMode.AudioVideo)
+        {
+            <div class="stale-banner">Bài thi này yêu cầu ghi hình. Vui lòng làm bài trên trang AIVES chính.</div>
+        }
+        else
+        {
+            @if (state.Recording == RecordingMode.Audio)
+            {
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="vivaConsent" data-viva-consent />
+                    <label class="form-check-label" for="vivaConsent">Tôi đồng ý cho ghi âm câu trả lời làm minh chứng chấm thi.</label>
+                </div>
+            }
+            <button type="button" class="btn btn-primary" data-viva-start>Bắt đầu vấn đáp</button>
+        }
+    </section>
+
+    @* One question at a time *@
+    <section class="panel" data-viva-panel="turn" hidden>
+        <div class="panel-header">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-soft" data-viva-kind></span>
+                <small class="text-muted" data-viva-followups></small>
+            </div>
+            <button type="button" class="btn btn-sm btn-light" data-viva-replay>🔊 Nghe lại câu hỏi</button>
+        </div>
+        <div class="panel-body">
+            <div class="content-quote mb-4" data-viva-question></div>
+
+            <div class="viva-status" data-viva-status></div>
+            <div class="viva-meter" aria-hidden="true"><span data-viva-level></span></div>
+
+            <div class="viva-transcript" data-viva-live aria-live="polite"></div>
+            <textarea class="form-control mt-3" rows="5" data-viva-text hidden placeholder="Câu trả lời của bạn…"></textarea>
+
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="button" class="btn btn-primary" data-viva-record hidden>🎙 Bắt đầu trả lời</button>
+                <button type="button" class="btn btn-warning" data-viva-stop hidden>⏹ Tôi đã trả lời xong</button>
+                <button type="button" class="btn btn-light" data-viva-retry hidden>↺ Trả lời lại</button>
+                <button type="button" class="btn btn-light" data-viva-type hidden>⌨ Gõ câu trả lời</button>
+                <button type="button" class="btn btn-primary ms-auto" data-viva-submit hidden>Nộp câu trả lời</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel panel-body text-center" data-viva-panel="done" hidden>
+        <div class="empty-icon">✓</div>
+        <h2 class="h4">Bạn đã hoàn thành phần vấn đáp</h2>
+        <p class="text-muted">Câu trả lời đã được lưu. Giảng viên sẽ xem lại và công bố điểm.</p>
+        <a asp-page="Index" class="btn btn-light">Về phòng thi của tôi</a>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/interview-room.js" asp-append-version="true"></script>
+}

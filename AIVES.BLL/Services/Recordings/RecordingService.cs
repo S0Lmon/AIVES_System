@@ -51,7 +51,7 @@ public sealed class RecordingService(
     TimeProvider clock,
     ILogger<RecordingService> logger) : IRecordingService
 {
-    private static readonly string[] AllowedTypes = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "video/webm", "video/mp4"];
+    private static readonly string[] AllowedTypes = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "video/webm", "video/mp4"];
     private IDataProtector Protector => protection.CreateProtector("AIVES.Recordings.v1");
 
     public async Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default)
