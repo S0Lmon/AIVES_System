@@ -2,7 +2,12 @@
 @inject AIVES.WebMVC.DisplayTimeZone TimeZone
 @{
     ViewData["Title"] = Model.Title;
-    var started = Model.HasStarted(DateTime.UtcNow);
+    var nowUtc = DateTime.UtcNow;
+    var started = Model.HasStarted(nowUtc);
+    var statuses = Model.Candidates.Select(candidate => candidate.StatusAt(nowUtc)).ToList();
+    int StatusCount(AIVES.DTO.CandidateStatus status) => statuses.Count(value => value == status);
+    var scores = Model.Candidates.Where(candidate => candidate.FinalScore is not null).Select(candidate => candidate.FinalScore!.Value).ToList();
+    decimal? averageScore = scores.Count > 0 ? Math.Round(scores.Average(), 2) : null;
     string ReasonLabel(AIVES.DTO.FollowUpReason reason) => reason switch
     {
         AIVES.DTO.FollowUpReason.Sufficient => L10n.T("answer sufficient"),
@@ -21,11 +26,27 @@
         <span class="page-kicker">Exams / Details</span>
         <h1>@Model.Title</h1>
         <p>
-            @Model.SubjectName@(Model.TopicName is null ? "" : " / " + Model.TopicName) ·
+            @Model.SubjectName@(Model.TopicName is null ? "" : " / " + Model.TopicName)@(string.IsNullOrWhiteSpace(Model.Term) ? "" : " · " + Model.Term)@(string.IsNullOrWhiteSpace(Model.ExamType) ? "" : " · " + Model.ExamType) ·
             @TimeZone.ToLocal(Model.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(Model.EndsAtUtc).ToString("HH:mm") (@TimeZone.OffsetLabel) ·
             @L10n.Format("{0} min per candidate", Model.SlotMinutes) ·
             @L10n.Format("{0} main question(s), up to {1} follow-up(s)", Model.MainQuestionCount, Model.MaxFollowUpQuestions)
+            @if (Model.ScheduleEndsAtUtc is { } scheduleEnd && scheduleEnd != Model.EndsAtUtc)
+            {
+                <span>· @L10n.Format("schedule runs until {0}", TimeZone.ToLocal(scheduleEnd).ToString("HH:mm"))</span>
+            }
         </p>
+        @if (Model.BufferMinutes > 0 || (Model.BreakMinutes > 0 && Model.BreakEveryCount > 0) || Model.Strategy != AIVES.DTO.QuestionSelectionStrategy.Balanced)
+        {
+            <p class="small text-muted mb-0">
+                @if (Model.BufferMinutes > 0) { <span>@L10n.Format("{0} min buffer between candidates", Model.BufferMinutes)</span> }
+                @if (Model.BreakMinutes > 0 && Model.BreakEveryCount > 0) { <span>· @L10n.Format("{0} min break every {1} candidates", Model.BreakMinutes, Model.BreakEveryCount)</span> }
+                <span>· @(Model.Strategy == AIVES.DTO.QuestionSelectionStrategy.Balanced ? L10n.T("Balanced question selection") : L10n.T("Random question selection"))</span>
+            </p>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Instructions))
+        {
+            <p class="small mb-0">@Model.Instructions</p>
+        }
     </div>
     <div class="d-flex flex-wrap gap-2 align-items-center">
         @if (started)
@@ -39,6 +60,9 @@
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-light">@L10n.T("Edit")</a>
             <form method="post" asp-action="Reassign" asp-route-id="@Model.Id" class="d-inline">
                 <button type="submit" class="btn btn-light">@L10n.T("Draw new questions")</button>
+            </form>
+            <form method="post" asp-action="ResetSchedule" asp-route-id="@Model.Id" class="d-inline" onsubmit="return confirm('@L10n.T("Regenerate every time slot from the exam settings? Manual moves will be lost.")');">
+                <button type="submit" class="btn btn-light">@L10n.T("Reset schedule")</button>
             </form>
         }
         else
@@ -64,6 +88,47 @@
     <div class="alert alert-danger" role="alert">@error</div>
 }
 
+@* Instructor dashboard (plan §13): every candidate status at a glance. *@
+<section class="check-summary mb-4">
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Students")</span>
+        <strong>@Model.Candidates.Count</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Scheduled")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.Scheduled)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Waiting")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.Waiting)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("In progress")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.InProgress)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Completed")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.Completed)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Absent")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.Absent)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Requires review")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.RequiresReview)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Cancelled")</span>
+        <strong>@StatusCount(AIVES.DTO.CandidateStatus.Cancelled)</strong>
+    </div>
+    <div class="check-summary-card">
+        <span class="check-summary-label">@L10n.T("Average score")</span>
+        <strong>@(averageScore?.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) ?? "—")</strong>
+        <small>@L10n.T("out of 10, confirmed grades")</small>
+    </div>
+</section>
+
 <section class="panel overflow-hidden mb-4">
     <div class="table-responsive">
         <table class="table data-table">
@@ -72,22 +137,65 @@
                     <th scope="col">#</th>
                     <th scope="col">@L10n.T("Slot") (@TimeZone.OffsetLabel)</th>
                     <th scope="col">@L10n.T("Candidate")</th>
+                    <th scope="col">@L10n.T("Status")</th>
                     <th scope="col">@L10n.T("Main questions")</th>
                     <th scope="col">@L10n.T("Viva")</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var candidate in Model.Candidates)
+                @for (var index = 0; index < Model.Candidates.Count; index++)
                 {
+                    var candidate = Model.Candidates[index];
+                    var status = candidate.StatusAt(nowUtc);
+                    var previous = index == 0 ? null : Model.Candidates[index - 1];
+                    var gapMinutes = previous is null ? 0 : (int)(candidate.StartsAtUtc - previous.EndsAtUtc).TotalMinutes;
+                    var isBreak = Model.BreakMinutes > 0 && gapMinutes >= Model.BufferMinutes + Model.BreakMinutes;
                     <tr>
                         <td>@candidate.Order</td>
-                        <td class="small text-nowrap">@TimeZone.ToLocal(candidate.StartsAtUtc).ToString("HH:mm") – @TimeZone.ToLocal(candidate.EndsAtUtc).ToString("HH:mm")</td>
+                        <td class="small text-nowrap">
+                            @if (gapMinutes > 0)
+                            {
+                                <div class="badge text-bg-light mb-1">@(isBreak ? L10n.Format("Break {0} min", Model.BreakMinutes) : L10n.Format("Gap {0} min", gapMinutes))</div>
+                            }
+                            <div>@TimeZone.ToLocal(candidate.StartsAtUtc).ToString("HH:mm") – @TimeZone.ToLocal(candidate.EndsAtUtc).ToString("HH:mm")</div>
+                            @if (!started)
+                            {
+                                <form method="post" asp-action="AdjustSlot" asp-route-id="@Model.Id" asp-route-order="@candidate.Order" class="d-flex gap-1 mt-1">
+                                    <input type="datetime-local" name="slotStartLocal" value="@TimeZone.ToLocal(candidate.StartsAtUtc).ToString("yyyy-MM-ddTHH:mm")" class="form-control form-control-sm" style="width:11.5rem" />
+                                    <button type="submit" class="btn btn-sm btn-light">@L10n.T("Move")</button>
+                                </form>
+                            }
+                        </td>
                         <td>
                             <strong>@(candidate.DisplayName ?? candidate.Email)</strong>
                             <div class="small text-muted">@candidate.Email</div>
                             @if (candidate.DisplayName is null)
                             {
                                 <span class="badge text-bg-light">@L10n.T("No account yet")</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="status-label @ViewText.StatusClass(status)">@ViewText.Status(status)</span>
+                            @if (candidate.FinalScore is { } score)
+                            {
+                                <div class="small text-muted">@L10n.Format("Score {0}/10", score.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))</div>
+                            }
+                            <form method="post" asp-action="CandidateStatus" asp-route-id="@Model.Id" asp-route-order="@candidate.Order" class="d-flex gap-1 mt-1">
+                                <select name="status" class="form-select form-select-sm" style="max-width:11rem" aria-label="@L10n.T("Status")">
+                                    <option value="">@L10n.T("Set status…")</option>
+                                    <option value="Absent">@L10n.T("Absent")</option>
+                                    <option value="Cancelled">@L10n.T("Cancelled")</option>
+                                    <option value="RequiresReview">@L10n.T("Requires review")</option>
+                                    <option value="NotScheduled">@L10n.T("Not scheduled")</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-light">@L10n.T("Apply")</button>
+                            </form>
+                            @if (candidate.StatusOverride is not null)
+                            {
+                                <form method="post" asp-action="CandidateStatus" asp-route-id="@Model.Id" asp-route-order="@candidate.Order" class="mt-1">
+                                    <input type="hidden" name="status" value="" />
+                                    <button type="submit" class="btn btn-sm btn-link p-0">@L10n.T("Use the schedule again")</button>
+                                </form>
                             }
                         </td>
                         <td>

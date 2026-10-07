@@ -7,6 +7,9 @@ public static class AuditActions
     public const string ExamUpdated = "exam.updated";
     public const string ExamQuestionsRedrawn = "exam.questions-redrawn";
     public const string ExamDeleted = "exam.deleted";
+    public const string ExamSlotAdjusted = "exam.slot-adjusted";
+    public const string ExamScheduleReset = "exam.schedule-reset";
+    public const string ExamCandidateStatusChanged = "exam.candidate-status";
     public const string InterviewStarted = "interview.started";
     public const string InterviewCompleted = "interview.completed";
     public const string RecordingConsent = "recording.consent";

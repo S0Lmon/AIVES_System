@@ -20,6 +20,31 @@ public static class ViewText
 
     public static string Score(decimal? value) => value?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "—";
 
+    /// <summary>Plan §5 exam status of a candidate, translated.</summary>
+    public static string Status(CandidateStatus status) => status switch
+    {
+        CandidateStatus.NotScheduled => L10n.T("Not scheduled"),
+        CandidateStatus.Scheduled => L10n.T("Scheduled"),
+        CandidateStatus.Waiting => L10n.T("Waiting"),
+        CandidateStatus.InProgress => L10n.T("In progress"),
+        CandidateStatus.Completed => L10n.T("Completed"),
+        CandidateStatus.Absent => L10n.T("Absent"),
+        CandidateStatus.Cancelled => L10n.T("Cancelled"),
+        _ => L10n.T("Requires review")
+    };
+
+    /// <summary>Extra badge class for a candidate's status (the base .status-label is the default look).</summary>
+    public static string StatusClass(CandidateStatus status) => status switch
+    {
+        CandidateStatus.InProgress => "warning",
+        CandidateStatus.Completed => "ready",
+        CandidateStatus.Absent => "missing",
+        CandidateStatus.Cancelled => "missing",
+        CandidateStatus.RequiresReview => "warning",
+        CandidateStatus.Waiting => "warning",
+        _ => string.Empty
+    };
+
     public static string Seconds(double? value) => value is null ? "—" : L10n.Format("{0} s", value.Value.ToString("0.#", System.Globalization.CultureInfo.CurrentCulture));
 
     public static string Action(string action) => action switch
@@ -28,6 +53,9 @@ public static class ViewText
         AuditActions.ExamUpdated => L10n.T("Exam changed"),
         AuditActions.ExamQuestionsRedrawn => L10n.T("Questions drawn again"),
         AuditActions.ExamDeleted => L10n.T("Exam deleted"),
+        AuditActions.ExamSlotAdjusted => L10n.T("Slot moved"),
+        AuditActions.ExamScheduleReset => L10n.T("Schedule regenerated"),
+        AuditActions.ExamCandidateStatusChanged => L10n.T("Candidate status changed"),
         AuditActions.InterviewStarted => L10n.T("Viva started"),
         AuditActions.InterviewCompleted => L10n.T("Viva finished"),
         AuditActions.RecordingViewed => L10n.T("Recording played"),

@@ -22,13 +22,51 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         View(new ExamIndexViewModel { Exams = await exams.ListAsync(Actor, cancellationToken), ShowOwner = Actor.IsAdmin });
 
     [HttpGet]
-    public async Task<IActionResult> Create(CancellationToken cancellationToken)
+    public async Task<IActionResult> Calendar(int? year, int? month, CancellationToken cancellationToken)
     {
-        // Default to the next full hour so the form opens with a valid, future start.
+        var now = DateTime.UtcNow;
+        var target = new DateTime(year ?? now.Year, month ?? now.Month, 1);
+        var monthStart = new DateTime(target.Year, target.Month, 1);
+        var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+
+        var allExams = await exams.ListAsync(Actor, cancellationToken);
+        var monthExams = allExams
+            .Where(exam => exam.StartsAtUtc >= monthStart && exam.StartsAtUtc <= monthEnd)
+            .ToList();
+
+        var days = monthExams
+            .GroupBy(exam => timeZone.ToLocal(exam.StartsAtUtc).Date)
+            .OrderBy(group => group.Key)
+            .Select(group => new ExamCalendarDay
+            {
+                Date = group.Key,
+                Exams = group.ToList()
+            })
+            .ToList();
+
+        var upcoming = allExams
+            .Where(exam => exam.StartsAtUtc > now && exam.StartsAtUtc <= now.AddDays(7))
+            .OrderBy(exam => exam.StartsAtUtc)
+            .ToList();
+
+        return View(new ExamCalendarViewModel
+        {
+            Month = target,
+            Days = days,
+            UpcomingExams = upcoming,
+            ShowOwner = Actor.IsAdmin
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Create(CancellationToken cancellationToken, DateTime? startsAt = null)
+    {
         var now = timeZone.ToLocal(DateTime.UtcNow);
+        var start = startsAt ?? now.Date.AddHours(now.Hour + 1);
         var model = new ExamFormViewModel
         {
-            StartsAtLocal = now.Date.AddHours(now.Hour + 1),
+            StartsAtLocal = start,
+            EndsAtLocal = start.AddHours(4),
             Language = (await settings.GetSpeechAsync(cancellationToken)).DefaultLanguage
         };
         return View("Form", await FillAsync(model, cancellationToken));
@@ -84,6 +122,15 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
             AnswerTimeLimitSeconds = exam.AnswerTimeLimitSeconds,
             Language = exam.Language,
             Recording = exam.Recording,
+            EndsAtLocal = timeZone.ToLocal(exam.EndsAtUtc),
+            BufferMinutes = exam.BufferMinutes,
+            BreakMinutes = exam.BreakMinutes,
+            BreakEveryCount = exam.BreakEveryCount,
+            Strategy = exam.Strategy,
+            Term = exam.Term,
+            ExamType = exam.ExamType,
+            Instructions = exam.Instructions,
+            ScheduleOverflowAllowed = exam.ScheduleEndsAtUtc > exam.EndsAtUtc,
             CandidateEmails = string.Join(Environment.NewLine, exam.Candidates.Select(candidate => candidate.Email))
         };
         return View("Form", await FillAsync(model, cancellationToken));
@@ -150,6 +197,82 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         }
     }
 
+    /// <summary>Moves one candidate's slot by hand; the time comes in as a local datetime (plan §6).</summary>
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdjustSlot(int id, int order, DateTime slotStartLocal, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await exams.AdjustSlotAsync(id, order, timeZone.ToUtc(slotStartLocal), Actor, cancellationToken);
+            TempData["ExamMessage"] = L10n.Format("Candidate #{0} was moved to a new time.", order);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["ExamError"] = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ExamError"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>Regenerates every slot from the schedule settings, discarding manual moves (plan §6).</summary>
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetSchedule(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await exams.ResetScheduleAsync(id, Actor, cancellationToken);
+            TempData["ExamMessage"] = L10n.T("The schedule was regenerated from the exam settings.");
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ExamError"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>Sets or clears a candidate's status override: absent, cancelled, review, unscheduled (plan §5).</summary>
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CandidateStatus(int id, int order, string? status, CancellationToken cancellationToken)
+    {
+        CandidateStatus? parsed = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<CandidateStatus>(status, out var value))
+            {
+                TempData["ExamError"] = L10n.T("That status does not exist.");
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            parsed = value;
+        }
+        try
+        {
+            await exams.SetCandidateStatusAsync(id, order, parsed, Actor, cancellationToken);
+            TempData["ExamMessage"] = parsed is null
+                ? L10n.Format("Candidate #{0} follows the schedule again.", order)
+                : L10n.Format("Candidate #{0} was marked {1}.", order, ViewText.Status(parsed.Value));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            TempData["ExamError"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     private void Report(ExamSaveResult result, string message)
     {
         TempData["ExamMessage"] = message;
@@ -172,7 +295,16 @@ public sealed class ExamController(IExamService exams, ICatalogService catalog, 
         model.AnswerTimeLimitSeconds,
         model.MaxFollowUpsPerQuestion,
         model.Language,
-        model.Recording);
+        model.Recording,
+        model.EndsAtLocal is { } endsAtLocal ? timeZone.ToUtc(endsAtLocal) : null,
+        model.BufferMinutes,
+        model.BreakMinutes,
+        model.BreakEveryCount,
+        model.Strategy,
+        model.Term,
+        model.ExamType,
+        model.Instructions,
+        model.ScheduleOverflowAllowed);
 
     private async Task<ExamFormViewModel> FillAsync(ExamFormViewModel model, CancellationToken cancellationToken)
     {

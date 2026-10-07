@@ -580,8 +580,31 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("Functional Tester", details);        // the registered candidate's name
         Assert.Contains("not.registered@fpt.edu.vn", details);
         Assert.Contains("No account yet", details);
+        Assert.Contains("Students", details);                 // the instructor dashboard (plan §13)
+        Assert.Contains("Set status", details);               // the per-candidate status control (plan §5)
         Assert.Equal(4, contents.Count(content => details.Contains(content)));
         Assert.Contains("Viva schedule test", await Html(await lecturer.GetAsync("/Exam")));
+
+        // The lecturer moves candidate #2 into a free gap by hand (plan §6).
+        var moved = await Post(lecturer, detailsUrl, detailsUrl.Replace("Details", "AdjustSlot"), new()
+        {
+            ["order"] = "2",
+            ["slotStartLocal"] = day.ToString("yyyy-MM-dd") + "T10:00"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, moved.StatusCode);
+        var afterMove = await Html(await lecturer.GetAsync(detailsUrl));
+        Assert.Contains("10:00 – 10:10", afterMove);
+        Assert.DoesNotContain("09:10 – 09:20", afterMove);
+
+        // And marks them absent, which wins over the schedule (plan §5).
+        var marked = await Post(lecturer, detailsUrl, detailsUrl.Replace("Details", "CandidateStatus"), new()
+        {
+            ["order"] = "2",
+            ["status"] = "Absent"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, marked.StatusCode);
+        var afterMark = await Html(await lecturer.GetAsync(detailsUrl));
+        Assert.Contains("status-label missing", afterMark);   // the overridden status badge
 
         // The student sees their slot, never the questions, and cannot open the lecturer pages.
         var mine = await Html(await student.GetAsync("/MyExams"));
@@ -665,7 +688,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             Assert.Equal(90, exam.AnswerTimeLimitSeconds);
             Assert.Equal(1, exam.MaxFollowUpsPerQuestion);
             Assert.Equal("en-US", exam.Language);
+            // Slots are stored per candidate, so move both the exam and its schedule into the past.
             exam.StartsAtUtc = DateTime.UtcNow.AddMinutes(-1);
+            exam.EndsAtUtc = DateTime.UtcNow.AddMinutes(exam.SlotMinutes * exam.Candidates.Count);
+            foreach (var candidate in exam.Candidates)
+                candidate.SlotStartsAtUtc = exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * (candidate.Order - 1));
             await db.SaveChangesAsync();
             candidateId = exam.Candidates.Single().Id;
         }

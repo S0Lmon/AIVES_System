@@ -9,8 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/hallmark.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/slide-panels.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/catalog.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/catalog-picker.css" asp-append-version="true" />
@@ -20,46 +20,104 @@
     <div class="app-shell">
         <aside class="sidebar" id="appSidebar">
             <a class="brand" asp-controller="Home" asp-action="Index">
-                <span class="brand-mark">A</span>
-                <span><strong>AIVES</strong><small>AI-powered Viva Exam</small></span>
+                <div class="brand-mark">A</div>
+                <div>
+                    <strong>AIVES</strong>
+                    <small>AI-powered Viva Exam</small>
+                </div>
             </a>
-            <nav class="side-nav" aria-label="Main navigation">
-                <span class="nav-label">@L10n.T("Work space")</span>
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index"><span class="nav-icon">OV</span> @L10n.T("Overview")</a>
+            <nav class="side-nav">
+                <div class="nav-label">Menu</div>
+                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                    <span>@L10n.T("Overview")</span>
+                </a>
                 @if (User.IsInRole(AIVES.DTO.AppRoles.Admin) || User.IsInRole(AIVES.DTO.AppRoles.Lecturer))
                 {
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">QB</span> @L10n.T("Question bank")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank"><span class="nav-icon">RB</span> @L10n.T("Rubric bank")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index"><span class="nav-icon">SJ</span> @L10n.T("Catalog")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index"><span class="nav-icon">EX</span> @L10n.T("Exams")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Grading" && ViewContext.RouteData.Values["action"]?.ToString() != "Report" ? "active" : "")" asp-controller="Grading" asp-action="Index"><span class="nav-icon">GR</span> @L10n.T("Grading")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" || ViewContext.RouteData.Values["action"]?.ToString() == "Report" ? "active" : "")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">RP</span> @L10n.T("Reports")</a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Glossary" ? "active" : "")" asp-controller="Glossary" asp-action="Index"><span class="nav-icon">TM</span> @L10n.T("Subject terms")</a>
+                    <div class="nav-label nav-label-spaced">@L10n.T("Staff")</div>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Question" ? "active" : "")" asp-controller="Question" asp-action="Index" asp-route-tab="bank">
+                        <span>@L10n.T("Question bank")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rubric" ? "active" : "")" asp-controller="Rubric" asp-action="Index" asp-route-tab="bank">
+                        <span>@L10n.T("Rubric bank")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Catalog" ? "active" : "")" asp-controller="Catalog" asp-action="Index">
+                        <span>@L10n.T("Catalog")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index">
+                        <span>@L10n.T("Exams")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" && ViewContext.RouteData.Values["action"]?.ToString() == "Calendar" ? "active" : "")" asp-controller="Exam" asp-action="Calendar">
+                        <span>@L10n.T("Calendar")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Grading" && ViewContext.RouteData.Values["action"]?.ToString() != "Report" ? "active" : "")" asp-controller="Grading" asp-action="Index">
+                        <span>@L10n.T("Grading")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" || ViewContext.RouteData.Values["action"]?.ToString() == "Report" ? "active" : "")" asp-controller="Reports" asp-action="Index">
+                        <span>@L10n.T("Reports")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Glossary" ? "active" : "")" asp-controller="Glossary" asp-action="Index">
+                        <span>@L10n.T("Subject terms")</span>
+                    </a>
                 }
-                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyExams" ? "active" : "")" asp-controller="MyExams" asp-action="Index"><span class="nav-icon">ME</span> @L10n.T("My exams")</a>
-                <span class="nav-label nav-label-spaced">@L10n.T("System")</span>
+                <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyExams" ? "active" : "")" asp-controller="MyExams" asp-action="Index">
+                    <span>@L10n.T("My exams")</span>
+                </a>
                 @if (User.IsInRole(AIVES.DTO.AppRoles.Admin))
                 {
-                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Users" ? "active" : "")" asp-controller="Admin" asp-action="Users"><span class="nav-icon">US</span> @L10n.T("Users") <small>@L10n.T("Admin")</small></a>
-                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Subjects" ? "active" : "")" asp-controller="Admin" asp-action="Subjects"><span class="nav-icon">LS</span> @L10n.T("Lecturers per subject") <small>@L10n.T("Admin")</small></a>
-                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Settings" ? "active" : "")" asp-controller="Admin" asp-action="Settings"><span class="nav-icon">SP</span> @L10n.T("Speech settings") <small>@L10n.T("Admin")</small></a>
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Audit" ? "active" : "")" asp-controller="Admin" asp-action="Audit"><span class="nav-icon">LG</span> @L10n.T("Audit log") <small>@L10n.T("Admin")</small></a>
+                    <div class="nav-label nav-label-spaced">@L10n.T("Admin")</div>
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Users" ? "active" : "")" asp-controller="Admin" asp-action="Users">
+                        <span>@L10n.T("Users")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Subjects" ? "active" : "")" asp-controller="Admin" asp-action="Subjects">
+                        <span>@L10n.T("Lecturers per subject")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Settings" ? "active" : "")" asp-controller="Admin" asp-action="Settings">
+                        <span>@L10n.T("Speech settings")</span>
+                    </a>
+                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Audit" ? "active" : "")" asp-controller="Admin" asp-action="Audit">
+                        <span>@L10n.T("Audit log")</span>
+                    </a>
                 }
-                @if (User.IsInRole(AIVES.DTO.AdminRoles.RoleName))
-                {
-                    <a class="side-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Admin" asp-action="Index"><span class="nav-icon">AD</span> @L10n.T("System check") <small>@L10n.T("Admin")</small></a>
-                }
-                <a class="side-link" asp-controller="Home" asp-action="Privacy"><span class="nav-icon">ST</span> @L10n.T("Data policy")</a>
+                <div class="nav-label nav-label-spaced">@L10n.T("Legal")</div>
+                <a class="side-link" asp-controller="Home" asp-action="Privacy">
+                    <span>@L10n.T("Data policy")</span>
+                </a>
             </nav>
+            <div class="sidebar-note">
+                <div class="note-dot"></div>
+                <div>
+                    <strong>@L10n.T("System ready")</strong>
+                    <small>@L10n.T("All services online")</small>
+                </div>
+            </div>
         </aside>
         <div class="app-main">
             <header class="topbar">
-                <button class="menu-toggle" type="button" id="menuToggle" aria-label="Toggle navigation">☰</button>
-                <div class="topbar-copy"><span class="eyebrow">@L10n.T("AI-powered Viva Exam System")</span><strong>@ViewData["Title"]</strong></div>
-                <div class="topbar-actions">@await Html.PartialAsync("_LanguageSwitcher")@if (User.Identity?.IsAuthenticated == true) { <a class="avatar" asp-controller="Profile" asp-action="Index" title="@L10n.T("Your profile")">@((User.Identity.Name ?? "GV")[..Math.Min(2, (User.Identity.Name ?? "GV").Length)].ToUpperInvariant())</a> } else { <a asp-controller="Account" asp-action="Login" class="btn btn-light btn-sm">@L10n.T("Sign in")</a> }</div>
+                <div class="topbar-copy">
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+                    <strong>@ViewData["Title"]</strong>
+                </div>
+                <div class="topbar-actions">
+                    <div class="database-pill">
+                        <span></span>
+                        <span>@L10n.T("System online")</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        @await Html.PartialAsync("_LanguageSwitcher")
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a class="avatar" asp-controller="Profile" asp-action="Index" title="@L10n.T("Your profile")">@((User.Identity.Name ?? "GV")[..Math.Min(2, (User.Identity.Name ?? "GV").Length)].ToUpperInvariant())</a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-sm">@L10n.T("Sign in")</a>
+                        }
+                    </div>
+                </div>
             </header>
-            <main class="content-area">@RenderBody()</main>
-            <footer class="app-footer">AIVES · @L10n.T("AI-powered viva exam system") · 2026</footer>
+            <main class="content-area">
+                @RenderBody()
+            </main>
         </div>
     </div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
