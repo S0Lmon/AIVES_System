@@ -79,9 +79,35 @@ Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md).
 | `/Questions` | CRUD ngân hàng câu hỏi: `Index`, `Create`, `Edit/{id}`, `Details/{id}`, `Delete/{id}` |
 | `/Subjects` | Môn học và chủ đề, mỗi form dùng một named handler (`OnPostCreateTopic`, `OnPostDeleteTopic`, `OnPostUpdate`) |
 | `/Rubrics` | Xem rubric dạng ma trận |
+| `/Interviews`, `/Interviews/Room/{id}` | Sinh viên: lịch vấn đáp và phòng thi với giám khảo AI bằng giọng nói |
+| `/Interviews/Monitor/{examId}` | Giảng viên: giám sát trực tiếp các buổi vấn đáp của một kỳ thi |
 | `/Account/Login`, `/Account/Logout` | Đăng nhập dùng chung tài khoản Identity với site MVC |
 
-Phân quyền khai báo bằng convention trong `RazorPresentation.cs`: mọi trang cần đăng nhập, còn `/Questions`, `/Subjects` và `/Rubrics` cần policy `Staff` (Admin, Lecturer).
+Phân quyền khai báo bằng convention trong `RazorPresentation.cs`: mọi trang cần đăng nhập, còn `/Questions`, `/Subjects`, `/Rubrics` và `/Interviews/Monitor` cần policy `Staff` (Admin, Lecturer).
+
+### Lõi phỏng vấn AI bằng giọng nói (nhóm chức năng 3)
+
+Giám khảo AI đọc câu hỏi, sinh viên trả lời bằng giọng nói, chữ hiện ra gần như ngay lập tức, và AI hỏi xoáy khi câu trả lời còn mơ hồ, thiếu ý, mâu thuẫn hoặc lạc đề. Phần giọng nói chạy **offline trên máy chủ bằng package NuGet**, không phụ thuộc trình duyệt:
+
+| Phần | Package / lớp | Ghi chú |
+|---|---|---|
+| Đọc câu hỏi (TTS) | `org.k2fsa.sherpa-onnx` + giọng Piper `vi_VN-vais1000-medium` / `en_US-amy-low`, lớp `BLL/Services/Speech/SherpaTextToSpeech` | Trang phòng thi lấy WAV qua handler `?handler=QuestionAudio`, chỉ cho câu hỏi đang mở; kết quả được cache theo nội dung câu |
+| Nghe câu trả lời (STT) | `Whisper.net` + `Whisper.net.Runtime` (CPU) + `Whisper.net.Runtime.Vulkan` (GPU), lớp `WhisperSpeechToText` | Dùng câu hỏi và thuật ngữ môn học làm prompt; bỏ đoạn im lặng và các câu Whisper hay "bịa" |
+| Gần thời gian thực | `LiveTranscriber` + `Realtime/InterviewHub.cs` (`/hubs/interview`) | Trình duyệt thu micro bằng AudioWorklet, chuyển về 16 kHz PCM, gửi từng khối 250 ms qua **SignalR client-to-server streaming**. Máy chủ đọc lại phần đuôi khoảng mỗi 1,5 giây (`Transcript`), và chốt từng đoạn khoảng 8 giây tại chỗ ngắt hơi, nên bản cuối chỉ còn vài giây phải nhận dạng |
+| Hỏi xoáy thích ứng | `IInterviewService` + `GeminiFollowUpGenerator` (đã có) | AI phân loại câu trả lời (`Sufficient`, `Vague`, `Missing`, `Contradiction`, `OffTopic`) và viết câu hỏi xoáy; quá thời gian chờ thì chuyển câu, không làm treo buổi thi |
+| Giới hạn | `AnswerTimeLimitSeconds`, `MaxFollowUpsPerQuestion`, `MaxFollowUpQuestions` của kỳ thi | Đồng hồ đếm ngược trên trang, hết giờ thì tự nộp; máy chủ không nhận âm thanh quá giới hạn, và BLL đánh dấu `timedOut` |
+| Giám sát | `InterviewEvent` gửi tới nhóm `exam-{id}` | Giảng viên thấy câu hỏi, chữ sinh viên đang nói, câu trả lời, câu hỏi xoáy và lúc hoàn thành |
+
+Chữ nhận dạng giữ nguyên thì được ghi là `Speech`; phần sinh viên sửa lại thì được ghi là `Typed`, để giảng viên phân biệt. Kỳ thi có ghi âm (`Recording = Audio`) sẽ lưu file WAV của từng câu trả lời (được mã hoá) qua `IRecordingService`. Kỳ thi ghi hình (`AudioVideo`) vẫn làm trên site MVC.
+
+**Cài model** (khoảng 600 MB, nằm trong `AIVES.WebRazor/App_Data/speech-models`, không commit):
+
+```powershell
+.\scripts\download-speech-models.ps1            # Whisper small + giọng Việt và Anh
+.\scripts\download-speech-models.ps1 -WithPreviewModel   # thêm ggml-base cho bản xem trước nhanh hơn trên CPU
+```
+
+Đo ngày 08/10/2026 trên máy chủ (GTX 1070, Vulkan): đọc một câu hỏi mất 0,3–0,6 giây (lần đầu khoảng 2,7 giây do nạp model); chữ tạm cập nhật khoảng mỗi 1,6 giây khi đang nói; bản cuối có sau khi ngừng nói 0,7–2,9 giây; Gemini quyết định hỏi xoáy trong khoảng 1,2–1,6 giây. Chỉ có CPU thì Whisper small chậm hơn khoảng 6 lần, nên đặt `Speech:WhisperPreviewModel` là `whisper/ggml-base.bin`. Thiếu model thì phòng thi tự chuyển sang chế độ gõ câu trả lời. Cấu hình nằm trong mục `Speech` (`SpeechOptions`).
 
 **Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
 

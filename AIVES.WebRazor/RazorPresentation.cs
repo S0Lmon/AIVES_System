@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 using AIVES.DTO;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Localization;
@@ -44,11 +45,22 @@ public static class RazorPresentation
             options.Conventions.AuthorizeFolder("/Questions", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Subjects", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Rubrics", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizePage("/Interviews/Monitor", AuthorizationPolicies.Staff);
         });
 
         services.AddHttpContextAccessor();
-        services.AddSignalR();
+        services.AddSignalR(options =>
+            {
+                // Room for audio chunks that arrive while Whisper is busy with the previous ones.
+                options.StreamBufferCapacity = 64;
+            })
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+            });
         services.AddSingleton<PresenceTracker>();
+        services.AddSingleton<AnswerSessions>();
         services.AddScoped<ILiveUpdates, LiveUpdates>();
 
         // Vietnamese first; BLL messages are English keys that L10n translates for this culture.
