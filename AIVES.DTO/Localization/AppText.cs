@@ -1155,6 +1155,24 @@ internal static class AppText
         ["Candidate #{0} follows the schedule again."] = "Thí sinh #{0} theo lại lịch thi.",
         ["That status does not exist."] = "Trạng thái đó không tồn tại.",
         ["Candidate #{0} was marked {1}."] = "Thí sinh #{0} được đánh dấu {1}.",
+
+        // Calendar and reminders
+        ["Calendar"] = "Lịch thi",
+        ["Exam calendar"] = "Lịch thi",
+        ["Select a date to create an exam, or pick an existing exam to open it."] = "Chọn ngày để tạo kỳ thi, hoặc chọn kỳ thi hiện có để mở.",
+        ["Create exam on {0}"] = "Tạo kỳ thi ngày {0}",
+        ["No exams on this day."] = "Không có kỳ thi nào trong ngày này.",
+        ["Previous month"] = "Tháng trước",
+        ["Next month"] = "Tháng sau",
+        ["Reminders"] = "Nhắc nhở",
+        ["Upcoming in the next 7 days"] = "Sắp diễn ra trong 7 ngày tới",
+        ["No upcoming exams."] = "Không có kỳ thi sắp tới.",
+        ["starts in {0} min"] = "bắt đầu sau {0} phút",
+        ["starts in {0} h"] = "bắt đầu sau {0} giờ",
+        ["starts in {0} d"] = "bắt đầu sau {0} ngày",
+        ["Today"] = "Hôm nay",
+        ["Month"] = "Tháng",
+        ["Week"] = "Tuần",
     };
 
     public static string Resolve(string english)

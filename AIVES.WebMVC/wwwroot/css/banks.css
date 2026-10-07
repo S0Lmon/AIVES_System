@@ -3,17 +3,17 @@
 .bank-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: .4rem;
-    margin-bottom: 1.25rem;
-    border-bottom: 1px solid var(--line, #e3e6ef);
+    gap: var(--space-3xs);
+    margin-bottom: var(--space-md);
+    border-bottom: var(--rule);
 }
 
 .bank-tab {
-    padding: .6rem 1rem;
+    padding: var(--space-2xs) var(--space-sm);
     border: 0;
     border-bottom: 2px solid transparent;
     background: none;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
     font: inherit;
     font-weight: 600;
     text-decoration: none;
@@ -21,41 +21,42 @@
 }
 
 .bank-tab:hover {
-    color: var(--ink, #1d2333);
+    color: var(--color-ink);
 }
 
 .bank-tab.is-active {
-    color: var(--accent, #2f5bd7);
-    border-bottom-color: var(--accent, #2f5bd7);
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
 }
 
 .stat-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: .75rem;
-    margin-bottom: 1.25rem;
+    gap: var(--space-2xs);
+    margin-bottom: var(--space-md);
 }
 
 .stat {
-    background: var(--panel, #fff);
-    border: 1px solid var(--line, #e3e6ef);
-    border-radius: 12px;
-    padding: .85rem 1rem;
+    background: var(--color-paper);
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    padding: var(--space-xs) var(--space-sm);
 }
 
 .stat-value {
     display: block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.4rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-lg);
     font-weight: 600;
+    color: var(--color-ink);
 }
 
 .stat-label {
     display: block;
-    font-size: .75rem;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: .06em;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
 }
 
 /* Rubric matrix, laid out as one spreadsheet-like sheet: rows are criteria, columns are levels.
@@ -63,10 +64,10 @@
    rather than a stack of separate form controls. */
 .sheet-toolbar {
     display: flex;
-    gap: .5rem;
+    gap: var(--space-2xs);
     align-items: center;
     flex-wrap: wrap;
-    margin-bottom: .75rem;
+    margin-bottom: var(--space-sm);
 }
 
 .sheet-toolbar-hint {
@@ -76,9 +77,9 @@
 .matrix-scroll {
     overflow: auto;
     max-height: 70vh;
-    border: 1px solid var(--line, #e3e6ef);
-    border-radius: 12px;
-    background: var(--panel, #fff);
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    background: var(--color-paper);
 }
 
 .sheet {
@@ -91,8 +92,8 @@
 
 .sheet th,
 .sheet td {
-    border-right: 1px solid var(--line, #e3e6ef);
-    border-bottom: 1px solid var(--line, #e3e6ef);
+    border-right: var(--rule);
+    border-bottom: var(--rule);
     padding: 0;
     vertical-align: top;
     text-align: left;
@@ -112,14 +113,14 @@
     position: sticky;
     top: 0;
     z-index: 3;
-    padding: .3rem .5rem;
-    background: var(--wash, #f5f7fb);
-    border-bottom: 1px solid var(--line, #e3e6ef);
+    padding: var(--space-3xs) var(--space-2xs);
+    background: var(--color-paper-2);
+    border-bottom: var(--rule);
     text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .68rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     font-weight: 700;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
 }
 
 .sheet-corner,
@@ -129,10 +130,10 @@
     z-index: 2;
     width: 230px;
     min-width: 230px;
-    background: var(--wash, #f5f7fb);
-    font-size: .74rem;
+    background: var(--color-paper-2);
+    font-size: var(--text-sm);
     font-weight: 700;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
 }
 
 .sheet-letters .sheet-corner {
@@ -140,14 +141,14 @@
 }
 
 .sheet-rowlabel {
-    padding: .55rem .7rem;
+    padding: var(--space-xs) var(--space-sm);
 }
 
 .sheet-heads th {
     position: sticky;
     top: 1.85rem;
     z-index: 3;
-    background: var(--wash, #f5f7fb);
+    background: var(--color-paper-2);
 }
 
 .sheet-colhead {
@@ -156,16 +157,16 @@
 
 .sheet-rowhead {
     display: table-cell;
-    padding: .5rem .55rem .55rem;
-    background: var(--wash, #f5f7fb);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-paper-2);
 }
 
 .sheet-rownum {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: .4rem;
-    margin-bottom: .3rem;
+    gap: var(--space-2xs);
+    margin-bottom: var(--space-3xs);
 }
 
 .sheet-rownumber {
@@ -174,74 +175,74 @@
     justify-content: center;
     min-width: 1.5rem;
     height: 1.5rem;
-    padding: 0 .3rem;
-    border-radius: 6px;
-    background: var(--panel, #fff);
-    border: 1px solid var(--line, #e3e6ef);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .7rem;
+    padding: 0 var(--space-2xs);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+    border: var(--rule);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     font-weight: 700;
-    color: var(--ink, #1f2430);
+    color: var(--color-ink);
 }
 
 .sheet-cell-input {
     display: block;
     width: 100%;
     min-height: 62px;
-    padding: .55rem .6rem;
+    padding: var(--space-xs) var(--space-sm);
     border: 0;
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: .88rem;
+    font-size: var(--text-sm);
     line-height: 1.45;
     resize: vertical;
 }
 
 .sheet-cell-input:focus {
-    outline: 2px solid var(--primary, #5b5ce2);
+    outline: 2px solid var(--color-accent);
     outline-offset: -2px;
-    background: var(--panel, #fff);
+    background: var(--color-paper);
 }
 
 .sheet-cell-input::placeholder,
 .sheet-note::placeholder {
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
     opacity: .6;
 }
 
 .sheet-note {
     display: block;
     width: 100%;
-    padding: .35rem .6rem;
+    padding: var(--space-2xs) var(--space-sm);
     border: 0;
-    border-top: 1px dashed var(--line, #e3e6ef);
+    border-top: var(--rule);
     background: transparent;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
     font: inherit;
-    font-size: .78rem;
+    font-size: var(--text-sm);
 }
 
 .sheet-cellfoot {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: .4rem;
-    padding: .3rem .4rem .35rem;
-    border-top: 1px solid var(--line, #e3e6ef);
-    background: var(--wash, #f5f7fb);
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border-top: var(--rule);
+    background: var(--color-paper-2);
 }
 
 .sheet-points {
     width: 100%;
     min-width: 0;
-    padding: .25rem .4rem;
-    border: 1px solid var(--line, #e3e6ef);
-    border-radius: 6px;
-    background: var(--panel, #fff);
+    padding: var(--space-2xs) var(--space-sm);
+    border: var(--rule);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
     color: inherit;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .78rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
 }
 
 .sheet-remove {
@@ -252,11 +253,11 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    border: 1px solid var(--line, #e3e6ef);
-    border-radius: 6px;
-    background: var(--panel, #fff);
-    color: #c0392b;
-    font-size: .95rem;
+    border: var(--rule);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+    color: var(--color-error);
+    font-size: var(--text-base);
     line-height: 1;
 }
 
@@ -264,24 +265,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: .4rem;
-    padding-top: .35rem;
-    border-top: 1px dashed var(--line, #e3e6ef);
-    font-size: .72rem;
-    color: var(--muted, #5c6478);
+    margin-top: var(--space-2xs);
+    padding-top: var(--space-2xs);
+    border-top: 1px dashed var(--color-rule);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
 }
 
 .sheet-rowtotal b,
 .sheet-total,
 .sheet-grandtotal b {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--ink, #1f2430);
+    font-family: var(--font-mono);
+    color: var(--color-ink);
 }
 
 .sheet-addrow td,
 .sheet-addrow th {
     height: 2.2rem;
-    background: var(--wash, #f5f7fb);
+    background: var(--color-paper-2);
 }
 
 .sheet-totals th,
@@ -289,9 +290,9 @@
     position: sticky;
     bottom: 0;
     z-index: 2;
-    background: var(--wash, #f5f7fb);
-    border-top: 1px solid var(--line, #e3e6ef);
-    padding: .5rem .6rem;
+    background: var(--color-paper-2);
+    border-top: var(--rule);
+    padding: var(--space-xs) var(--space-sm);
     text-align: center;
 }
 
@@ -300,8 +301,8 @@
 }
 
 .sheet-total {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .82rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
     font-weight: 700;
 }
 
@@ -309,37 +310,38 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-md);
     flex-wrap: wrap;
-    margin-top: .6rem;
+    margin-top: var(--space-sm);
 }
 
 .sheet-grandtotal {
-    font-size: .8rem;
+    font-size: var(--text-sm);
     font-weight: 700;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
 }
 
 /* Read only matrix used on the rubric details screen. */
 .matrix-readonly td,
 .matrix-readonly th {
-    font-size: .9rem;
+    font-size: var(--text-base);
 }
 
 .matrix-readonly .matrix-cell-points {
     display: block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .75rem;
-    color: var(--muted, #5c6478);
-    margin-top: .3rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    margin-top: var(--space-2xs);
 }
+
 /* Review list shared by AI generation and bulk generation. */
 .review-row {
-    border: 1px solid var(--line, #e3e6ef);
-    border-radius: 12px;
-    background: var(--panel, #fff);
-    padding: .9rem 1rem;
-    margin-bottom: .75rem;
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    background: var(--color-paper);
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-sm);
 }
 
 .review-row.is-off {
@@ -348,44 +350,44 @@
 
 .review-head {
     display: flex;
-    gap: .75rem;
+    gap: var(--space-sm);
     align-items: flex-start;
     justify-content: space-between;
 }
 
 .review-content {
     font-weight: 600;
-    margin: 0 0 .35rem;
+    margin: 0 0 var(--space-2xs);
 }
 
 .review-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: .4rem .9rem;
-    font-size: .82rem;
-    color: var(--muted, #5c6478);
+    gap: var(--space-2xs) var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--color-muted);
 }
 
 .review-answer {
-    margin: .5rem 0 0;
-    font-size: .88rem;
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-base);
 }
 
 .review-followups {
-    margin: .45rem 0 0;
-    padding-left: 1.1rem;
-    font-size: .84rem;
-    color: var(--muted, #5c6478);
+    margin: var(--space-sm) 0 0;
+    padding-left: var(--space-md);
+    font-size: var(--text-base);
+    color: var(--color-muted);
 }
 
 /* Bulk plan rows: one per Bloom level, giving a lowest and highest count. */
 .plan-row {
     display: grid;
     grid-template-columns: minmax(160px, 1fr) 96px 96px;
-    gap: .75rem;
+    gap: var(--space-sm);
     align-items: center;
-    padding: .55rem 0;
-    border-bottom: 1px solid var(--line, #e3e6ef);
+    padding: var(--space-xs) 0;
+    border-bottom: var(--rule);
 }
 
 .plan-row:last-child {
@@ -396,13 +398,13 @@
 .plan-legend {
     display: grid;
     grid-template-columns: minmax(160px, 1fr) 96px 96px;
-    gap: .75rem;
-    padding-top: .35rem;
-    font-size: .7rem;
+    gap: var(--space-sm);
+    padding-top: var(--space-2xs);
+    font-size: var(--text-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .05em;
-    color: var(--muted, #5c6478);
+    color: var(--color-muted);
 }
 
 .plan-legend span:not(:first-child) {
