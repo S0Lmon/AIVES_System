@@ -1,0 +1,38 @@
+@page
+@model AIVES.WebRazor.Pages.Rubrics.IndexModel
+@{
+    ViewData["Title"] = "Ngân hàng rubric";
+}
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Chỉ xem</span>
+        <h1>Ngân hàng rubric</h1>
+        <p>Rubric dạng ma trận dùng để chấm câu hỏi. Trình biên tập ma trận vẫn nằm ở trang AIVES (MVC).</p>
+    </div>
+</div>
+<section class="panel">
+    @if (Model.Rubrics.Count == 0)
+    {
+        <div class="empty-state"><div class="empty-icon">R</div><h3>Chưa có rubric</h3></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead><tr><th>Rubric</th><th>Tiêu chí</th><th>Mức</th><th>Tổng điểm</th><th class="text-end"></th></tr></thead>
+                <tbody>
+                    @foreach (var rubric in Model.Rubrics)
+                    {
+                        <tr>
+                            <td><div class="question-title">@rubric.Name</div><small class="text-muted">@rubric.Description</small></td>
+                            <td>@rubric.Criteria.Count</td>
+                            <td>@rubric.Levels.Count</td>
+                            <td><span class="badge-soft">@rubric.TotalPoints điểm</span></td>
+                            <td class="text-end"><a asp-page="Details" asp-route-id="@rubric.Id" class="btn btn-sm btn-light">Xem ma trận</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

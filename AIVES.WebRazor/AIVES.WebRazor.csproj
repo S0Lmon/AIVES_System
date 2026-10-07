@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>84b14742-bfe7-495e-b430-ecc0bb734425</UserSecretsId>
+  </PropertyGroup>
+
+  <!-- Presentation layer: talks to BLL and DTO only, never to DAL or EF Core. -->
+  <ItemGroup>
+    <ProjectReference Include="../AIVES.BLL/AIVES.BLL.csproj" />
+    <ProjectReference Include="../AIVES.DTO/AIVES.DTO.csproj" />
+  </ItemGroup>
+
+</Project>
