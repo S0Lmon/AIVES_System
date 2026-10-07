@@ -37,3 +37,25 @@
 .stat-card strong.bumped{color:var(--primary)}
 
 @media(max-width:767.98px){.live-status [data-live-label]{display:none}}
+
+/* AI viva room */
+.viva-timer{display:flex;flex-direction:column;align-items:flex-end;padding:10px 16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.viva-timer span{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.viva-timer strong{font:800 1.8rem var(--font-mono);font-variant-numeric:tabular-nums}
+.viva-timer.is-low strong{color:var(--danger)}
+.viva-rules{padding-left:1.1rem;color:var(--ink-2,#38415a)}
+.viva-rules li{margin-bottom:6px}
+.viva-status{min-height:1.5em;margin-bottom:8px;color:var(--muted);font-weight:600}
+.viva-meter{height:6px;margin-bottom:14px;border-radius:3px;background:var(--primary-soft);overflow:hidden}
+.viva-meter span{display:block;height:100%;width:0;background:var(--success);transition:width .1s linear}
+.viva-transcript{min-height:110px;padding:16px;border:1px dashed var(--line);border-radius:12px;background:#fafbfe;font-size:1.02rem;line-height:1.6;white-space:pre-wrap}
+.viva-room.is-recording .viva-transcript{border-color:var(--success);background:#f4fbf8}
+.badge-soft.is-follow-up,.monitor-question.is-follow-up{color:#9a6107;background:#fff3dc}
+
+/* Lecturer monitor */
+.monitor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+.monitor-card .panel-header h2{font-size:.95rem}
+.monitor-question{padding:12px 14px;border-radius:10px;background:var(--primary-soft);font-weight:600}
+.monitor-live{min-height:2.5em;margin:10px 0;color:var(--muted);font-style:italic;white-space:pre-wrap}
+.monitor-log{max-height:280px;overflow:auto;padding:0}
+@media(max-width:575.98px){.monitor-grid{grid-template-columns:1fr}.viva-timer{align-items:flex-start}}

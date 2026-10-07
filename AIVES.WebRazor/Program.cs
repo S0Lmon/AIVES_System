@@ -31,6 +31,7 @@ app.MapStaticAssets();
 app.MapHealthChecks("/health");
 app.MapRazorPages().WithStaticAssets();
 app.MapHub<AivesHub>(AivesHub.Path);
+app.MapHub<InterviewHub>(InterviewHub.Path);
 
 app.Run();
 

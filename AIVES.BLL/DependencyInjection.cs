@@ -12,6 +12,7 @@ using AIVES.BLL.Services.Dashboard;
 using AIVES.BLL.Services.Grading;
 using AIVES.BLL.Services.Operations;
 using AIVES.BLL.Services.Recordings;
+using AIVES.BLL.Services.Speech;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,10 @@ public static class DependencyInjection
             // The service gives up sooner (Interview:AiTimeoutSeconds); this only bounds a stuck socket.
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        // Offline speech for the viva; models load on first use, so registering costs nothing.
+        services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
+        services.AddSingleton<ISpeechToText, WhisperSpeechToText>();
+        services.AddSingleton<ITextToSpeech, SherpaTextToSpeech>();
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IAuditService, AuditService>();
