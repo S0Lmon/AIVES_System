@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+@{
+    var page = ViewContext.RouteData.Values["page"] as string ?? string.Empty;
+    string Active(string folder) => page.StartsWith(folder, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var isStaff = AivesHub.IsStaff(User);
+    var name = AivesHub.DisplayName(User);
+}
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · AIVES</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/realtime.css" asp-append-version="true" />
+</head>
+<body data-user-id="@AivesHub.UserId(User)" data-hub-url="@(signedIn ? AivesHub.Path : "")">
+    <div class="app-shell">
+        <aside class="sidebar" id="appSidebar">
+            <a class="brand" asp-page="/Index">
+                <span class="brand-mark">A</span>
+                <span><strong>AIVES</strong><small>Razor Pages · SignalR</small></span>
+            </a>
+            <nav class="side-nav" aria-label="Điều hướng chính">
+                <span class="nav-label">Không gian làm việc</span>
+                <a class="side-link @(page == "/Index" ? "active" : "")" asp-page="/Index"><span class="nav-icon">OV</span> Tổng quan</a>
+                @if (isStaff)
+                {
+                    <a class="side-link @Active("/Questions")" asp-page="/Questions/Index"><span class="nav-icon">QB</span> Ngân hàng câu hỏi</a>
+                    <a class="side-link @Active("/Subjects")" asp-page="/Subjects/Index"><span class="nav-icon">SJ</span> Môn học &amp; chủ đề</a>
+                    <a class="side-link @Active("/Rubrics")" asp-page="/Rubrics/Index"><span class="nav-icon">RB</span> Ngân hàng rubric</a>
+                }
+                @if (signedIn)
+                {
+                    <span class="nav-label nav-label-spaced">Tài khoản</span>
+                    <form method="post" asp-page="/Account/Logout" class="m-0">
+                        <button type="submit" class="side-link w-100 border-0 bg-transparent text-start"><span class="nav-icon">↩</span> Đăng xuất</button>
+                    </form>
+                }
+            </nav>
+        </aside>
+        <div class="app-main">
+            <header class="topbar">
+                <button class="menu-toggle" type="button" id="menuToggle" aria-label="Mở menu">☰</button>
+                <div class="topbar-copy"><span class="eyebrow">AI-powered Viva Exam System</span><strong>@ViewData["Title"]</strong></div>
+                <div class="topbar-actions">
+                    @if (signedIn)
+                    {
+                        <span class="live-status" data-live-status="connecting" title="Trạng thái kết nối real-time"><span class="live-dot"></span><span data-live-label>Đang kết nối…</span></span>
+                        <div class="dropdown">
+                            <button class="online-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="online-dot"></span> <span data-online-count>0</span> online
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end online-menu" data-online-list>
+                                <li class="dropdown-item-text text-muted small">Chưa có dữ liệu</li>
+                            </ul>
+                        </div>
+                        <span class="avatar" title="@name">@name[..Math.Min(2, name.Length)].ToUpperInvariant()</span>
+                    }
+                    else
+                    {
+                        <a asp-page="/Account/Login" class="btn btn-light btn-sm">Đăng nhập</a>
+                    }
+                </div>
+            </header>
+            <main class="content-area">
+                @if (TempData["Success"] is string success)
+                {
+                    <div class="alert alert-success" role="status">@success</div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="alert alert-danger" role="alert">@error</div>
+                }
+                @RenderBody()
+            </main>
+            <footer class="app-footer">AIVES · Razor Pages + SignalR · 3 lớp (Presentation → BLL → DAL) · 2026</footer>
+        </div>
+    </div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="false"></div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (signedIn)
+    {
+        <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+        <script src="~/js/realtime.js" asp-append-version="true"></script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
