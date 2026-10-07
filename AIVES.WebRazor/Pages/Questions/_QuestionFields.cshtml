@@ -1,0 +1,87 @@
+@model AIVES.WebRazor.Pages.Questions.IQuestionFormPage
+<div asp-validation-summary="ModelOnly" class="text-danger px-4 pt-3"></div>
+<div class="form-section">
+    <div class="section-title"><span class="section-number">1</span><div><h2>Nội dung</h2><p>Câu hỏi và đáp án mong đợi để giảng viên chấm.</p></div></div>
+    <div class="mb-3">
+        <label asp-for="Input.Content" class="form-label"></label>
+        <textarea asp-for="Input.Content" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="Input.Content" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Input.ExpectedAnswer" class="form-label"></label>
+        <textarea asp-for="Input.ExpectedAnswer" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="Input.ExpectedAnswer" class="text-danger small"></span>
+    </div>
+    <div>
+        <label asp-for="Input.Context" class="form-label"></label>
+        <input asp-for="Input.Context" class="form-control" />
+        <span asp-validation-for="Input.Context" class="text-danger small"></span>
+    </div>
+</div>
+<div class="form-section">
+    <div class="section-title"><span class="section-number">2</span><div><h2>Phân loại</h2><p>Môn học, chủ đề, mức Bloom và rubric chấm.</p></div></div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="Input.SubjectId" class="form-label"></label>
+            <select asp-for="Input.SubjectId" asp-items="Model.Options.Subjects" class="form-select" data-subject-select>
+                <option value="">— Không chọn —</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Input.TopicId" class="form-label"></label>
+            <select asp-for="Input.TopicId" class="form-select" data-topic-select>
+                <option value="">— Không chọn —</option>
+                @foreach (var topic in Model.Options.Topics)
+                {
+                    <option value="@topic.Id" data-subject="@topic.SubjectId" selected="@(Model.Input.TopicId == topic.Id)">@topic.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Input.BloomLevelId" class="form-label"></label>
+            <select asp-for="Input.BloomLevelId" asp-items="Model.Options.BloomLevels" class="form-select">
+                <option value="0">— Chọn mức —</option>
+            </select>
+            <span asp-validation-for="Input.BloomLevelId" class="text-danger small"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Input.Difficulty" class="form-label"></label>
+            <select asp-for="Input.Difficulty" asp-items="Model.Options.Difficulties" class="form-select">
+                <option value="">— Không đặt —</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Input.RubricId" class="form-label"></label>
+            <select asp-for="Input.RubricId" asp-items="Model.Options.Rubrics" class="form-select">
+                <option value="">— Không dùng rubric —</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Input.DisplayOrder" class="form-label"></label>
+            <input asp-for="Input.DisplayOrder" class="form-control" />
+            <span asp-validation-for="Input.DisplayOrder" class="text-danger small"></span>
+        </div>
+        <div class="col-md-8 d-flex align-items-end">
+            <div class="form-check form-switch">
+                <input asp-for="Input.IsActive" class="form-check-input" role="switch" />
+                <label asp-for="Input.IsActive" class="form-check-label"></label>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Only offer the topics of the chosen subject.
+    (() => {
+        const subject = document.querySelector('[data-subject-select]');
+        const topic = document.querySelector('[data-topic-select]');
+        const sync = () => {
+            for (const option of topic.options) {
+                if (!option.dataset.subject) continue;
+                option.hidden = !!subject.value && option.dataset.subject !== subject.value;
+            }
+            if (topic.selectedOptions[0]?.hidden) topic.value = '';
+        };
+        subject.addEventListener('change', sync);
+        sync();
+    })();
+</script>
