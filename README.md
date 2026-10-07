@@ -109,6 +109,26 @@ Chữ nhận dạng giữ nguyên thì được ghi là `Speech`; phần sinh vi
 
 Đo ngày 08/10/2026 trên máy chủ (GTX 1070, Vulkan): đọc một câu hỏi mất 0,3–0,6 giây (lần đầu khoảng 2,7 giây do nạp model); chữ tạm cập nhật khoảng mỗi 1,6 giây khi đang nói; bản cuối có sau khi ngừng nói 0,7–2,9 giây; Gemini quyết định hỏi xoáy trong khoảng 1,2–1,6 giây. Chỉ có CPU thì Whisper small chậm hơn khoảng 6 lần, nên đặt `Speech:WhisperPreviewModel` là `whisper/ggml-base.bin`. Thiếu model thì phòng thi tự chuyển sang chế độ gõ câu trả lời. Cấu hình nằm trong mục `Speech` (`SpeechOptions`).
 
+#### Kết hợp với Gemini (tuỳ chọn)
+
+Mặc định mọi thứ chạy tại chỗ. Khi đã có `Gemini:ApiKey`, có thể bật thêm:
+
+| Cấu hình | Tác dụng |
+|---|---|
+| `Speech:Provider = Gemini` | Chữ tạm khi đang nói vẫn do Whisper làm. Khi sinh viên ngừng nói, **toàn bộ** câu trả lời được gửi cho `gemini-3.5-transcribe` (Interactions API, `vi-VN`, chế độ `verbatim`, `custom_vocabulary` là **bảng thuật ngữ môn học**) **song song** với lượt chốt cuối của Whisper. Sinh viên thấy bản của Whisper trước, rồi bản của Gemini thay vào. Gemini lỗi, bị 429 hoặc quá `Speech:GeminiTimeoutSeconds` (10 giây) thì giữ bản của Whisper; sau lỗi 429, hệ thống ngưng gọi Gemini trong khoảng thời gian API yêu cầu. Không cài Whisper nhưng bật Gemini thì vẫn thi bằng giọng nói được, chỉ không có chữ tạm. |
+| `Speech:TtsProvider = Gemini` | Đọc câu hỏi bằng `gemini-3.8-flash-lite-tts` (giọng `Speech:GeminiVoice`), có cache; lỗi thì dùng giọng sherpa-onnx tại chỗ. |
+
+Đo ngày 08/10/2026 với key gói miễn phí:
+- Gemini viết đúng phần tiếng Việt mà Whisper nghe sai ("Lớp **giao diện**… lớp **nghiệp vụ**… **xử lý**… **đọc ghi**", trong khi Whisper ra "sau diện… nghiệp phụ… sự lý… độc ký").
+- Bản cuối của Gemini có sau khi ngừng nói khoảng 5–8 giây.
+- Gói miễn phí chỉ cho **3 request/phút** với model Transcribe, nên khi nhiều sinh viên thi cùng lúc thì phần lớn câu trả lời sẽ quay về Whisper.
+- Gemini TTS mất 8–9 giây mỗi câu, và câu hỏi xoáy được sinh ra ngay lúc thi nên không cache trước được. Vì vậy mặc định vẫn là TTS tại chỗ.
+
+Cần lưu ý trước khi bật `Provider = Gemini` cho bài thi thật:
+- Gặp tên tiếng Anh phát âm không rõ, Gemini **đoán** ra một cụm nghe hợp lý thay vì ghi sai như Whisper. Ví dụ: với giọng máy đọc "SignalR… qua WebSocket", chế độ `smart` ghi thành "Server-Sent Events… qua HTTP", và chế độ `verbatim` ghi thành "…qua SSE". Giám khảo AI sau đó hỏi xoáy về điều sinh viên không nói. Code dùng `verbatim` (theo tài liệu là ghi đúng từng từ) và **không** đưa thuật ngữ trong câu hỏi vào `custom_vocabulary`, vì làm vậy từng biến "WebSocket" thành "ASP.NET Core". Các phép đo này dùng giọng máy đọc; cần thử với giọng sinh viên thật trước khi dùng cho bài thi.
+- Sinh viên luôn xem và có thể sửa bản chữ trước khi nộp (phần sửa được ghi là `Typed`), và bài thi có ghi âm vẫn giữ file WAV để giảng viên nghe lại.
+- Âm thanh câu trả lời được gửi tới Google. Gói miễn phí có thể dùng dữ liệu để cải thiện sản phẩm, nên với bài thi thật nên dùng gói trả phí và báo trước cho sinh viên.
+
 **Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
 
 - **Đang online:** `PresenceTracker` đếm người dùng (nhiều tab tính là một người) và đẩy `PresenceChanged` cho mọi client.

@@ -46,10 +46,20 @@ public static class DependencyInjection
             // The service gives up sooner (Interview:AiTimeoutSeconds); this only bounds a stuck socket.
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
-        // Offline speech for the viva; models load on first use, so registering costs nothing.
+        // Speech for the viva: local models load on first use, Gemini is only called when switched on
+        // (Speech:Provider / Speech:TtsProvider) and falls back to the local engine.
         services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
         services.AddSingleton<ISpeechToText, WhisperSpeechToText>();
-        services.AddSingleton<ITextToSpeech, SherpaTextToSpeech>();
+        services.AddSingleton<SherpaTextToSpeech>();
+        // No retry handler: a slow answer is worse than the local transcript it would replace.
+        services.AddHttpClient(GeminiSpeechClient.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+        services.AddSingleton<GeminiSpeechClient>();
+        services.AddSingleton<IAnswerTranscriber>(provider => provider.GetRequiredService<GeminiSpeechClient>());
+        services.AddSingleton<ITextToSpeech, HybridTextToSpeech>();
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IAuditService, AuditService>();

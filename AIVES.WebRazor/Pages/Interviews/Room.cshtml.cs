@@ -14,7 +14,7 @@ namespace AIVES.WebRazor.Pages.Interviews;
 /// follow-ups) goes over <see cref="InterviewHub"/>. Questions are read aloud from
 /// <see cref="OnGetQuestionAudioAsync"/>, synthesised on the server.
 /// </summary>
-public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech, ITextToSpeech voice,
+public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech, IAnswerTranscriber answers, ITextToSpeech voice,
     ILogger<RoomModel> logger) : PageModel
 {
     public InterviewStateDto State { get; private set; } = null!;
@@ -35,7 +35,7 @@ public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech
         {
             return NotFound();
         }
-        CanListen = speech.IsAvailable;
+        CanListen = InterviewHub.CanListen(speech, answers);
         CanSpeak = voice.IsAvailable(State.Language);
         return Page();
     }
