@@ -1,13 +1,46 @@
 namespace AIVES.BLL.Services.Speech;
 
+/// <summary>Where a piece of speech work runs.</summary>
+public enum SpeechProvider
+{
+    /// <summary>On this server: Whisper.net for text, sherpa-onnx for voice.</summary>
+    Local = 0,
+    /// <summary>Gemini, falling back to the local engine when it fails, is rate limited or is too slow.</summary>
+    Gemini = 1
+}
+
 /// <summary>
-/// Offline speech for the AI viva: Whisper.net turns answers into text and sherpa-onnx (Piper voices)
-/// reads questions aloud. Models are files under <see cref="ModelsPath"/>; scripts/download-speech-models
-/// fetches them. A missing model only disables that half, and the viva falls back to typing.
+/// Speech for the AI viva. Whisper.net turns answers into text and sherpa-onnx (Piper voices) reads
+/// questions aloud, both offline; models are files under <see cref="ModelsPath"/> that
+/// scripts/download-speech-models fetches. With <see cref="Provider"/> set to Gemini, the live preview
+/// stays on Whisper and the kept transcript of each answer comes from Gemini's transcription model.
+/// A missing model only disables that half, and the viva falls back to typing.
 /// </summary>
 public sealed class SpeechOptions
 {
     public const string SectionName = "Speech";
+
+    /// <summary>Who writes the transcript that is kept. The preview while speaking is always local.</summary>
+    public SpeechProvider Provider { get; set; } = SpeechProvider.Local;
+
+    /// <summary>Who reads questions aloud. Local is ~0.4 s a question; Gemini took 8-9 s on 2026-10-08.</summary>
+    public SpeechProvider TtsProvider { get; set; } = SpeechProvider.Local;
+
+    /// <summary>
+    /// Gemini model for answer transcripts. On 2026-10-08 it got Vietnamese with English terms right
+    /// ("ASP.NET Core") where Whisper small did not, in ~5 s a request; the free tier allows 3 a minute.
+    /// </summary>
+    public string GeminiTranscribeModel { get; set; } = "gemini-3.5-transcribe";
+
+    public string GeminiTtsModel { get; set; } = "gemini-3.8-flash-lite-tts";
+
+    /// <summary>One of Gemini's prebuilt voices (Kore, Puck, Charon, …).</summary>
+    public string GeminiVoice { get; set; } = "Kore";
+
+    /// <summary>Longest wait for Gemini before the local result is used instead.</summary>
+    public int GeminiTimeoutSeconds { get; set; } = 10;
+
+    public int GeminiTtsTimeoutSeconds { get; set; } = 12;
 
     /// <summary>Folder holding the models; relative paths are under the app's content root.</summary>
     public string ModelsPath { get; set; } = "App_Data/speech-models";

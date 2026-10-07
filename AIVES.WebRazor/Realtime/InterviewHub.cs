@@ -60,6 +60,7 @@ public sealed class InterviewHub(
     IExamService exams,
     IRecordingService recordings,
     ISpeechToText speech,
+    IAnswerTranscriber answers,
     AnswerSessions sessions,
     IOptions<SpeechOptions> speechOptions,
     IOptions<InterviewOptions> interviewOptions,
@@ -101,7 +102,7 @@ public sealed class InterviewHub(
     /// </summary>
     public async Task StreamAnswer(int candidateId, int turnId, IAsyncEnumerable<string> chunks)
     {
-        if (!speech.IsAvailable)
+        if (!CanListen(speech, answers))
             throw new HubException("Nhận dạng giọng nói chưa được cài đặt trên máy chủ. Vui lòng gõ câu trả lời.");
 
         var state = await Guard(() => interviews.GetStateAsync(candidateId, Email, Context.ConnectionAborted));
@@ -110,7 +111,9 @@ public sealed class InterviewHub(
             throw new HubException("Câu hỏi này không còn mở.");
 
         var maxSeconds = turn.TimeLimitSeconds + Math.Max(0, interviewOptions.Value.AnswerGraceSeconds);
-        var transcriber = new LiveTranscriber(speech, speechOptions.Value, state.Language, Prompt(turn, state.Phrases), maxSeconds);
+        // Without a Whisper model there is no live preview, but Gemini can still write the transcript.
+        var preview = speech.IsAvailable ? speech : NoPreviewSpeechToText.Instance;
+        var transcriber = new LiveTranscriber(preview, speechOptions.Value, state.Language, Prompt(turn, state.Phrases), maxSeconds);
         var aborted = Context.ConnectionAborted;
         var examId = await ExamIdAsync(candidateId);
 
@@ -137,8 +140,19 @@ public sealed class InterviewHub(
                 await Clients.Group(ExamGroup(id)).InterviewEvent(Event(id, candidateId, InterviewEventKinds.Partial, text, turnId));
         }
 
-        var final = await transcriber.FinishAsync(aborted);
         var audio = transcriber.Samples.ToArray();
+        // Gemini reads the whole answer while Whisper finishes its last window; the candidate sees
+        // Whisper's text first and Gemini's replaces it if it arrives in time.
+        var remote = answers.TranscribeAnswerAsync(audio, state.Language, Vocabulary(state.Phrases), aborted);
+        var final = await transcriber.FinishAsync(aborted);
+        if (answers.IsEnabled)
+        {
+            if (final.Length > 0)
+                await Clients.Caller.Transcript(turnId, final, false);
+            var better = await remote;
+            logger.LogInformation("Turn {TurnId} transcript from {Engine}", turnId, better is null ? "Whisper" : "Gemini");
+            final = better ?? final;
+        }
         sessions.Set(Context.ConnectionId, new AnswerSessions.Session(candidateId, turnId, final, audio, SpeakingMs(audio)));
         await Clients.Caller.Transcript(turnId, final, true);
         if (examId is { } exam)
@@ -228,13 +242,25 @@ public sealed class InterviewHub(
     }
 
     /// <summary>The question and the subject's terms, so Whisper spells them the way the course does.</summary>
-    internal static string Prompt(InterviewTurnDto turn, IReadOnlyList<string>? phrases)
+    public static string Prompt(InterviewTurnDto turn, IReadOnlyList<string>? phrases)
     {
         var prompt = turn.QuestionText;
         if (phrases is { Count: > 0 })
             prompt += " " + string.Join(", ", phrases.Take(30));
         return prompt.Length <= 400 ? prompt : prompt[..400];
     }
+
+    /// <summary>
+    /// Terms for Gemini's custom vocabulary: only the subject's glossary, which the lecturer curates.
+    /// Terms taken from the question were tried on 2026-10-08 and pulled the transcript towards them
+    /// ("qua WebSocket" came back as "qua ASP.NET Core"), which would put the right words in a
+    /// candidate's mouth.
+    /// </summary>
+    public static IReadOnlyList<string> Vocabulary(IReadOnlyList<string>? glossary) =>
+        (glossary ?? []).Where(term => term.Trim().Length > 1).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>Speech can be taken when either Whisper is installed or Gemini writes transcripts.</summary>
+    public static bool CanListen(ISpeechToText speech, IAnswerTranscriber answers) => speech.IsAvailable || answers.IsEnabled;
 
     private static int SpeakingMs(float[] audio)
     {
