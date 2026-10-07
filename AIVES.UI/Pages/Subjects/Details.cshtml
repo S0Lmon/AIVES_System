@@ -1,0 +1,74 @@
+@page "{id:int}"
+@model AIVES.WebRazor.Pages.Subjects.DetailsModel
+@{
+    ViewData["Title"] = Model.Subject.Name;
+}
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Môn học #@Model.Id</span>
+        <h1>@Model.Subject.Name</h1>
+        <p>@Model.Subject.Description</p>
+    </div>
+    <a asp-page="Index" class="btn btn-light">Tất cả môn học</a>
+</div>
+<div class="stale-banner" data-stale-banner hidden role="alert"></div>
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<div class="dashboard-grid" data-subject-id="@Model.Id">
+    <section class="panel" data-live-region>
+        <partial name="_TopicRows" model="Model" />
+    </section>
+    <div class="d-flex flex-column gap-3 align-self-start">
+        <form method="post" asp-page-handler="CreateTopic" asp-route-id="@Model.Id" class="panel">
+            <div class="panel-header"><h2>Thêm chủ đề</h2></div>
+            <div class="panel-body">
+                <div class="mb-3">
+                    <label asp-for="TopicForm.Name" class="form-label"></label>
+                    <input asp-for="TopicForm.Name" class="form-control" />
+                    <span asp-validation-for="TopicForm.Name" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="TopicForm.Description" class="form-label"></label>
+                    <textarea asp-for="TopicForm.Description" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Thêm chủ đề</button>
+            </div>
+        </form>
+        <form method="post" asp-page-handler="Update" asp-route-id="@Model.Id" class="panel">
+            <div class="panel-header"><h2>Sửa môn học</h2></div>
+            <div class="panel-body">
+                <div class="mb-3">
+                    <label asp-for="SubjectForm.Name" class="form-label"></label>
+                    <input asp-for="SubjectForm.Name" class="form-control" />
+                    <span asp-validation-for="SubjectForm.Name" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="SubjectForm.Description" class="form-label"></label>
+                    <textarea asp-for="SubjectForm.Description" class="form-control" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-light w-100">Lưu môn học</button>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const subjectId = Number(document.querySelector('[data-subject-id]').dataset.subjectId);
+            const region = document.querySelector('[data-live-region]');
+            const banner = document.querySelector('[data-stale-banner]');
+            const refresh = () => window.refreshRegion(region, 'Topics');
+            document.addEventListener('aives:entity-changed', (event) => {
+                const change = event.detail;
+                if (change.entity === 'topic') refresh();
+                if (change.entity !== 'subject' || change.id !== subjectId || change.actorId === document.body.dataset.userId) return;
+                banner.hidden = false;
+                banner.textContent = change.action === 'deleted'
+                    ? `${change.actorName} vừa xoá môn học này.`
+                    : `${change.actorName} vừa sửa môn học này (tên mới: ${change.title}). Tải lại trang để xem.`;
+            });
+            document.addEventListener('aives:reconnected', refresh);
+        })();
+    </script>
+}
