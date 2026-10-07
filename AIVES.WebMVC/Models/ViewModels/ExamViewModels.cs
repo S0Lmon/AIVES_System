@@ -35,16 +35,36 @@ public sealed class ExamFormViewModel
     [Range(ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds)]
     public int AnswerTimeLimitSeconds { get; set; } = ExamLimits.DefaultAnswerSeconds;
 
-    /// <summary>Language the AI examiner speaks and listens in.</summary>
     public AppLanguage Language { get; set; } = AppLanguage.Vi;
 
-    /// <summary>What is recorded of each answer as evidence for grade appeals.</summary>
     public RecordingMode Recording { get; set; } = RecordingMode.Audio;
 
-    /// <summary>Interview languages the administrator enabled.</summary>
+    public DateTime? EndsAtLocal { get; set; }
+
+    [Range(0, ExamLimits.MaxBufferMinutes)]
+    public int BufferMinutes { get; set; }
+
+    [Range(0, ExamLimits.MaxBreakMinutes)]
+    public int BreakMinutes { get; set; }
+
+    [Range(0, ExamLimits.MaxBreakEveryCount)]
+    public int BreakEveryCount { get; set; }
+
+    public QuestionSelectionStrategy Strategy { get; set; } = QuestionSelectionStrategy.Balanced;
+
+    [StringLength(ExamLimits.TermMaxLength)]
+    public string? Term { get; set; }
+
+    [StringLength(ExamLimits.ExamTypeMaxLength)]
+    public string? ExamType { get; set; }
+
+    [StringLength(ExamLimits.InstructionsMaxLength)]
+    public string? Instructions { get; set; }
+
+    public bool ScheduleOverflowAllowed { get; set; }
+
     public IReadOnlyList<AppLanguage> EnabledLanguages { get; set; } = [AppLanguage.Vi, AppLanguage.En];
 
-    /// <summary>One email per line (commas and semicolons also work), in sitting order.</summary>
     public string CandidateEmails { get; set; } = string.Empty;
 
     public IReadOnlyList<SubjectOption> Subjects { get; set; } = [];
@@ -56,4 +76,18 @@ public sealed class ExamIndexViewModel
 {
     public IReadOnlyList<ExamSummaryDto> Exams { get; set; } = [];
     public bool ShowOwner { get; set; }
+}
+
+public sealed class ExamCalendarDay
+{
+    public DateTime Date { get; init; }
+    public IReadOnlyList<ExamSummaryDto> Exams { get; init; } = [];
+}
+
+public sealed class ExamCalendarViewModel
+{
+    public DateTime Month { get; init; }
+    public IReadOnlyList<ExamCalendarDay> Days { get; init; } = [];
+    public IReadOnlyList<ExamSummaryDto> UpcomingExams { get; init; } = [];
+    public bool ShowOwner { get; init; }
 }

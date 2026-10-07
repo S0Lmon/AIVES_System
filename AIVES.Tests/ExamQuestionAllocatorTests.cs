@@ -100,4 +100,30 @@ public sealed class ExamQuestionAllocatorTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ExamQuestionAllocator.Allocate(Pool(5), 3, perCandidate, new Random(1)));
     }
+
+    [Fact]
+    public void TheRandomStrategyStillGivesEachCandidateDistinctQuestions()
+    {
+        var allocation = ExamQuestionAllocator.Allocate(Pool(12), 20, 4, new Random(13), QuestionSelectionStrategy.Random);
+
+        Assert.Equal(20, allocation.Sets.Count);
+        Assert.All(allocation.Sets, set =>
+        {
+            Assert.Equal(4, set.Count);
+            Assert.Equal(4, set.Select(question => question.Id).Distinct().Count());
+        });
+    }
+
+    [Fact]
+    public void TheRandomStrategyDrawsADifferentSequenceThanTheBalancedOne()
+    {
+        var pool = Pool(30);
+        static string Signature(ExamAllocation allocation) =>
+            string.Join("|", allocation.Sets.Select(set => string.Join(",", set.Select(question => question.Id))));
+
+        var balanced = Signature(ExamQuestionAllocator.Allocate(pool, 10, 3, new Random(9)));
+        var random = Signature(ExamQuestionAllocator.Allocate(pool, 10, 3, new Random(9), QuestionSelectionStrategy.Random));
+
+        Assert.NotEqual(balanced, random);
+    }
 }

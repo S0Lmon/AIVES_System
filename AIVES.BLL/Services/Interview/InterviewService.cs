@@ -54,6 +54,13 @@ public sealed class InterviewService(
         var context = await LoadAsync(candidateId, email, cancellationToken);
         if (context.Record is not null)
             return await GetStateAsync(candidateId, email, cancellationToken);
+        // A lecturer-set status (plan §5) decides before the clock does; "requires review" does not block.
+        if (context.StatusOverride == CandidateStatus.NotScheduled)
+            throw new InvalidOperationException(L10n.T("You have no slot for this exam. Please contact your lecturer."));
+        if (context.StatusOverride == CandidateStatus.Absent)
+            throw new InvalidOperationException(L10n.T("You have been marked absent for this exam. Please contact your lecturer."));
+        if (context.StatusOverride == CandidateStatus.Cancelled)
+            throw new InvalidOperationException(L10n.T("Your participation in this exam was cancelled. Please contact your lecturer."));
         if (Now < context.SlotStartsAtUtc)
             throw new InvalidOperationException(L10n.T("Your exam slot has not started yet."));
         if (Now >= context.SlotEndsAtUtc)

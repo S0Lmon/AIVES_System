@@ -92,10 +92,10 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         var rows = await context.Exams.AsNoTracking()
             .Where(exam => createdById == null || exam.CreatedById == createdById)
             .OrderByDescending(exam => exam.StartsAtUtc)
-            .Select(exam => new { exam.Id, exam.Title, exam.SubjectName, exam.TopicName, exam.StartsAtUtc, exam.SlotMinutes, exam.CreatedById, Count = exam.Candidates.Count })
+            .Select(exam => new { exam.Id, exam.Title, exam.SubjectName, exam.TopicName, exam.StartsAtUtc, exam.EndsAtUtc, exam.SlotMinutes, exam.CreatedById, Count = exam.Candidates.Count })
             .ToListAsync(cancellationToken);
         return rows.Select(row => new ExamSummaryDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.StartsAtUtc,
-            row.StartsAtUtc.AddMinutes(row.SlotMinutes * row.Count), row.SlotMinutes, row.Count, row.CreatedById)).ToList();
+            row.EndsAtUtc ?? ExamSchedule.LegacyEndsAt(row.StartsAtUtc, row.SlotMinutes, row.Count), row.SlotMinutes, row.Count, row.CreatedById)).ToList();
     }
 
     public async Task<ExamDetailsDto?> GetAsync(int id, CancellationToken cancellationToken = default)
@@ -115,7 +115,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
 
         var candidates = exam.Candidates.OrderBy(candidate => candidate.Order).Select(candidate =>
         {
-            var start = SlotStart(exam, candidate.Order);
+            var start = SlotStart(exam, candidate);
             return new ExamCandidateDto(candidate.Order, candidate.Email,
                 names.GetValueOrDefault(candidate.Email.ToUpperInvariant()),
                 start, start.AddMinutes(exam.SlotMinutes),
@@ -123,13 +123,19 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                     .Select(question => new ExamAssignedQuestion(question.Order, question.QuestionId, question.Content, question.ExpectedAnswer, question.BloomLevelName, question.RubricJson))
                     .ToList(),
                 candidate.Id,
-                candidate.Attempt is null ? null : ToRecord(candidate.Attempt));
+                candidate.Attempt is null ? null : ToRecord(candidate.Attempt),
+                candidate.StatusOverride,
+                candidate.Attempt is { FinalizedAtUtc: not null } ? candidate.Attempt.FinalScore : null);
         }).ToList();
 
+        // The window the lecturer chose; for exams saved before the column existed, the schedule itself is the window.
+        var scheduleEndsAt = candidates.Count == 0 ? exam.StartsAtUtc : candidates.Max(candidate => candidate.EndsAtUtc);
         return new ExamDetailsDto(exam.Id, exam.Title, exam.SubjectId, exam.SubjectName, exam.TopicId, exam.TopicName,
-            exam.StartsAtUtc, exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * candidates.Count), exam.SlotMinutes,
+            exam.StartsAtUtc, exam.EndsAtUtc ?? scheduleEndsAt, exam.SlotMinutes,
             exam.MainQuestionCount, exam.MaxFollowUpQuestions, exam.CreatedById, candidates,
-            exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage(), RecordingOf(exam));
+            exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage(), RecordingOf(exam),
+            exam.BufferMinutes, exam.BreakMinutes, exam.BreakEveryCount, exam.Strategy,
+            exam.Term, exam.ExamType, exam.Instructions, scheduleEndsAt);
     }
 
     internal static RecordingMode RecordingOf(Exam exam) =>
@@ -147,6 +153,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 FinalizedAtUtc = candidate.Attempt == null ? null : candidate.Attempt.FinalizedAtUtc,
                 FinalScore = candidate.Attempt == null ? null : candidate.Attempt.FinalScore,
                 candidate.Order,
+                candidate.SlotStartsAtUtc,
                 candidate.Exam.Id,
                 candidate.Exam.Title,
                 candidate.Exam.SubjectName,
@@ -160,7 +167,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             .ToListAsync(cancellationToken);
         return rows.Select(row =>
             {
-                var start = row.StartsAtUtc.AddMinutes(row.SlotMinutes * (row.Order - 1));
+                var start = row.SlotStartsAtUtc ?? ExamSchedule.LegacySlotStart(row.StartsAtUtc, row.SlotMinutes, row.Order);
                 return new StudentExamDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.Order, row.Count,
                     start, start.AddMinutes(row.SlotMinutes), row.MainQuestionCount, row.MaxFollowUpQuestions,
                     row.CandidateId, row.Status ?? InterviewStatus.NotStarted, row.FinalizedAtUtc != null, row.FinalizedAtUtc != null ? row.FinalScore : null);
@@ -169,7 +176,40 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             .ToList();
     }
 
-    private static DateTime SlotStart(Exam exam, int order) => exam.StartsAtUtc.AddMinutes(exam.SlotMinutes * (order - 1));
+    public async Task UpdateSlotAsync(int examId, int order, DateTime slotStartsAtUtc, CancellationToken cancellationToken = default)
+    {
+        var candidate = await context.ExamCandidates
+            .FirstOrDefaultAsync(item => item.ExamId == examId && item.Order == order, cancellationToken)
+            ?? throw new KeyNotFoundException($"Candidate {order} of exam {examId} was not found.");
+        candidate.SlotStartsAtUtc = slotStartsAtUtc;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateScheduleAsync(int id, IReadOnlyList<DateTime> slotStartsAtUtc, CancellationToken cancellationToken = default)
+    {
+        var exam = await context.Exams.Include(item => item.Candidates)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw new KeyNotFoundException($"Exam {id} was not found.");
+        foreach (var candidate in exam.Candidates)
+        {
+            if (candidate.Order - 1 < slotStartsAtUtc.Count)
+                candidate.SlotStartsAtUtc = slotStartsAtUtc[candidate.Order - 1];
+        }
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateCandidateStatusAsync(int examId, int order, CandidateStatus? status, CancellationToken cancellationToken = default)
+    {
+        var candidate = await context.ExamCandidates
+            .FirstOrDefaultAsync(item => item.ExamId == examId && item.Order == order, cancellationToken)
+            ?? throw new KeyNotFoundException($"Candidate {order} of exam {examId} was not found.");
+        candidate.StatusOverride = status;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>The candidate's stored slot, or the derived layout for rows saved before slots were stored.</summary>
+    private static DateTime SlotStart(Exam exam, ExamCandidate candidate) =>
+        candidate.SlotStartsAtUtc ?? ExamSchedule.LegacySlotStart(exam.StartsAtUtc, exam.SlotMinutes, candidate.Order);
 
     private static void Apply(ExamDraft draft, Exam exam)
     {
@@ -179,7 +219,15 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         exam.TopicId = draft.TopicId;
         exam.TopicName = draft.TopicName;
         exam.StartsAtUtc = draft.StartsAtUtc;
+        exam.EndsAtUtc = draft.EndsAtUtc;
         exam.SlotMinutes = draft.SlotMinutes;
+        exam.BufferMinutes = draft.BufferMinutes;
+        exam.BreakMinutes = draft.BreakMinutes;
+        exam.BreakEveryCount = draft.BreakEveryCount;
+        exam.Strategy = draft.Strategy;
+        exam.Term = NullIfEmpty(draft.Term);
+        exam.ExamType = NullIfEmpty(draft.ExamType);
+        exam.Instructions = NullIfEmpty(draft.Instructions);
         exam.MainQuestionCount = draft.MainQuestionCount;
         exam.MaxFollowUpQuestions = draft.MaxFollowUpQuestions;
         exam.AnswerTimeLimitSeconds = draft.AnswerTimeLimitSeconds;
@@ -188,6 +236,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         exam.RecordAudio = draft.Recording != RecordingMode.None;
         exam.RecordVideo = draft.Recording == RecordingMode.AudioVideo;
     }
+
+    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     internal static InterviewRecordDto ToRecord(ExamAttempt attempt) => new(attempt.Status, attempt.StartedAtUtc, attempt.CompletedAtUtc,
         attempt.Turns.OrderBy(turn => turn.Order).Select(turn => new InterviewTurnRecordDto(turn.Order, turn.Kind, turn.MainIndex,
@@ -199,6 +249,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     {
         Order = draft.Order,
         Email = draft.Email,
+        SlotStartsAtUtc = draft.SlotStartsAtUtc,
         Questions = draft.Questions.Select(question => new ExamCandidateQuestion
         {
             Order = question.Order,

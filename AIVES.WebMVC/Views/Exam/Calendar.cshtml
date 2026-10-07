@@ -1,0 +1,130 @@
+@using System.Globalization
+@model AIVES.WebMVC.Models.ViewModels.ExamCalendarViewModel
+@inject AIVES.WebMVC.DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("Exam calendar");
+    var month = Model.Month;
+    var today = DateTime.Today;
+    var firstDay = new DateTime(month.Year, month.Month, 1);
+    var lastDay = firstDay.AddMonths(1).AddTicks(-1);
+    var daysInMonth = lastDay.Day;
+    var startDow = (int)firstDay.DayOfWeek;
+    var cells = new List<(int Day, bool IsCurrentMonth, bool IsToday, IReadOnlyList<AIVES.DTO.ExamSummaryDto>? Exams)>();
+    for (var i = 0; i < startDow; i++) cells.Add((0, false, false, null));
+    for (var d = 1; d <= daysInMonth; d++)
+    {
+        var date = new DateTime(month.Year, month.Month, d);
+        var exams = Model.Days.FirstOrDefault(day => day.Date == date)?.Exams ?? [];
+        cells.Add((d, true, date == today, exams));
+    }
+    while (cells.Count % 7 != 0) cells.Add((0, false, false, null));
+    string[] dayNames = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames.ToArray();
+}
+
+<div class="page-heading">
+    <div>
+        <span class="page-kicker">Exams / Calendar</span>
+        <h1>@L10n.T("Exam calendar")</h1>
+        <p>@L10n.T("Select a date to create an exam, or pick an existing exam to open it.")</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a asp-action="Create" class="btn btn-primary">@L10n.T("New exam")</a>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+        <a asp-action="Calendar" asp-route-year="@firstDay.AddMonths(-1).Year" asp-route-month="@firstDay.AddMonths(-1).Month" class="btn btn-light btn-sm">&laquo; @L10n.T("Previous month")</a>
+        <strong>@month.ToString("MMMM yyyy")</strong>
+        <a asp-action="Calendar" asp-route-year="@firstDay.AddMonths(1).Year" asp-route-month="@firstDay.AddMonths(1).Month" class="btn btn-light btn-sm">@L10n.T("Next month") &raquo;</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0 align-middle calendar-table">
+            <thead>
+                <tr>
+                    @foreach (var name in dayNames)
+                    {
+                        <th class="text-center">@name</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (var row = 0; row < cells.Count; row += 7)
+                {
+                    <tr>
+                        @for (var col = 0; col < 7; col++)
+                        {
+                            var cell = cells[row + col];
+                            var cellDate = cell.IsCurrentMonth ? new DateTime(month.Year, month.Month, cell.Day) : DateTime.MinValue;
+                            var classes = new List<string> { "calendar-cell" };
+                            if (!cell.IsCurrentMonth) classes.Add("text-muted");
+                            if (cell.IsToday) classes.Add("calendar-today");
+                            <td class="@string.Join(" ", classes)" style="min-width:110px;height:90px;vertical-align:top;position:relative;">
+                                @if (cell.IsCurrentMonth)
+                                {
+                                    <div class="d-flex flex-column gap-1">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <strong class="small">@cell.Day</strong>
+                                            @if (cell.Exams is { Count: > 0 })
+                                            {
+                                                <span class="badge text-bg-primary rounded-pill">@cell.Exams.Count</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex flex-column gap-1">
+                                            @if (cell.Exams is { Count: > 0 })
+                                            {
+                                                foreach (var exam in cell.Exams.Take(3))
+                                                {
+                                                    var start = TimeZone.ToLocal(exam.StartsAtUtc);
+                                                    <a asp-action="Details" asp-route-id="@exam.Id" class="calendar-event text-decoration-none" title="@exam.Title · @start.ToString("HH:mm")">
+                                                        <span class="badge text-bg-light w-100 text-start">@exam.Title</span>
+                                                    </a>
+                                                }
+                                                if (cell.Exams.Count > 3)
+                                                {
+                                                    <span class="small text-muted">+@(cell.Exams.Count - 3) more</span>
+                                                }
+                                            }
+                                        </div>
+                                        <a asp-action="Create" asp-route-startsAt="@cellDate.ToString("yyyy-MM-ddTHH:mm")" class="calendar-add text-decoration-none" aria-label="@L10n.Format("Create exam on {0}", cellDate.ToString("yyyy-MM-dd"))" title="@L10n.Format("Create exam on {0}", cellDate.ToString("yyyy-MM-dd"))">+</a>
+                                    </div>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.UpcomingExams is { Count: > 0 })
+{
+    <div class="panel mb-4">
+        <div class="panel-header">
+            <div><span class="page-kicker">@L10n.T("Reminders")</span><h2>@L10n.T("Upcoming in the next 7 days")</h2></div>
+        </div>
+        <div class="panel-body reminder-panel">
+            <div class="list-group list-group-flush">
+                @foreach (var exam in Model.UpcomingExams)
+                {
+                    var local = TimeZone.ToLocal(exam.StartsAtUtc);
+                    var diff = local - DateTime.Now;
+                    var label = diff.TotalMinutes < 60 ? L10n.Format("starts in {0} min", (int)diff.TotalMinutes) :
+                        diff.TotalHours < 24 ? L10n.Format("starts in {0} h", (int)diff.TotalHours) :
+                        L10n.Format("starts in {0} d", (int)diff.TotalDays);
+                    <a asp-action="Details" asp-route-id="@exam.Id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>@exam.Title</strong>
+                            <div class="small text-muted">@exam.SubjectName@(string.IsNullOrEmpty(exam.TopicName) ? "" : " / " + exam.TopicName)</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small">@local.ToString("yyyy-MM-dd HH:mm")</div>
+                            <span class="badge text-bg-warning">@label</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}

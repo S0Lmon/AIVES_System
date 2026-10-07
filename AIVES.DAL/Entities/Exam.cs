@@ -1,3 +1,5 @@
+using AIVES.DTO;
+
 namespace AIVES.DAL.Entities
 {
     /// <summary>A viva exam session: one subject, a list of candidates and a fixed slot per candidate.</summary>
@@ -11,7 +13,26 @@ namespace AIVES.DAL.Entities
         public int? TopicId { get; set; }
         public string? TopicName { get; set; }
         public DateTime StartsAtUtc { get; set; }
+        /// <summary>
+        /// End of the examination window the lecturer chose (plan §4/§6). Null when the exam predates
+        /// the window column or no end was given; readers then treat the schedule end as the window end.
+        /// </summary>
+        public DateTime? EndsAtUtc { get; set; }
         public int SlotMinutes { get; set; }
+        /// <summary>Quiet time inserted after each candidate's slot, in minutes (plan §6, optional).</summary>
+        public int BufferMinutes { get; set; }
+        /// <summary>Length of a break inserted after every <see cref="BreakEveryCount"/> candidates (plan §6, optional).</summary>
+        public int BreakMinutes { get; set; }
+        /// <summary>Put a break after every N candidates; 0 means no scheduled breaks.</summary>
+        public int BreakEveryCount { get; set; }
+        /// <summary>How main questions are drawn for each candidate (plan §8).</summary>
+        public QuestionSelectionStrategy Strategy { get; set; } = QuestionSelectionStrategy.Balanced;
+        /// <summary>Academic term, e.g. "Fall 2026" (plan §4).</summary>
+        public string? Term { get; set; }
+        /// <summary>Examination type, e.g. "Final" or "Competency assessment" (plan §4).</summary>
+        public string? ExamType { get; set; }
+        /// <summary>Instructions or notes shown with the session (plan §4).</summary>
+        public string? Instructions { get; set; }
         public int MainQuestionCount { get; set; }
         public int MaxFollowUpQuestions { get; set; }
         public int AnswerTimeLimitSeconds { get; set; } = 120;
