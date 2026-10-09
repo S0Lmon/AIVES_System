@@ -13,8 +13,8 @@
 ```text
 Internet ──HTTPS──► caddy (TLS tự động, HTTP→HTTPS, cân bằng tải round-robin)
                        │
-             web × AIVES_WEB_REPLICAS   (stateless, /health, user SQL aives_app)
-                       │
+             web × AIVES_WEB_REPLICAS   razor × 1 (:8081, SignalR + giọng nói offline)
+                       │                    │
                    sqlserver  ◄── migrate (sa, chạy một lần) ◄── db-init (tạo aives_app)
 ```
 
@@ -169,6 +169,27 @@ docker compose logs quicktunnel | Select-String "trycloudflare.com"
 - *Settings → System → Power*: không cho máy ngủ khi cắm điện.
 - *Windows Update → Advanced options → Active hours*: tránh tự khởi động lại trong giờ sử dụng.
 - Không chạy `docker compose down -v` (xóa database).
+
+## Site Razor Pages và phỏng vấn bằng giọng nói
+
+Service `razor` chạy site `AIVES.WebRazor` (Razor Pages + SignalR; giám khảo AI đọc câu hỏi và nghe câu trả lời ngay trên máy chủ). Nó dùng chung database, login `aives_app`, khóa Data Protection và volume `aives-recordings` với site MVC, nên dùng chung tài khoản và bản ghi âm. Caddy phục vụ nó ở site `:8081` (trên máy chủ: `http://127.0.0.1:8089`). Với `COMPOSE_PROFILES=quicktunnel`, container `quicktunnel-razor` cấp thêm một địa chỉ `https://*.trycloudflare.com` riêng:
+
+```bash
+docker compose logs quicktunnel-razor | grep trycloudflare.com
+```
+
+Có tên miền thì đặt `AIVES_RAZOR_SITE` là hostname riêng (ví dụ `razor.example.com`) và thêm hostname đó vào Cloudflare Tunnel, trỏ tới `http://caddy:8081`. Micro của trình duyệt chỉ hoạt động trên HTTPS (hoặc `localhost`).
+
+**Model giọng nói** không nằm trong image hay Git. Tải một lần trên máy chủ, compose mount chỉ đọc vào container (`SPEECH_MODELS_DIR`, mặc định `./AIVES.WebRazor/App_Data/speech-models`):
+
+```powershell
+.\scripts\download-speech-models.ps1 -WithPreviewModel   # Whisper small + base, giọng Việt và Anh, khoảng 750 MB
+```
+
+- Docker không có GPU nên Whisper chạy trên CPU (`Speech:UseGpu=false`). Chữ tạm khi đang nói dùng `ggml-base`, bản giữ lại dùng `ggml-small`. Máy nhiều nhân thì tăng `SPEECH_THREADS`.
+- Image cài `libgomp1`. Thiếu thư viện OpenMP này thì thư viện native của Whisper.net không nạp được và tiến trình bị dừng.
+- Chỉ chạy **một** instance, vì danh sách người online và phiên trả lời đang nói nằm trong bộ nhớ. Muốn nhiều instance thì cần SignalR backplane (ví dụ Redis) và sticky session.
+- Thiếu model thì phòng thi tự chuyển sang gõ câu trả lời.
 
 ## Scale số instance web
 
