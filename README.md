@@ -143,6 +143,8 @@ Chạy (cùng database với site MVC, cổng 5301):
 dotnet run --project AIVES.WebRazor --launch-profile http
 ```
 
+Trong Docker Compose, site này là service `razor` (một instance, Whisper chạy trên CPU, model được mount từ máy chủ). Xem mục *Site Razor Pages và phỏng vấn bằng giọng nói* trong [DEPLOY.md](DEPLOY.md).
+
 Để thấy real-time: mở hai cửa sổ (hoặc một cửa sổ ẩn danh với tài khoản giảng viên khác) ở `/Questions` và `/`, rồi thêm, sửa hoặc xoá câu hỏi ở một cửa sổ.
 
 ## Chạy bằng .NET

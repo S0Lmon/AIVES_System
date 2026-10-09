@@ -130,6 +130,59 @@ services:
       db-init:
         condition: service_completed_successfully
 
+  # Second front end (Razor Pages + SignalR) with the offline voice viva. One instance only: the
+  # online list and live answer sessions are in memory. Caddy serves it on its own site (:8081).
+  razor:
+    build:
+      context: .
+      dockerfile: AIVES.WebRazor/Dockerfile
+    image: aives-razor:latest
+    container_name: aives-razor
+    restart: unless-stopped
+    environment:
+      <<: *app-environment
+      Database__MigrateOnStartup: "false"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=AIVES;User Id=aives_app;Password=${MSSQL_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      DataProtection__CertificatePath: /run/secrets/dataprotection-cert
+      DataProtection__CertificatePassword: "${DATAPROTECTION_CERT_PASSWORD:?DATAPROTECTION_CERT_PASSWORD is required}"
+      Gemini__ApiKey: "${GEMINI_API_KEY:-}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-3.8-flash}"
+      Interview__Model: "${INTERVIEW_MODEL:-gemini-3.5-flash-lite}"
+      Grading__Model: "${GRADING_MODEL:-}"
+      Recordings__Path: /app/recordings
+      Ollama__Enabled: "${OLLAMA_ENABLED:-false}"
+      Ollama__BaseUrl: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      Ollama__Model: "${OLLAMA_MODEL:-phi3:mini}"
+      # Docker has no Vulkan GPU here, so Whisper runs on the CPU; the base model keeps the live preview quick.
+      Speech__ModelsPath: /app/App_Data/speech-models
+      Speech__UseGpu: "false"
+      Speech__Threads: "${SPEECH_THREADS:-8}"
+      Speech__WhisperPreviewModel: "${SPEECH_PREVIEW_MODEL:-whisper/ggml-base.bin}"
+      Speech__Provider: "${SPEECH_PROVIDER:-Local}"
+      Speech__TtsProvider: "${SPEECH_TTS_PROVIDER:-Local}"
+    expose:
+      - "8080"
+    volumes:
+      - aives-recordings:/app/recordings
+      - ${SPEECH_MODELS_DIR:-./AIVES.WebRazor/App_Data/speech-models}:/app/App_Data/speech-models:ro
+    secrets:
+      - dataprotection-cert
+    networks:
+      - aives-network
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
   caddy:
     image: caddy:2-alpine
     container_name: aives-caddy
@@ -137,8 +190,11 @@ services:
     environment:
       # A domain (TLS by Caddy), "localhost", or ":80" behind Cloudflare Tunnel.
       AIVES_CADDY_SITE: "${AIVES_CADDY_SITE:-${AIVES_DOMAIN:-localhost}}"
+      # The Razor site: ":8081" behind a tunnel, or its own domain (e.g. razor.example.com).
+      AIVES_RAZOR_SITE: "${AIVES_RAZOR_SITE:-:8081}"
     ports:
       - "${AIVES_HTTP_PORT:-80}:80"
+      - "${AIVES_RAZOR_HTTP_PORT:-127.0.0.1:8089}:8081"
       - "${AIVES_HTTPS_PORT:-443}:443"
       - "${AIVES_HTTPS_PORT:-443}:443/udp"
     volumes:
@@ -149,6 +205,7 @@ services:
       - aives-network
     depends_on:
       - web
+      - razor
 
   # Optional: publish through a Cloudflare Tunnel instead of opening ports 80/443 on the router.
   # Enabled by COMPOSE_PROFILES=tunnel in .env; the tunnel's public hostname points to http://caddy:80.
@@ -174,6 +231,18 @@ services:
     profiles: ["quicktunnel"]
     restart: unless-stopped
     command: ["tunnel", "--no-autoupdate", "--url", "http://caddy:80"]
+    networks:
+      - aives-network
+    depends_on:
+      - caddy
+
+  # Its own random address for the Razor site (docker compose logs quicktunnel-razor | grep trycloudflare.com).
+  quicktunnel-razor:
+    image: cloudflare/cloudflared:latest
+    container_name: aives-quicktunnel-razor
+    profiles: ["quicktunnel"]
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--url", "http://caddy:8081"]
     networks:
       - aives-network
     depends_on:

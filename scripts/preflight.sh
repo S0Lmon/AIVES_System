@@ -140,6 +140,13 @@ echo "Dịch vụ tùy chọn"
 if [[ $(value DEMO_ACCOUNT_ENABLED) == true && $(value DEMO_ACCOUNT_RESET_PASSWORD) == true ]]; then
     warn "DEMO_ACCOUNT_RESET_PASSWORD=true: mật khẩu tài khoản demo bị đặt lại mỗi lần deploy."
 fi
+speech_dir=$(value SPEECH_MODELS_DIR)
+speech_dir=${speech_dir:-./AIVES.WebRazor/App_Data/speech-models}
+if [[ -f $speech_dir/whisper/ggml-small.bin && -f $speech_dir/tts/vits-piper-vi_VN-vais1000-medium/tokens.txt ]]; then
+    ok "Model giọng nói cho site Razor có trong $speech_dir."
+else
+    warn "Thiếu model giọng nói trong $speech_dir: phòng thi của site Razor chỉ cho gõ câu trả lời. Tải bằng scripts/download-speech-models.ps1 -WithPreviewModel."
+fi
 
 echo
 if (( errors > 0 )); then

@@ -24,3 +24,9 @@
 		fail_duration 30s
 	}
 }
+
+# The Razor Pages site (one instance). SignalR's WebSockets pass through reverse_proxy as is.
+{$AIVES_RAZOR_SITE::8081} {
+	encode zstd gzip
+	reverse_proxy razor:8080
+}
