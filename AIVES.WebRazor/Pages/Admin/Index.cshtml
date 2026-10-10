@@ -1,0 +1,57 @@
+@page
+@page "/Admin/Index"
+@model AIVES.WebRazor.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = L10n.T("System check");
+    var report = Model.Report;
+}
+<div class="page-heading">
+    <div><span class="page-kicker">Admin / System check</span><h1>@L10n.T("System configuration check")</h1><p>@L10n.T("Aggregated status of external services and the database. This page is restricted to administrators.")</p></div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="status-label @(report.IsHealthy ? "ready" : "missing")">@(report.IsHealthy ? L10n.T("System healthy") : L10n.T("Configuration incomplete"))</span>
+        <a asp-page="/Admin/Index" class="btn btn-light">@L10n.T("Check again")</a>
+    </div>
+</div>
+<div class="check-summary">
+    <article class="check-summary-card is-critical"><span class="check-summary-label">@L10n.T("Missing / errors")</span><strong>@report.CriticalCount</strong><small>@L10n.T("Configuration needed before the feature runs")</small></article>
+    <article class="check-summary-card is-warning"><span class="check-summary-label">@L10n.T("Warnings")</span><strong>@report.WarningCount</strong><small>@L10n.T("Optional, but worth reviewing")</small></article>
+    <article class="check-summary-card is-ok"><span class="check-summary-label">@L10n.T("Configured")</span><strong>@report.OkCount</strong><small>@L10n.T("Services ready to use")</small></article>
+</div>
+<section class="panel overflow-hidden mb-4" aria-labelledby="check-list-title">
+    <div class="panel-header"><div><span class="page-kicker">Indicators</span><h2 id="check-list-title">@L10n.T("Service status")</h2></div><span class="status-label">@L10n.Format("{0} checks", report.Checks.Count)</span></div>
+    <div class="check-list">
+        @foreach (var check in report.Checks)
+        {
+            var statusClass = check.Status switch { AIVES.DTO.SystemCheckStatus.Ok => "ready", AIVES.DTO.SystemCheckStatus.Warning => "warning", _ => "missing" };
+            var statusLabel = check.Status switch { AIVES.DTO.SystemCheckStatus.Ok => L10n.T("Configured"), AIVES.DTO.SystemCheckStatus.Warning => L10n.T("Warnings"), _ => L10n.T("Missing / errors") };
+            <article class="check-item check-@statusClass">
+                <div class="check-item-main">
+                    <h3>@check.Name</h3><p>@check.Detail</p>
+                    @if (!string.IsNullOrWhiteSpace(check.Remedy)) { <div class="check-remedy"><strong>@L10n.T("How to fix")</strong><p>@check.Remedy</p></div> }
+                </div>
+                <span class="status-label @statusClass">@statusLabel</span>
+            </article>
+        }
+    </div>
+</section>
+<section class="panel overflow-hidden" aria-labelledby="db-title">
+    <div class="panel-header"><div><span class="page-kicker">Database</span><h2 id="db-title">@L10n.T("SQL Server data")</h2></div><span class="status-badge @(report.Database.IsReachable ? "active" : "inactive")">@(report.Database.IsReachable ? L10n.T("Connected") : L10n.T("Disconnected"))</span></div>
+    <div class="panel-body">
+        @if (report.Database.IsReachable)
+        {
+            <div class="detail-grid">
+                <div class="detail-item"><small>@L10n.T("Server")</small><strong>@report.Database.ServerName</strong></div>
+                <div class="detail-item"><small>@L10n.T("Database")</small><strong>@report.Database.DatabaseName</strong></div>
+                <div class="detail-item"><small>@L10n.T("Pending migrations")</small><strong>@report.Database.PendingMigrations.Count</strong></div>
+                <div class="detail-item"><small>@L10n.T("Accounts with verified email")</small><strong>@report.Database.ConfirmedUserCount / @report.Database.UserCount</strong></div>
+                <div class="detail-item"><small>@L10n.T("Questions in the bank")</small><strong>@report.Database.QuestionCount</strong></div>
+                <div class="detail-item"><small>@L10n.T("Rubrics / Bloom levels")</small><strong>@report.Database.RubricCount / @report.Database.BloomLevelCount</strong></div>
+            </div>
+        }
+        else
+        {
+            <div class="config-notice"><strong>@L10n.T("Could not read data from SQL Server.")</strong><p>@L10n.T("Internal counters stay at 0 until the connection succeeds.")</p></div>
+        }
+    </div>
+</section>
+<p class="check-timestamp">@L10n.Format("Updated at {0} UTC · Environment {1}", report.GeneratedAtUtc.ToString("dd/MM/yyyy HH:mm:ss"), report.Environment)</p>

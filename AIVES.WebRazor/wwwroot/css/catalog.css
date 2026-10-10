@@ -1,0 +1,327 @@
+/* Catalog: sub-tabs, stat tiles, collapsible subject nodes, inline forms. */
+
+.cat-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2xs);
+    margin-bottom: var(--space-md);
+}
+
+.cat-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-xs) var(--space-sm);
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    background: var(--color-paper);
+}
+
+.cat-stat-value {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    line-height: 1.1;
+    color: var(--color-accent);
+}
+
+.cat-stat-label {
+    font-size: var(--text-xs);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+
+.cat-tabs {
+    display: flex;
+    gap: var(--space-3xs);
+    margin-bottom: var(--space-md);
+    border-bottom: var(--rule);
+}
+
+.cat-tab {
+    padding: var(--space-2xs) var(--space-sm);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.cat-tab:hover {
+    color: var(--color-ink);
+}
+
+.cat-tab.is-active {
+    border-bottom-color: var(--color-accent);
+    color: var(--color-ink);
+    font-weight: 600;
+}
+
+.cat-toolbar {
+    margin-bottom: var(--space-sm);
+}
+
+.cat-toolbar-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-xs);
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    background: var(--color-paper);
+}
+
+.cat-toolbar-form .form-select,
+.cat-toolbar-form .form-control {
+    width: auto;
+    min-width: 9rem;
+}
+
+.cat-search {
+    flex: 1 1 12rem;
+    display: block;
+}
+
+.cat-toolbar-spacer {
+    flex: 1 1 0;
+}
+
+.cat-nodes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+}
+
+.cat-node {
+    border: var(--rule);
+    border-radius: var(--radius-panel);
+    background: var(--color-paper);
+    overflow: hidden;
+}
+
+.cat-node-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    background: var(--color-paper-2);
+}
+
+.cat-node-toggle {
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: var(--rule);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+    color: var(--color-ink-2);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.cat-chevron {
+    display: inline-block;
+    transition: transform var(--dur-short) var(--ease-out);
+}
+
+.cat-node-toggle.is-open .cat-chevron {
+    transform: rotate(90deg);
+}
+
+.cat-node-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.cat-node-title strong {
+    font-size: var(--text-base);
+}
+
+.cat-node-title small {
+    color: var(--color-muted);
+    font-size: var(--text-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cat-node-meta {
+    display: flex;
+    gap: var(--space-3xs);
+    flex: none;
+}
+
+.cat-node-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    flex: none;
+}
+
+.cat-node-body {
+    padding: var(--space-xs);
+    border-top: var(--rule);
+}
+
+.cat-empty-row {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+}
+
+.cat-inline-form {
+    padding: var(--space-xs);
+    margin-bottom: var(--space-2xs);
+    border: 1px dashed var(--color-rule-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-paper-2);
+}
+
+.cat-inline-form:last-child {
+    margin-bottom: 0;
+}
+
+.cat-inline-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto auto;
+    gap: var(--space-2xs);
+    align-items: center;
+}
+
+.cat-material-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-2xs);
+    align-items: start;
+}
+
+.cat-material-form textarea {
+    grid-column: 1 / -1;
+}
+
+.cat-inline-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+}
+
+.cat-edit-row > td {
+    padding: 0 var(--space-xs) var(--space-2xs);
+    background: var(--color-paper-2);
+}
+
+.cat-edit-row .cat-inline-form {
+    margin-bottom: 0;
+}
+
+.cat-topics {
+    margin-bottom: 0;
+}
+
+.cat-col-count {
+    width: 6rem;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .cat-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .cat-inline-grid,
+    .cat-material-form {
+        grid-template-columns: 1fr;
+    }
+
+    .cat-node-head {
+        flex-wrap: wrap;
+    }
+
+    .cat-node-meta {
+        order: 3;
+    }
+}
+/* ---------- Subject page ----------
+   Opening a subject turns the tab into that subject's own page, so the hierarchy is one level deep
+   at a time and adding a topic is the first thing on screen rather than a hidden toggle.
+ */
+
+.subject-page {
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.subject-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: var(--space-sm);
+    border-bottom: var(--rule);
+}
+
+.subject-page-head h2 {
+    margin: 0 0 var(--space-3xs);
+}
+
+.subject-page-stats {
+    display: flex;
+    gap: var(--space-3xs);
+    flex-wrap: wrap;
+}
+
+.subject-page-actions {
+    display: flex;
+    gap: var(--space-3xs);
+    flex-wrap: wrap;
+    padding: var(--space-sm) 0;
+}
+
+.topic-create {
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    border: 2px dashed var(--color-accent);
+    border-radius: var(--radius-panel);
+    background: var(--color-accent-soft, rgba(47, 91, 215, .05));
+}
+
+.topic-create-head {
+    margin-bottom: var(--space-sm);
+}
+
+.topic-create-head h3 {
+    margin: 0 0 2px;
+    font-size: var(--text-md);
+}
+
+.topic-create-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: var(--space-sm);
+    align-items: end;
+}
+
+.topic-create-grid .form-label {
+    font-size: var(--text-xs);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+
+.topic-create-submit {
+    display: flex;
+    align-items: flex-end;
+}
+
+@media (max-width: 860px) {
+    .topic-create-grid {
+        grid-template-columns: 1fr;
+    }
+}

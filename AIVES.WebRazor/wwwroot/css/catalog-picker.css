@@ -1,0 +1,143 @@
+/* Custom subject / topic dropdown.
+ *
+ * The native select is kept for form posts and simply hidden; everything visible is the button
+ * and the menu, so the control still reads as a normal field to keyboard and screen reader users.
+ */
+
+.picker {
+    position: relative;
+}
+
+.picker .picker-select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.picker-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    min-height: 38px;
+    padding: .375rem .75rem;
+    background: var(--panel, #fff);
+    border: 1px solid var(--line, #e3e6ef);
+    border-radius: 8px;
+    color: var(--ink, #1d2333);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.picker-toggle:hover {
+    border-color: var(--accent, #2f5bd7);
+}
+
+.picker.is-open .picker-toggle {
+    border-color: var(--accent, #2f5bd7);
+    box-shadow: 0 0 0 3px rgba(47, 91, 215, .12);
+}
+
+.picker-value {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker-value.is-placeholder {
+    color: var(--muted, #5c6478);
+}
+
+.picker-caret {
+    color: var(--muted, #5c6478);
+    font-size: .8rem;
+    transition: transform .15s ease;
+}
+
+.picker.is-open .picker-caret {
+    transform: rotate(180deg);
+}
+
+.picker-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + .25rem);
+    left: 0;
+    right: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--panel, #fff);
+    border: 1px solid var(--line, #e3e6ef);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(29, 35, 51, .14);
+}
+
+.picker-search {
+    position: sticky;
+    top: 0;
+    padding: .5rem;
+    background: var(--panel, #fff);
+    border-bottom: 1px solid var(--line, #e3e6ef);
+}
+
+.picker-list {
+    list-style: none;
+    margin: 0;
+    padding: .25rem;
+}
+
+.picker-item {
+    padding: .45rem .6rem;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: .92rem;
+}
+
+.picker-item:hover {
+    background: var(--wash, #f5f7fb);
+}
+
+.picker-item[aria-selected="true"] {
+    background: rgba(47, 91, 215, .12);
+    color: var(--accent, #2f5bd7);
+    font-weight: 600;
+}
+
+.picker-empty {
+    color: var(--muted, #5c6478);
+    font-style: italic;
+}
+
+.picker-none {
+    margin: 0;
+    padding: .6rem;
+    color: var(--muted, #5c6478);
+    font-size: .85rem;
+}
+
+.picker-error {
+    display: block;
+    margin-top: .25rem;
+}
+
+/* Two pickers side by side share a row so subject and topic stay visually paired. */
+.picker-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 720px) {
+    .picker-pair {
+        grid-template-columns: 1fr;
+    }
+}

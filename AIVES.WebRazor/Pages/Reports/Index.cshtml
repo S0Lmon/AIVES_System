@@ -1,0 +1,12 @@
+@page
+@model AIVES.WebRazor.Pages.Reports.IndexModel
+@inject DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("Reports");
+    var now = DateTime.UtcNow;
+}
+<div class="page-heading"><div><span class="page-kicker">Reports / Exams</span><h1>@L10n.T("Class reports")</h1><p>@L10n.T("Score distribution, hardest questions and answer quality per exam, and the grade sheet export.")</p></div></div>
+<section class="panel overflow-hidden mb-4">@if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No exams yet. Create one to schedule candidates and assign questions.")</p> } else {
+<div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Time") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+@foreach (var exam in Model.Exams) { <tr class="@(now < exam.StartsAtUtc ? "text-muted" : "")"><td><strong>@exam.Title</strong></td><td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td><td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td class="text-end text-nowrap"><a class="btn btn-sm btn-primary" asp-page="Exam" asp-route-id="@exam.Id">@L10n.T("Report")</a><a class="btn btn-sm btn-light" asp-page="/Grading/Export" asp-route-id="@exam.Id">@L10n.T("Grade sheet (.xlsx)")</a></td></tr> }
+</tbody></table></div> }</section>

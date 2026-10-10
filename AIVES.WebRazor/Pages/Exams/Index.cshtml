@@ -1,0 +1,26 @@
+@page
+@model AIVES.WebRazor.Pages.Exams.IndexModel
+@inject DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("Exams");
+    var now = DateTime.UtcNow;
+}
+<div class="page-heading">
+    <div><span class="page-kicker">Exams / Schedule</span><h1>@L10n.T("Viva exam sessions")</h1>
+        <p>@L10n.T("Each candidate gets a time slot and their own set of main questions, drawn so that candidates sitting one after another do not share questions.")</p></div>
+    <div class="d-flex gap-2"><a asp-page="Calendar" class="btn btn-light">@L10n.T("Calendar")</a><a asp-page="Create" class="btn btn-primary">@L10n.T("New exam")</a></div>
+</div>
+@if (TempData["ExamMessage"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+<section class="panel overflow-hidden mb-4">
+    @if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No exams yet. Create one to schedule candidates and assign questions.")</p> }
+    else {
+        <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Time") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Candidates")</th><th>@L10n.T("Status")</th></tr></thead><tbody>
+        @foreach (var exam in Model.Exams) {
+            <tr><td><a asp-page="Details" asp-route-id="@exam.Id"><strong>@exam.Title</strong></a></td>
+                <td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td>
+                <td class="small">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")<div class="text-muted">@L10n.Format("{0} min per candidate", exam.SlotMinutes)</div></td>
+                <td>@exam.CandidateCount</td><td>@if (now < exam.StartsAtUtc) { <span class="status-label ready">@L10n.T("Upcoming")</span> } else if (now < exam.EndsAtUtc) { <span class="status-label warning">@L10n.T("In progress")</span> } else { <span class="status-label">@L10n.T("Finished")</span> }</td></tr>
+        }
+        </tbody></table></div>
+    }
+</section>

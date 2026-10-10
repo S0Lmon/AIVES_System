@@ -1,0 +1,74 @@
+@page "{id:int}"
+@model AIVES.WebRazor.Pages.Exams.DetailsModel
+@{
+    var exam = Model.Exam;
+    var statuses = exam.Candidates.Select(candidate => candidate.StatusAt(Model.NowUtc)).ToList();
+    var scores = exam.Candidates.Where(candidate => candidate.FinalScore.HasValue).Select(candidate => candidate.FinalScore!.Value).ToList();
+    var average = scores.Count == 0 ? (decimal?)null : Math.Round(scores.Average(), 2);
+    ViewData["Title"] = exam.Title;
+}
+<div class="page-heading"><div>
+    <span class="page-kicker">Exams / Details</span><h1>@exam.Title</h1>
+    <p>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)@(string.IsNullOrWhiteSpace(exam.Term) ? "" : " · " + exam.Term)@(string.IsNullOrWhiteSpace(exam.ExamType) ? "" : " · " + exam.ExamType) ·
+        @Model.TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @Model.TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm") (@Model.TimeZone.OffsetLabel) ·
+        @L10n.Format("{0} min per candidate", exam.SlotMinutes) · @L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)
+        @if (exam.ScheduleEndsAtUtc is { } scheduleEnd && scheduleEnd != exam.EndsAtUtc) { <span> · @L10n.Format("schedule runs until {0}", Model.TimeZone.ToLocal(scheduleEnd).ToString("HH:mm"))</span> }
+    </p>
+    @if (exam.BufferMinutes > 0 || (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) || exam.Strategy != QuestionSelectionStrategy.Balanced) {
+        <p class="small text-muted mb-0">@if (exam.BufferMinutes > 0) { <span>@L10n.Format("{0} min buffer between candidates", exam.BufferMinutes)</span> }@if (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) { <span> · @L10n.Format("{0} min break every {1} candidates", exam.BreakMinutes, exam.BreakEveryCount)</span> } · @(exam.Strategy == QuestionSelectionStrategy.Balanced ? L10n.T("Balanced question selection") : L10n.T("Random question selection"))</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(exam.Instructions)) { <p class="small mb-0">@exam.Instructions</p> }
+</div><div class="d-flex flex-wrap gap-2 align-items-center">
+    @if (Model.Started) { <a asp-page="/Grading/Exam" asp-route-id="@exam.Id" class="btn btn-primary">@L10n.T("Grade")</a><a asp-page="/Reports/Exam" asp-route-id="@exam.Id" class="btn btn-light">@L10n.T("Class report")</a> }
+    <a asp-page="/Grading/Audit" asp-route-id="@exam.Id" class="btn btn-light">@L10n.T("Audit log")</a>
+    @if (!Model.Started) {
+        <a asp-page="Edit" asp-route-id="@exam.Id" class="btn btn-light">@L10n.T("Edit")</a>
+        <form method="post" asp-page-handler="Reassign"><button type="submit" class="btn btn-light">@L10n.T("Draw new questions")</button></form>
+        <form method="post" asp-page-handler="ResetSchedule" onsubmit="return confirm('@L10n.T("Regenerate every time slot from the exam settings? Manual moves will be lost.")');"><button type="submit" class="btn btn-light">@L10n.T("Reset schedule")</button></form>
+    } else { <span class="status-label warning">@L10n.T("Locked: the exam has started")</span> }
+    <form method="post" asp-page-handler="Delete" onsubmit="return confirm('@L10n.T("Delete this exam and its schedule?")');"><button type="submit" class="btn btn-outline-danger">@L10n.T("Delete")</button></form>
+</div></div>
+@if (TempData["ExamMessage"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+@if (TempData["ExamWarning"] is string warning) { <div class="alert alert-warning" role="status">@warning</div> }
+@if (TempData["ExamError"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+<section class="check-summary mb-4">
+    @foreach (var item in new[] {
+        (L10n.T("Students"), exam.Candidates.Count.ToString()),
+        (L10n.T("Scheduled"), statuses.Count(s => s == CandidateStatus.Scheduled).ToString()),
+        (L10n.T("Waiting"), statuses.Count(s => s == CandidateStatus.Waiting).ToString()),
+        (L10n.T("In progress"), statuses.Count(s => s == CandidateStatus.InProgress).ToString()),
+        (L10n.T("Completed"), statuses.Count(s => s == CandidateStatus.Completed).ToString()),
+        (L10n.T("Absent"), statuses.Count(s => s == CandidateStatus.Absent).ToString()),
+        (L10n.T("Requires review"), statuses.Count(s => s == CandidateStatus.RequiresReview).ToString()),
+        (L10n.T("Cancelled"), statuses.Count(s => s == CandidateStatus.Cancelled).ToString()),
+        (L10n.T("Average score"), ViewText.Score(average)) }) {
+        <div class="check-summary-card"><span class="check-summary-label">@item.Item1</span><strong>@item.Item2</strong>@if (item.Item1 == L10n.T("Average score")) { <small>@L10n.T("out of 10, confirmed grades")</small> }</div>
+    }
+</section>
+<section class="panel overflow-hidden mb-4"><div class="table-responsive"><table class="table data-table">
+<thead><tr><th>#</th><th>@L10n.T("Slot") (@Model.TimeZone.OffsetLabel)</th><th>@L10n.T("Candidate")</th><th>@L10n.T("Status")</th><th>@L10n.T("Main questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
+@for (var i = 0; i < exam.Candidates.Count; i++) {
+    var candidate = exam.Candidates[i]; var status = candidate.StatusAt(Model.NowUtc);
+    var gap = i == 0 ? 0 : (int)(candidate.StartsAtUtc - exam.Candidates[i - 1].EndsAtUtc).TotalMinutes;
+    var isBreak = exam.BreakMinutes > 0 && gap >= exam.BufferMinutes + exam.BreakMinutes;
+    <tr><td>@candidate.Order</td><td class="small text-nowrap">
+        @if (gap > 0) { <div class="badge text-bg-light mb-1">@(isBreak ? L10n.Format("Break {0} min", exam.BreakMinutes) : L10n.Format("Gap {0} min", gap))</div> }
+        <div>@Model.TimeZone.ToLocal(candidate.StartsAtUtc).ToString("HH:mm") – @Model.TimeZone.ToLocal(candidate.EndsAtUtc).ToString("HH:mm")</div>
+        @if (!Model.Started) { <form method="post" asp-page-handler="AdjustSlot" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><input type="datetime-local" name="slotStartLocal" value="@Model.TimeZone.ToLocal(candidate.StartsAtUtc).ToString("yyyy-MM-ddTHH:mm")" class="form-control form-control-sm" style="width:11.5rem" /><button type="submit" class="btn btn-sm btn-light">@L10n.T("Move")</button></form> }
+    </td><td><strong>@(candidate.DisplayName ?? candidate.Email)</strong><div class="small text-muted">@candidate.Email</div>@if (candidate.DisplayName is null) { <span class="badge text-bg-light">@L10n.T("No account yet")</span> }</td>
+    <td><span class="status-label @ViewText.StatusClass(status)">@ViewText.Status(status)</span>@if (candidate.FinalScore is { } score) { <div class="small text-muted">@L10n.Format("Score {0}/10", score.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))</div> }
+        <form method="post" asp-page-handler="CandidateStatus" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><select name="status" class="form-select form-select-sm" style="max-width:11rem" aria-label="@L10n.T("Status")"><option value="">@L10n.T("Set status…")</option><option value="Absent">@L10n.T("Absent")</option><option value="Cancelled">@L10n.T("Cancelled")</option><option value="RequiresReview">@L10n.T("Requires review")</option><option value="NotScheduled">@L10n.T("Not scheduled")</option></select><button type="submit" class="btn btn-sm btn-light">@L10n.T("Apply")</button></form>
+        @if (candidate.StatusOverride is not null) { <form method="post" asp-page-handler="CandidateStatus" class="mt-1"><input type="hidden" name="order" value="@candidate.Order" /><input type="hidden" name="status" value="" /><button type="submit" class="btn btn-sm btn-link p-0">@L10n.T("Use the schedule again")</button></form> }
+    </td><td><ol class="mb-0 ps-3">@foreach (var question in candidate.Questions) { <li class="mb-1"><span class="badge text-bg-light me-1">@question.BloomLevelName</span>@question.Content</li> }</ol></td>
+    <td>@if (candidate.Interview is null) { <span class="small text-muted">@L10n.T("Not started")</span> } else { var record = candidate.Interview;
+        <span class="status-label @(record.Status == InterviewStatus.Completed ? "ready" : "warning")">@(record.Status == InterviewStatus.Completed ? L10n.T("Completed") : L10n.T("In progress"))</span>
+        <details class="mt-2"><summary class="small">@L10n.Format("Transcript ({0} turns)", record.Turns.Count)</summary><ol class="small mt-2 ps-3 mb-0">@foreach (var turn in record.Turns) {
+            <li class="mb-2"><strong>@(turn.Kind == TurnKind.FollowUp ? L10n.T("Follow-up") : L10n.Format("Main question {0}", turn.MainIndex)):</strong> @turn.QuestionText
+                <div class="mt-1">@(string.IsNullOrEmpty(turn.Answer) ? (turn.AnsweredAtUtc is null ? L10n.T("Waiting for the answer") : L10n.T("No answer")) : turn.Answer)</div>
+                <div class="text-muted">@if (turn.InputMode == AnswerInputMode.Typed) { <span class="badge text-bg-light">@L10n.T("Typed")</span> }@if (turn.TimedOut) { <span class="badge text-bg-warning">@L10n.T("Over time")</span> }@if (turn.Decision is { } decision) { <span class="badge text-bg-light">@L10n.T("Examiner"): @ViewText.Reason(decision)</span> }</div>
+            </li>
+        }</ol></details>
+    }</td></tr>
+}
+</tbody></table></div></section>
+<a asp-page="Index" class="btn btn-light">@L10n.T("Back to exams")</a>

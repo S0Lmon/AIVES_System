@@ -1,0 +1,29 @@
+@page
+@page "/Account/ResendCode/{handler=ResendCode}"
+@model AIVES.WebRazor.Pages.Account.VerifyEmailModel
+@{
+    ViewData["Title"] = L10n.T("Email verification");
+}
+<section class="verify-shell panel">
+    <div class="verify-code-mark" aria-hidden="true">06</div>
+    <span class="page-kicker">Email verification</span>
+    <h1>@L10n.T("Enter your verification code")</h1>
+    <p>@L10n.Format("A 6 digit code was sent to {0}. The code expires after 10 minutes.", Model.Email)</p>
+    @if (TempData["AuthMessage"] is string message)
+    {
+        <div class="alert alert-success">@message</div>
+    }
+    <form method="post">
+        <input asp-for="Email" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <label asp-for="Code" class="form-label">@L10n.T("Verification code")</label>
+        <input asp-for="Code" class="form-control otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" autofocus />
+        <span asp-validation-for="Code" class="text-danger small"></span>
+        <button type="submit" class="btn btn-primary auth-submit">@L10n.T("Verify account")</button>
+    </form>
+    <form method="post" action="/Account/ResendCode" class="resend-form">
+        <input name="email" value="@Model.Email" type="hidden" />
+        <button type="submit" class="btn btn-light">@L10n.T("Resend code")</button>
+    </form>
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

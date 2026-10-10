@@ -12,8 +12,8 @@ public sealed class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Ap
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("AIVES.WebMVC/appsettings.json", optional: true)
-            .AddJsonFile($"AIVES.WebMVC/appsettings.{environment}.json", optional: true)
+            .AddJsonFile("AIVES.WebRazor/appsettings.json", optional: true)
+            .AddJsonFile($"AIVES.WebRazor/appsettings.{environment}.json", optional: true)
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile($"appsettings.{environment}.json", optional: true)
             .AddUserSecrets("84b14742-bfe7-495e-b430-ecc0bb734425")

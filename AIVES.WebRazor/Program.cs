@@ -8,10 +8,12 @@ builder.Services.AddAives(builder.Configuration);
 builder.Services.AddRazorPresentation(builder.Configuration);
 var app = builder.Build();
 
-// Both front ends share one database. Whichever starts first applies pending migrations;
-// set Database:MigrateOnStartup=false when the MVC site already owns that step.
-if (builder.Configuration.GetValue("Database:MigrateOnStartup", true))
+// Deployments that run several web instances apply pending migrations once up front.
+var migrateOnly = args.Contains("--migrate-only");
+if (migrateOnly || builder.Configuration.GetValue("Database:MigrateOnStartup", true))
     await app.Services.InitializeAivesAsync(builder.Configuration, app.Environment.IsDevelopment());
+if (migrateOnly)
+    return;
 
 if (!app.Environment.IsDevelopment())
 {

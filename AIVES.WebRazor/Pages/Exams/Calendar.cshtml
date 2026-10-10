@@ -1,0 +1,41 @@
+@page
+@model AIVES.WebRazor.Pages.Exams.CalendarModel
+@inject DisplayTimeZone TimeZone
+@using System.Globalization
+@{
+    ViewData["Title"] = L10n.T("Exam calendar");
+    var first = new DateTime(Model.TargetMonth.Year, Model.TargetMonth.Month, 1);
+    var cells = new List<int>();
+    for (var i = 0; i < (int)first.DayOfWeek; i++) cells.Add(0);
+    for (var d = 1; d <= DateTime.DaysInMonth(first.Year, first.Month); d++) cells.Add(d);
+    while (cells.Count % 7 != 0) cells.Add(0);
+    var names = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames;
+}
+<div class="page-heading"><div><span class="page-kicker">Exams / Calendar</span><h1>@L10n.T("Exam calendar")</h1><p>@L10n.T("Select a date to create an exam, or pick an existing exam to open it.")</p></div><a asp-page="Create" class="btn btn-primary">@L10n.T("New exam")</a></div>
+<div class="panel mb-4">
+    <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+        <a asp-page="Calendar" asp-route-year="@first.AddMonths(-1).Year" asp-route-month="@first.AddMonths(-1).Month" class="btn btn-light btn-sm">&laquo; @L10n.T("Previous month")</a>
+        <strong>@first.ToString("MMMM yyyy")</strong>
+        <a asp-page="Calendar" asp-route-year="@first.AddMonths(1).Year" asp-route-month="@first.AddMonths(1).Month" class="btn btn-light btn-sm">@L10n.T("Next month") &raquo;</a>
+    </div>
+    <div class="table-responsive"><table class="table table-bordered mb-0 align-middle calendar-table"><thead><tr>@foreach (var day in names) { <th class="text-center">@day</th> }</tr></thead><tbody>
+    @for (var row = 0; row < cells.Count; row += 7) {
+        <tr>@for (var col = 0; col < 7; col++) {
+            var day = cells[row + col]; var date = day == 0 ? DateTime.MinValue : new DateTime(first.Year, first.Month, day);
+            var events = day == 0 ? [] : Model.MonthExams.Where(e => TimeZone.ToLocal(e.StartsAtUtc).Date == date).ToList();
+            <td class="calendar-cell @(day == 0 ? "text-muted" : "") @(date == Model.TodayLocal ? "calendar-today" : "")" style="min-width:110px;height:90px;vertical-align:top;position:relative">
+            @if (day != 0) { <div class="d-flex flex-column gap-1"><div class="d-flex justify-content-between"><strong class="small">@day</strong>@if (events.Count > 0) { <span class="badge text-bg-primary rounded-pill">@events.Count</span> }</div>
+                @foreach (var exam in events.Take(3)) { <a asp-page="Details" asp-route-id="@exam.Id" class="calendar-event text-decoration-none"><span class="badge text-bg-light w-100 text-start">@exam.Title</span></a> }
+                @if (events.Count > 3) { <span class="small text-muted">+@(events.Count - 3) more</span> }
+                <a asp-page="Create" asp-route-startsAt="@date.ToString("yyyy-MM-ddTHH:mm")" class="calendar-add text-decoration-none" aria-label="@L10n.Format("Create exam on {0}", date.ToString("yyyy-MM-dd"))">+</a></div> }
+            </td>
+        }</tr>
+    }
+    </tbody></table></div>
+</div>
+@if (Model.Upcoming.Count > 0) {
+<div class="panel mb-4"><div class="panel-header"><div><span class="page-kicker">@L10n.T("Reminders")</span><h2>@L10n.T("Upcoming in the next 7 days")</h2></div></div><div class="panel-body reminder-panel"><div class="list-group list-group-flush">
+@foreach (var exam in Model.Upcoming) { var local = TimeZone.ToLocal(exam.StartsAtUtc); var diff = local - TimeZone.ToLocal(DateTime.UtcNow); var label = diff.TotalMinutes < 60 ? L10n.Format("starts in {0} min", (int)diff.TotalMinutes) : diff.TotalHours < 24 ? L10n.Format("starts in {0} h", (int)diff.TotalHours) : L10n.Format("starts in {0} d", (int)diff.TotalDays);
+<a asp-page="Details" asp-route-id="@exam.Id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><div><strong>@exam.Title</strong><div class="small text-muted">@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</div></div><div class="text-end"><div class="small">@local.ToString("yyyy-MM-dd HH:mm")</div><span class="badge text-bg-warning">@label</span></div></a> }
+</div></div></div>
+}

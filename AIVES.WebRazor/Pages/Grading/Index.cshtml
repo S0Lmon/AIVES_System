@@ -1,0 +1,14 @@
+@page
+@model AIVES.WebRazor.Pages.Grading.GradingIndexModel
+@inject DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("Grading");
+    var now = DateTime.UtcNow;
+}
+<div class="page-heading"><div><span class="page-kicker">Grading / Exams</span><h1>@L10n.T("Grade the vivas")</h1><p>@L10n.T("The AI proposes a score and feedback for every finished viva; you review the transcript and decide the final grade.")</p></div></div>
+<section class="panel overflow-hidden mb-4">
+    @if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No exams yet. Create one to schedule candidates and assign questions.")</p> }
+    else { <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Time") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+    @foreach (var exam in Model.Exams) { <tr class="@(now < exam.StartsAtUtc ? "text-muted" : "")"><td><strong>@exam.Title</strong></td><td>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</td><td class="small text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td class="text-end"><a class="btn btn-sm btn-primary" asp-page="Exam" asp-route-id="@exam.Id">@L10n.T("Grade")</a></td></tr> }
+    </tbody></table></div> }
+</section>

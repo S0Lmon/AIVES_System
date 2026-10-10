@@ -3,10 +3,10 @@
     var page = ViewContext.RouteData.Values["page"] as string ?? string.Empty;
     string Active(string folder) => page.StartsWith(folder, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
     var signedIn = User.Identity?.IsAuthenticated == true;
-    var isStaff = AivesHub.IsStaff(User);
-    var name = AivesHub.DisplayName(User);
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    var isStaff = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Lecturer);
 }
-<html lang="vi">
+<html lang="@L10n.Current.ToCultureCode()">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,42 +16,94 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/hallmark.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/slide-panels.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/catalog.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/catalog-picker.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/banks.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/realtime.css" asp-append-version="true" />
 </head>
 <body data-user-id="@AivesHub.UserId(User)" data-hub-url="@(signedIn ? AivesHub.Path : "")">
     <div class="app-shell">
         <aside class="sidebar" id="appSidebar">
             <a class="brand" asp-page="/Index">
-                <span class="brand-mark">A</span>
-                <span><strong>AIVES</strong><small>Razor Pages · SignalR</small></span>
+                <div class="brand-mark">A</div>
+                <div><strong>AIVES</strong><small>AI-powered Viva Exam</small></div>
             </a>
-            <nav class="side-nav" aria-label="Điều hướng chính">
-                <span class="nav-label">Không gian làm việc</span>
-                <a class="side-link @(page == "/Index" ? "active" : "")" asp-page="/Index"><span class="nav-icon">OV</span> Tổng quan</a>
+            <nav class="side-nav">
+                <div class="nav-label">Menu</div>
+                <a class="side-link @(page == "/Index" ? "active" : "")" asp-page="/Index">
+                    <span>@L10n.T("Overview")</span>
+                </a>
                 @if (isStaff)
                 {
-                    <a class="side-link @Active("/Questions")" asp-page="/Questions/Index"><span class="nav-icon">QB</span> Ngân hàng câu hỏi</a>
-                    <a class="side-link @Active("/Subjects")" asp-page="/Subjects/Index"><span class="nav-icon">SJ</span> Môn học &amp; chủ đề</a>
-                    <a class="side-link @Active("/Rubrics")" asp-page="/Rubrics/Index"><span class="nav-icon">RB</span> Ngân hàng rubric</a>
-                    <a class="side-link @Active("/Interviews/Monitor")" asp-page="/Interviews/Monitor"><span class="nav-icon">LV</span> Giám sát vấn đáp</a>
+                    <div class="nav-label nav-label-spaced">@L10n.T("Staff")</div>
+                    <a class="side-link @Active("/Questions")" asp-page="/Questions/Index" asp-route-tab="bank">
+                        <span>@L10n.T("Question bank")</span>
+                    </a>
+                    <a class="side-link @Active("/Rubrics")" asp-page="/Rubrics/Index" asp-route-tab="bank">
+                        <span>@L10n.T("Rubric bank")</span>
+                    </a>
+                    <a class="side-link @Active("/Catalog")" asp-page="/Catalog/Index">
+                        <span>@L10n.T("Catalog")</span>
+                    </a>
+                    <a class="side-link @Active("/Exams")" asp-page="/Exams/Index">
+                        <span>@L10n.T("Exams")</span>
+                    </a>
+                    <a class="side-link @(page.StartsWith("/Exams/Calendar", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-page="/Exams/Calendar">
+                        <span>@L10n.T("Calendar")</span>
+                    </a>
+                    <a class="side-link @Active("/Grading")" asp-page="/Grading/Index">
+                        <span>@L10n.T("Grading")</span>
+                    </a>
+                    <a class="side-link @Active("/Reports")" asp-page="/Reports/Index">
+                        <span>@L10n.T("Reports")</span>
+                    </a>
+                    <a class="side-link @Active("/Glossary")" asp-page="/Glossary/Index">
+                        <span>@L10n.T("Subject terms")</span>
+                    </a>
                 }
-                @if (signedIn)
+                <a class="side-link @Active("/MyExams")" asp-page="/MyExams/Index">
+                    <span>@L10n.T("My exams")</span>
+                </a>
+                @if (isAdmin)
                 {
-                    <a class="side-link @(page is "/Interviews/Index" or "/Interviews/Room" ? "active" : "")" asp-page="/Interviews/Index"><span class="nav-icon">AI</span> Phòng thi của tôi</a>
-                    <span class="nav-label nav-label-spaced">Tài khoản</span>
-                    <form method="post" asp-page="/Account/Logout" class="m-0">
-                        <button type="submit" class="side-link w-100 border-0 bg-transparent text-start"><span class="nav-icon">↩</span> Đăng xuất</button>
-                    </form>
+                    <div class="nav-label nav-label-spaced">@L10n.T("Admin")</div>
+                    <a class="side-link @Active("/Admin/Users")" asp-page="/Admin/Users"><span>@L10n.T("Users")</span></a>
+                    <a class="side-link @Active("/Admin/Subjects")" asp-page="/Admin/Subjects"><span>@L10n.T("Lecturers per subject")</span></a>
+                    <a class="side-link @Active("/Admin/Settings")" asp-page="/Admin/Settings"><span>@L10n.T("Speech settings")</span></a>
+                    <a class="side-link @Active("/Admin/Audit")" asp-page="/Admin/Audit"><span>@L10n.T("Audit log")</span></a>
                 }
+                <div class="nav-label nav-label-spaced">@L10n.T("Legal")</div>
+                <a class="side-link" asp-page="/Privacy"><span>@L10n.T("Data policy")</span></a>
             </nav>
+            <div class="sidebar-note">
+                <div class="note-dot"></div>
+                <div><strong>@L10n.T("System ready")</strong><small>@L10n.T("All services online")</small></div>
+            </div>
         </aside>
         <div class="app-main">
             <header class="topbar">
-                <button class="menu-toggle" type="button" id="menuToggle" aria-label="Mở menu">☰</button>
-                <div class="topbar-copy"><span class="eyebrow">AI-powered Viva Exam System</span><strong>@ViewData["Title"]</strong></div>
+                <div class="topbar-copy">
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+                    <strong>@ViewData["Title"]</strong>
+                </div>
                 <div class="topbar-actions">
-                    @if (signedIn)
+                    <div class="database-pill"><span></span><span>@L10n.T("System online")</span></div>
+                    <div class="d-flex align-items-center gap-2">
+                        @await Html.PartialAsync("_LanguageSwitcher")
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            var displayName = User.Identity.Name ?? "GV";
+                            <a class="avatar" asp-page="/Profile/Index" title="@L10n.T("Your profile")">@displayName[..Math.Min(2, displayName.Length)].ToUpperInvariant()</a>
+                        }
+                        else
+                        {
+                            <a asp-page="/Account/Login" class="btn btn-outline-primary btn-sm">@L10n.T("Sign in")</a>
+                        }
+                    </div>
+                    @if (User.Identity?.IsAuthenticated == true)
                     {
                         <span class="live-status" data-live-status="connecting" title="Trạng thái kết nối real-time"><span class="live-dot"></span><span data-live-label>Đang kết nối…</span></span>
                         <div class="dropdown">
@@ -62,11 +114,6 @@
                                 <li class="dropdown-item-text text-muted small">Chưa có dữ liệu</li>
                             </ul>
                         </div>
-                        <span class="avatar" title="@name">@name[..Math.Min(2, name.Length)].ToUpperInvariant()</span>
-                    }
-                    else
-                    {
-                        <a asp-page="/Account/Login" class="btn btn-light btn-sm">Đăng nhập</a>
                     }
                 </div>
             </header>
@@ -81,7 +128,6 @@
                 }
                 @RenderBody()
             </main>
-            <footer class="app-footer">AIVES · Razor Pages + SignalR · 3 lớp (Presentation → BLL → DAL) · 2026</footer>
         </div>
     </div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>

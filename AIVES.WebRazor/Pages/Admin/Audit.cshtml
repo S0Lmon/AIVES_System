@@ -1,0 +1,49 @@
+@page
+@model AIVES.WebRazor.Pages.Admin.AuditModel
+@inject AIVES.WebRazor.DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("Audit log");
+}
+<div class="page-heading">
+    <div><span class="page-kicker">Admin / Audit</span><h1>@L10n.T("Audit log")</h1><p>@L10n.T("Every exam change, AI proposal, score change, confirmation, recording playback and account change, newest first. Entries cannot be edited.")</p></div>
+</div>
+<form method="get" class="d-flex flex-wrap gap-2 mb-3">
+    <input name="actor" value="@Model.Actor" class="form-control" style="max-width:260px" placeholder="@L10n.T("Filter by email")" />
+    <select name="action" class="form-select" style="max-width:240px">
+        <option value="">@L10n.T("All actions")</option>
+        @foreach (var prefix in new[] { "exam.", "interview.", "grade.", "recording.", "report.", "user.", "subject.", "settings." })
+        {
+            <option value="@prefix" selected="@(Model.Action == prefix)">@prefix</option>
+        }
+    </select>
+    <button type="submit" class="btn btn-light">@L10n.T("Filter")</button>
+</form>
+<section class="panel overflow-hidden mb-4">
+    @if (Model.Entries.Count == 0)
+    {
+        <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead><tr><th scope="col">@L10n.T("Time") (@TimeZone.OffsetLabel)</th><th scope="col">@L10n.T("Who")</th><th scope="col">@L10n.T("Action")</th><th scope="col">@L10n.T("Details")</th></tr></thead>
+                <tbody>
+                    @foreach (var entry in Model.Entries)
+                    {
+                        <tr>
+                            <td class="small text-nowrap">@TimeZone.ToLocal(entry.AtUtc).ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td class="small">@(entry.ActorEmail ?? "—")</td>
+                            <td class="small">
+                                @L10n.T(entry.Action)
+                                @if (entry.CandidateId is { } candidateId) { <div>@L10n.Format("Candidate #{0}", candidateId)</div> }
+                                else if (entry.ExamId is { } examId) { <div>@L10n.Format("Exam #{0}", examId)</div> }
+                            </td>
+                            <td class="small">@entry.Details</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

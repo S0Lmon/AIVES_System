@@ -1,38 +1,69 @@
 @page
 @model AIVES.WebRazor.Pages.Rubrics.IndexModel
 @{
-    ViewData["Title"] = "Ngân hàng rubric";
+    ViewData["Title"] = "Rubric bank";
+    string[] tabs = ["bank", "create", "ai"];
+    string Label(string tab) => tab switch { "bank" => "Rubric bank", "create" => "Create", _ => "AI generation" };
 }
-<div class="page-heading">
-    <div>
-        <span class="page-kicker">Chỉ xem</span>
-        <h1>Ngân hàng rubric</h1>
-        <p>Rubric dạng ma trận dùng để chấm câu hỏi. Trình biên tập ma trận vẫn nằm ở trang AIVES (MVC).</p>
+<nav class="bank-tabs" aria-label="Rubric sections">@foreach (var tab in tabs) { <a class="bank-tab @(Model.ActiveTab == tab ? "is-active" : "")" asp-page="./Index" asp-route-tab="@tab">@Label(tab)</a> }</nav>
+@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+@if (Model.ActiveTab == "bank")
+{
+    <div class="stat-strip"><div class="stat"><span class="stat-value">@Model.Rubrics.Count</span><span class="stat-label">Rubrics</span></div><div class="stat"><span class="stat-value">@Model.Rubrics.Sum(x => x.Criteria.Count)</span><span class="stat-label">Criterion rows</span></div><div class="stat"><span class="stat-value">@Model.Rubrics.Sum(x => x.Levels.Count)</span><span class="stat-label">Level columns</span></div><div class="stat"><span class="stat-value">@(Model.Rubrics.Count == 0 ? 0 : Model.Rubrics.Max(x => x.TotalPoints))</span><span class="stat-label">Highest total</span></div></div>
+    <form method="get" class="cat-toolbar-form mb-3"><input type="hidden" name="tab" value="bank" /><label class="cat-search"><span class="visually-hidden">Search</span><input type="search" name="search" value="@Model.Search" class="form-control form-control-sm" placeholder="Search rubrics or criteria" /></label><button class="btn btn-light btn-sm">Search</button><a class="btn btn-primary btn-sm" asp-page="./Index" asp-route-tab="create">New rubric</a></form>
+    <div class="panel overflow-hidden"><div class="panel-header"><h2>Stored matrices</h2><small class="text-muted">@Model.Rubrics.Count rubrics in the bank</small></div>
+    @if (Model.Rubrics.Count == 0) { <div class="p-4 text-center"><p class="fw-semibold">Nothing matched your search</p><a class="btn btn-primary" asp-page="./Index" asp-route-tab="create">Create a rubric</a></div> }
+    else { <div class="table-responsive"><table class="table data-table"><thead><tr><th>Rubric</th><th>Levels</th><th>Matrix</th><th class="text-end">Total points</th><th class="text-end">Actions</th></tr></thead><tbody>
+        @foreach (var r in Model.Rubrics) { <tr><td><strong class="d-block">@r.Name</strong><small class="text-muted">@r.Description</small></td><td>@string.Join(" · ", r.Levels.OrderBy(x => x.Order).Select(x => x.Name))</td><td>@r.Criteria.Count rows × @r.Levels.Count columns</td><td class="text-end">@r.TotalPoints</td><td class="text-end"><div class="d-inline-flex gap-1"><a class="btn btn-light btn-sm" asp-page="Details" asp-route-id="@r.Id">View</a><a class="btn btn-light btn-sm" asp-page="./Index" asp-route-tab="create" asp-route-id="@r.Id">Edit</a><form method="post" asp-page-handler="Delete" asp-route-id="@r.Id" onsubmit="return confirm('Delete this rubric and its whole matrix?')"><button class="btn btn-light btn-sm text-danger">Delete</button></form></div></td></tr> }
+    </tbody></table></div> }</div>
+}
+else if (Model.ActiveTab == "ai")
+{
+    @if (Model.Ai.HasResult) { <div class="alert alert-info">Review the AI draft in the editor below, then save it to the bank. @if (Model.Ai.Sources.Count > 0) { <span>Grounded in @Model.Ai.Sources.Count material items.</span> }</div> }
+    <form method="post" asp-page-handler="Generate" class="panel form-panel mb-3"><div class="panel-header"><h2>Describe the matrix</h2><p>AI drafts the rows and columns so you can review and correct them.</p></div><div class="panel-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Subject</label><select name="Ai.SubjectId" class="form-select" required><option value="">Choose subject</option>@foreach (var s in await GetSubjects()) { <option value="@s.Id">@s.Name</option> }</select></div>
+        <div class="col-md-6"><label class="form-label">Topic</label><input name="Ai.Topic" value="@Model.Ai.Topic" class="form-control" maxlength="200" required /></div>
+        <div class="col-md-4"><label class="form-label">Criterion rows</label><input name="Ai.CriterionCount" type="number" min="1" max="10" value="@Model.Ai.CriterionCount" class="form-control" /></div>
+        <div class="col-md-4"><label class="form-label">Level columns</label><input name="Ai.LevelCount" type="number" min="2" max="6" value="@Model.Ai.LevelCount" class="form-control" /></div>
+        <div class="col-md-4 form-check align-self-end"><input name="Ai.UseMaterials" value="true" type="checkbox" class="form-check-input" checked="@Model.Ai.UseMaterials" /><label class="form-check-label">Ground in catalog material</label></div>
+        <div class="col-12"><label class="form-label">Learning outcomes</label><textarea name="Ai.LearningOutcomes" class="form-control" rows="3">@Model.Ai.LearningOutcomes</textarea></div>
+        <div class="col-md-6"><label class="form-label">Provider</label><select name="Ai.Provider" class="form-select"><option value="">Automatic</option><option value="Gemini" disabled="@(!Model.GeminiAvailable)">Gemini</option><option value="Ollama" disabled="@(!Model.OllamaAvailable)">Ollama</option></select></div>
+        </div><button class="btn btn-primary mt-3" disabled="@(!(Model.GeminiAvailable || Model.OllamaAvailable))">@(Model.GeminiAvailable || Model.OllamaAvailable ? "Draft a matrix" : "No AI provider available")</button><small class="text-muted ms-2">Active provider: @(Model.GeminiAvailable ? "Gemini" : Model.OllamaAvailable ? "Ollama" : "Unavailable")</small></div></form>
+}
+<form method="post" asp-page-handler="Save" class="panel form-panel" data-rubric-grid>
+    <div class="panel-header"><h2>@(Model.ActiveTab == "ai" ? (Model.Ai.HasResult ? "Review generated matrix" : "Matrix editor") : "Rubric matrix editor")</h2></div><div class="panel-body">
+        <input asp-for="Matrix.Id" type="hidden" />
+        <div class="form-section"><label class="form-label">Name</label><input asp-for="Matrix.Name" class="form-control" maxlength="200" required /><label class="form-label mt-3">Description</label><textarea asp-for="Matrix.Description" class="form-control" rows="2" maxlength="1000"></textarea></div>
+        <div class="sheet-toolbar"><button type="button" class="btn btn-light btn-sm" data-add-level>+ Level</button><button type="button" class="btn btn-light btn-sm" data-add-criterion>+ Criterion</button><span class="text-muted small">2 to 6 levels; up to 10 criteria</span></div>
+        <div class="matrix-scroll"><table class="sheet"><thead><tr><th>Criterion</th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { <th data-column="@c"><input name="Matrix.Columns[@c].Name" value="@Model.Matrix.Columns[c].Name" class="sheet-cell-input" placeholder="Level name" required /><input name="Matrix.Columns[@c].Points" value="@Model.Matrix.Columns[c].Points" type="number" min="0" max="100" class="sheet-points" title="Points" /></th> }</tr></thead>
+        <tbody data-criteria>@for (var r = 0; r < Model.Matrix.Rows.Count; r++) { <tr><th><input name="Matrix.Rows[@r].Criterion" value="@Model.Matrix.Rows[r].Criterion" class="sheet-cell-input" placeholder="Criterion" required /><input name="Matrix.Rows[@r].Description" value="@Model.Matrix.Rows[r].Description" class="sheet-note" placeholder="Note" /></th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { var cell = c < Model.Matrix.Rows[r].Cells.Count ? Model.Matrix.Rows[r].Cells[c] : new AIVES.WebRazor.Pages.Rubrics.RubricCellInput(); <td><textarea name="Matrix.Rows[@r].Cells[@c].Descriptor" class="sheet-cell-input" placeholder="What this level looks like">@cell.Descriptor</textarea><input name="Matrix.Rows[@r].Cells[@c].Points" value="@cell.Points" type="number" min="0" max="100" class="sheet-points" /></td> }</tr> }</tbody></table></div>
+        <div class="d-flex gap-2 mt-3"><a class="btn btn-light" asp-page="./Index" asp-route-tab="bank">Cancel</a><button class="btn btn-primary">Save rubric</button></div>
     </div>
-</div>
-<section class="panel">
-    @if (Model.Rubrics.Count == 0)
-    {
-        <div class="empty-state"><div class="empty-icon">R</div><h3>Chưa có rubric</h3></div>
+</form>
+@functions {
+    public async Task<IReadOnlyList<AIVES.DTO.SubjectDto>> GetSubjects() {
+        var service = HttpContext.RequestServices.GetRequiredService<AIVES.BLL.Services.Catalog.ICatalogService>();
+        return await service.GetSubjectsAsync();
     }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table data-table">
-                <thead><tr><th>Rubric</th><th>Tiêu chí</th><th>Mức</th><th>Tổng điểm</th><th class="text-end"></th></tr></thead>
-                <tbody>
-                    @foreach (var rubric in Model.Rubrics)
-                    {
-                        <tr>
-                            <td><div class="question-title">@rubric.Name</div><small class="text-muted">@rubric.Description</small></td>
-                            <td>@rubric.Criteria.Count</td>
-                            <td>@rubric.Levels.Count</td>
-                            <td><span class="badge-soft">@rubric.TotalPoints điểm</span></td>
-                            <td class="text-end"><a asp-page="Details" asp-route-id="@rubric.Id" class="btn btn-sm btn-light">Xem ma trận</a></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-</section>
+}
+@section Scripts {
+<script>
+(() => {
+ const form=document.querySelector('[data-rubric-grid]'); if(!form)return;
+ const body=form.querySelector('[data-criteria]');
+ form.querySelector('[data-add-criterion]').addEventListener('click',()=>{
+  const row=body.querySelector('tr'); if(body.children.length>=10)return;
+  const n=body.children.length, clone=row.cloneNode(true);
+  clone.querySelectorAll('[name]').forEach(x=>{x.name=x.name.replace(/Matrix\.Rows\[\d+\]/g,`Matrix.Rows[${n}]`); if(x.matches('input,textarea'))x.value='';});
+  body.appendChild(clone);
+ });
+ form.querySelector('[data-add-level]').addEventListener('click',()=>{
+  const head=form.querySelector('thead tr'), count=head.children.length-1; if(count>=6)return;
+  const th=document.createElement('th'); th.innerHTML=`<input name="Matrix.Columns[${count}].Name" class="sheet-cell-input" placeholder="Level name" required><input name="Matrix.Columns[${count}].Points" type="number" min="0" max="100" value="0" class="sheet-points">`; head.appendChild(th);
+  body.querySelectorAll('tr').forEach((tr,i)=>{const td=document.createElement('td');td.innerHTML=`<textarea name="Matrix.Rows[${i}].Cells[${count}].Descriptor" class="sheet-cell-input"></textarea><input name="Matrix.Rows[${i}].Cells[${count}].Points" type="number" min="0" max="100" value="0" class="sheet-points">`;tr.appendChild(td);});
+ });
+})();
+</script>
+}

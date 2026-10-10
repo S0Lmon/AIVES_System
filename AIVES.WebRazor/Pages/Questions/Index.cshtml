@@ -1,58 +1,109 @@
 @page
 @model AIVES.WebRazor.Pages.Questions.IndexModel
+@using System.Text.Json
 @{
-    ViewData["Title"] = "Ngân hàng câu hỏi";
+    ViewData["Title"] = "Question bank";
+    string[] tabs = ["bank", "create", "ai", "bulk", "import"];
+    string Label(string tab) => tab switch { "bank" => "Question bank", "create" => "Create", "ai" => "AI generation", "bulk" => "Bulk generation", _ => "Import" };
 }
-<div class="page-heading">
-    <div>
-        <span class="page-kicker">Cập nhật real-time</span>
-        <h1>Ngân hàng câu hỏi</h1>
-        <p>Danh sách tự làm mới khi có người thêm, sửa hoặc xoá câu hỏi.</p>
-    </div>
-    <a asp-page="Create" class="btn btn-primary">+ Thêm câu hỏi</a>
-</div>
-
-<form method="get" class="panel panel-body mb-4">
-    <div class="row g-3 align-items-end">
-        <div class="col-lg-4">
-            <label asp-for="Search" class="form-label">Tìm kiếm</label>
-            <input asp-for="Search" class="form-control" placeholder="Nội dung hoặc đáp án…" />
+<nav class="bank-tabs" aria-label="Question sections">
+    @foreach (var tab in tabs) { <a class="bank-tab @(Model.ActiveTab == tab ? "is-active" : "")" asp-page="./Index" asp-route-tab="@tab">@Label(tab)</a> }
+</nav>
+@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+@if (Model.ActiveTab == "bank")
+{
+    <section class="panel panel-body mb-3">
+        <form method="get" class="row g-3 align-items-end">
+            <input type="hidden" name="tab" value="bank" />
+            <div class="col-lg-3"><label class="form-label" for="search">Search</label><input id="search" name="search" value="@Model.Search" class="form-control" placeholder="Question or expected answer" /></div>
+            <div class="col-md-2"><label class="form-label" for="bloom">Bloom level</label><select id="bloom" name="bloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">All levels</option></select></div>
+            <div class="col-md-2"><label class="form-label" for="rubric">Rubric</label><select id="rubric" name="rubricId" asp-items="Model.Rubrics" class="form-select"><option value="">All rubrics</option></select></div>
+            <div class="col-md-2"><label class="form-label" for="subject">Subject</label><select id="subject" name="subjectId" class="form-select"><option value="">All subjects</option>@foreach (var x in Model.Subjects) { <option value="@x.Id" selected="@(x.Id == Model.SubjectId)">@x.Name</option> }</select></div>
+            <div class="col-md-2"><label class="form-label" for="topic">Topic</label><select id="topic" name="topicId" class="form-select"><option value="">All topics</option>@foreach (var x in Model.Topics) { <option value="@x.Id" selected="@(x.Id == Model.TopicId)">@x.Name</option> }</select></div>
+            <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="activeOnly" value="true" id="activeOnly" checked="@Model.ActiveOnly" /><label class="form-check-label" for="activeOnly">Active</label></div>
+            <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-light" asp-page="./Index">Reset</a></div>
+        </form>
+    </section>
+    <div class="dashboard-grid mb-3"><section class="panel panel-body"><span class="page-kicker">Filtered questions</span><h2>@Model.Questions.Count</h2></section><section class="panel panel-body"><span class="page-kicker">Active</span><h2>@Model.ActiveCount</h2></section><section class="panel panel-body"><span class="page-kicker">Linked to rubric</span><h2>@Model.CoveredByRubric</h2></section><section class="panel panel-body"><span class="page-kicker">Bloom levels</span><h2>@Model.BloomSpread</h2></section></div>
+    <section class="panel" data-live-region><partial name="_QuestionRows" model="Model" /></section>
+}
+else if (Model.ActiveTab == "create")
+{
+    <form method="post" asp-page-handler="Create" class="panel form-panel">
+        <div class="panel-header"><h2>Create a question</h2></div><div class="panel-body">
+            <div class="mb-3"><label asp-for="Editor.Content" class="form-label">Question</label><textarea asp-for="Editor.Content" class="form-control" rows="5"></textarea><span asp-validation-for="Editor.Content" class="text-danger small"></span></div>
+            <div class="mb-3"><label asp-for="Editor.ExpectedAnswer" class="form-label">Expected answer / key points</label><textarea asp-for="Editor.ExpectedAnswer" class="form-control" rows="4"></textarea></div>
+            <div class="row g-3"><div class="col-md-6"><label asp-for="Editor.SubjectId" class="form-label">Subject</label><select asp-for="Editor.SubjectId" class="form-select"><option value="">No subject</option>@foreach (var x in Model.Subjects) { <option value="@x.Id">@x.Name</option> }</select></div>
+            <div class="col-md-6"><label asp-for="Editor.TopicId" class="form-label">Topic</label><select asp-for="Editor.TopicId" class="form-select"><option value="">No topic</option>@foreach (var x in Model.Topics) { <option value="@x.Id">@x.Name</option> }</select></div>
+            <div class="col-md-6"><label asp-for="Editor.BloomLevelId" class="form-label">Bloom level</label><select asp-for="Editor.BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Select level</option></select><span asp-validation-for="Editor.BloomLevelId" class="text-danger small"></span></div>
+            <div class="col-md-6"><label asp-for="Editor.RubricId" class="form-label">Rubric</label><select asp-for="Editor.RubricId" asp-items="Model.Rubrics" class="form-select"><option value="">No rubric</option></select></div>
+            <div class="col-md-6"><label asp-for="Editor.Difficulty" class="form-label">Difficulty</label><select asp-for="Editor.Difficulty" class="form-select"><option value="">Not set</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div>
+            <div class="col-md-6"><label asp-for="Editor.DisplayOrder" class="form-label">Display order</label><input asp-for="Editor.DisplayOrder" class="form-control" type="number" min="0" /></div>
+            <div class="col-12"><label asp-for="Editor.Context" class="form-label">Context / note</label><input asp-for="Editor.Context" class="form-control" /></div>
+            <div class="col-12 form-check form-switch"><input asp-for="Editor.IsActive" class="form-check-input" /><label asp-for="Editor.IsActive" class="form-check-label">Publish to question bank</label></div></div>
+            <div class="form-actions mt-4"><a asp-page="./Index" asp-route-tab="bank" class="btn btn-light">Cancel</a><button class="btn btn-primary">Save question</button></div>
         </div>
-        <div class="col-lg-3">
-            <label asp-for="SubjectId" class="form-label">Môn học</label>
-            <select asp-for="SubjectId" asp-items="Model.Subjects" class="form-select"><option value="">Tất cả</option></select>
+    </form>
+}
+else if (Model.ActiveTab == "ai" || Model.ActiveTab == "bulk")
+{
+    var isBulk = Model.ActiveTab == "bulk";
+    var rows = isBulk ? Model.Bulk.Results : Model.Ai.Results;
+    var hasResults = isBulk ? Model.Bulk.HasResult : Model.Ai.HasResult;
+    var subjectId = isBulk ? Model.Bulk.SubjectId : Model.Ai.SubjectId;
+    var topicId = isBulk ? Model.Bulk.TopicId : Model.Ai.TopicId;
+    @if (hasResults)
+    {
+        <form method="post" asp-page-handler="SaveReviewed" class="panel form-panel mb-3">
+            <input type="hidden" name="returnTab" value="@Model.ActiveTab" /><input type="hidden" name="subjectId" value="@subjectId" /><input type="hidden" name="topicId" value="@topicId" />
+            <input type="hidden" name="ReviewJson" value="@JsonSerializer.Serialize(rows)" />
+            @for (var i = 0; i < rows.Count; i++)
+            {
+                <article class="panel-body border-bottom" data-review-row>
+                    <div class="d-flex justify-content-between"><label><input type="checkbox" name="Pick" value="@i" checked /> Include this question</label><span class="badge-soft">@rows[i].BloomLevel · @rows[i].Difficulty</span></div>
+                    <div class="mt-3"><label class="form-label">Question</label><textarea name="EditedContent" class="form-control" rows="3">@rows[i].Content</textarea></div>
+                    <div class="mt-3"><label class="form-label">Expected answer</label><textarea name="EditedAnswers" class="form-control" rows="2">@rows[i].ExpectedAnswer</textarea></div>
+                    <div class="row g-2 mt-2"><div class="col-md-6"><label class="form-label">Bloom level</label><select name="EditedBloom" class="form-select"><option selected>@rows[i].BloomLevel</option>@foreach (var level in Model.BloomLevels) { if (level.Text != rows[i].BloomLevel) { <option>@level.Text</option> } }</select></div><div class="col-md-6"><label class="form-label">Difficulty</label><select name="EditedDifficulty" class="form-select"><option selected>@rows[i].Difficulty</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { if (d != rows[i].Difficulty) { <option>@d</option> } }</select></div></div>
+                </article>
+            }
+            <div class="panel-body row g-3 align-items-end"><div class="col-md-4"><label class="form-label">Scoring rubric</label><select name="rubricId" asp-items="Model.Rubrics" class="form-select"><option value="">No rubric</option></select></div><div class="col"><button class="btn btn-primary">Add selected to bank</button></div></div>
+        </form>
+    }
+    <form method="post" asp-page-handler="@(isBulk ? "GenerateBulk" : "Generate")" class="panel form-panel">
+        <div class="panel-header"><h2>@(isBulk ? "Generate a question batch" : "Generate one question")</h2></div><div class="panel-body"><div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="row g-3"><div class="col-md-6"><label class="form-label">Subject</label><select name="@(isBulk ? "Bulk.SubjectId" : "Ai.SubjectId")" class="form-select" required><option value="">Choose subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
+            <div class="col-md-6"><label class="form-label">Topic</label><select name="@(isBulk ? "Bulk.TopicId" : "Ai.TopicId")" class="form-select"><option value="">Any topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id">@t.Name</option> }</select></div>
+            @if (!isBulk) { <div class="col-md-6"><label class="form-label">Bloom level</label><select name="Ai.BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Let AI decide</option></select></div><div class="col-md-6"><label class="form-label">Difficulty</label><select name="Ai.Difficulty" class="form-select"><option value="">Let AI decide</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div> }
+            else { <div class="col-md-4"><label class="form-label">Total (1–30)</label><input name="Bulk.Total" value="@Model.Bulk.Total" type="number" min="1" max="30" class="form-control" /></div><div class="col-md-4"><label class="form-label">Difficulty from</label><select name="Bulk.DifficultyFrom" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div><div class="col-md-4"><label class="form-label">Difficulty to</label><select name="Bulk.DifficultyTo" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div> }
+            <div class="col-12"><label class="form-label">Learning outcomes</label><textarea name="@(isBulk ? "Bulk.LearningOutcomes" : "Ai.LearningOutcomes")" class="form-control" rows="3"></textarea></div>
+            <div class="col-md-6 form-check"><input type="checkbox" class="form-check-input" name="@(isBulk ? "Bulk.UseMaterials" : "Ai.UseMaterials")" value="true" checked /><label class="form-check-label">Ground in catalog material</label></div>
+            <div class="col-md-6"><label class="form-label">AI provider</label><select name="@(isBulk ? "Bulk.Provider" : "Ai.Provider")" class="form-select"><option value="">Automatic</option><option value="Gemini" disabled="@(!Model.GeminiAvailable)">Gemini</option><option value="Ollama" disabled="@(!Model.OllamaAvailable)">Ollama</option></select><small class="form-text">Available: @(Model.GeminiAvailable ? "Gemini " : "")@(Model.OllamaAvailable ? "Ollama" : "")</small></div></div>
+            <button class="btn btn-primary mt-3" disabled="@(!(Model.GeminiAvailable || Model.OllamaAvailable))">Generate</button>
         </div>
-        <div class="col-lg-2">
-            <label asp-for="BloomLevelId" class="form-label">Mức Bloom</label>
-            <select asp-for="BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Tất cả</option></select>
-        </div>
-        <div class="col-lg-1">
-            <div class="form-check mb-2">
-                <input asp-for="ActiveOnly" class="form-check-input" />
-                <label asp-for="ActiveOnly" class="form-check-label">Đang dùng</label>
-            </div>
-        </div>
-        <div class="col-lg-2 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill">Lọc</button>
-            <a asp-page="Index" class="btn btn-light">Bỏ lọc</a>
-        </div>
-    </div>
-</form>
-
-<section class="panel" data-live-region>
-    <partial name="_QuestionRows" model="Model" />
-</section>
-
+    </form>
+}
+else
+{
+    <section class="panel form-panel"><div class="panel-header"><h2>Import questions for review</h2><p>CSV, Excel, or JSON. Imported rows are reviewed before saving.</p></div><div class="panel-body">
+        @if (Model.ImportProblems.Count > 0) { <ul class="text-danger">@foreach (var p in Model.ImportProblems) { <li>@p</li> }</ul> }
+        <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="row g-3">
+            <div class="col-md-6"><label class="form-label">Question file (max 5 MB)</label><input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls,.json" required /></div>
+            <div class="col-md-3"><label class="form-label">Subject</label><select name="subjectId" class="form-select"><option value="">No subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
+            <div class="col-md-3"><label class="form-label">Topic</label><select name="topicId" class="form-select"><option value="">No topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id">@t.Name</option> }</select></div><button class="btn btn-primary">Read and review</button>
+        </form>
+    </div></section>
+}
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
-        (() => {
-            const region = document.querySelector('[data-live-region]');
-            const refresh = () => window.refreshRegion(region, 'Rows');
-            // Subject and topic renames show up in the table too.
-            document.addEventListener('aives:entity-changed', (event) => {
-                if (['question', 'subject', 'topic'].includes(event.detail.entity)) refresh();
-            });
-            document.addEventListener('aives:reconnected', refresh);
-        })();
+    (() => {
+        const region = document.querySelector('[data-live-region]');
+        if (!region) return;
+        const refresh = () => window.refreshRegion(region, 'Rows');
+        document.addEventListener('aives:entity-changed', e => { if (e.detail.entity === 'question') refresh(); });
+        document.addEventListener('aives:reconnected', refresh);
+    })();
     </script>
 }
