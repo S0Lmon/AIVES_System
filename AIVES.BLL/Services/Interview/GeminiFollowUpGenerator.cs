@@ -1,10 +1,10 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Gemini;
 using AIVES.DTO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace AIVES.BLL.Services.Interview;
 

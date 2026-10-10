@@ -570,7 +570,7 @@ internal static class AppText
         ["Running the {0} environment."] = "Đang chạy môi trường {0}.",
         ["Running Production but the connection string still points at LocalDB, which will not work when deployed."] = "Đang chạy Production nhưng chuỗi kết nối vẫn trỏ tới LocalDB, điều này sẽ không hoạt động khi triển khai.",
         ["Set ConnectionStrings:DefaultConnection to an environment variable pointing at a real SQL Server."] = "Đặt ConnectionStrings:DefaultConnection trỏ tới một SQL Server thật.",
-["Running the Production environment with an external connection string."] = "Đang chạy môi trường Production với chuỗi kết nối bên ngoài.",
+        ["Running the Production environment with an external connection string."] = "Đang chạy môi trường Production với chuỗi kết nối bên ngoài.",
 
         // Compact AI panel on the question pages
         ["AI assist"] = "Trợ giúp AI",

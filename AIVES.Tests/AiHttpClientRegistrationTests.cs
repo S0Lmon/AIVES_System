@@ -1,11 +1,11 @@
-using System.Collections.Concurrent;
-using System.Net;
 using AIVES.BLL;
 using AIVES.BLL.Services.Ai;
 using AIVES.DTO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using System.Collections.Concurrent;
+using System.Net;
 
 namespace AIVES.Tests;
 

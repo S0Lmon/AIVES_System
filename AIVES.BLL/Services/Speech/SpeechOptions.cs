@@ -53,7 +53,10 @@ public sealed class SpeechOptions
     public string WhisperModel { get; set; } = "whisper/ggml-small.bin";
 
     /// <summary>Optional faster model for the live preview while the candidate is speaking.</summary>
-    public string? WhisperPreviewModel { get; set; }
+    public string? WhisperPreviewModel
+    {
+        get; set;
+    }
 
     /// <summary>Use the GPU (Vulkan) when there is one; Whisper.net falls back to the CPU otherwise.</summary>
     public bool UseGpu { get; set; } = true;

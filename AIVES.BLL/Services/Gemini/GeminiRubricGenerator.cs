@@ -2,9 +2,9 @@ using AIVES.BLL.Services.Ai;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 
 namespace AIVES.BLL.Services.Gemini;
 
@@ -42,7 +42,10 @@ public sealed class GeminiRubricGenerator : IRubricGenerator
             type = "OBJECT",
             properties = new
             {
-                criterion = new { type = "STRING" },
+                criterion = new
+                {
+                    type = "STRING"
+                },
                 cells = new
                 {
                     type = "ARRAY",
@@ -53,9 +56,18 @@ public sealed class GeminiRubricGenerator : IRubricGenerator
                         type = "OBJECT",
                         properties = new
                         {
-                            levelName = new { type = "STRING" },
-                            descriptor = new { type = "STRING" },
-                            points = new { type = "INTEGER" }
+                            levelName = new
+                            {
+                                type = "STRING"
+                            },
+                            descriptor = new
+                            {
+                                type = "STRING"
+                            },
+                            points = new
+                            {
+                                type = "INTEGER"
+                            }
                         },
                         required = new[] { "levelName", "descriptor", "points" }
                     }
@@ -76,8 +88,14 @@ public sealed class GeminiRubricGenerator : IRubricGenerator
                     type = "OBJECT",
                     properties = new
                     {
-                        name = new { type = "STRING" },
-                        description = new { type = "STRING" },
+                        name = new
+                        {
+                            type = "STRING"
+                        },
+                        description = new
+                        {
+                            type = "STRING"
+                        },
                         levels = new
                         {
                             type = "ARRAY",
@@ -86,7 +104,17 @@ public sealed class GeminiRubricGenerator : IRubricGenerator
                             items = new
                             {
                                 type = "OBJECT",
-                                properties = new { name = new { type = "STRING" }, points = new { type = "INTEGER" } },
+                                properties = new
+                                {
+                                    name = new
+                                    {
+                                        type = "STRING"
+                                    },
+                                    points = new
+                                    {
+                                        type = "INTEGER"
+                                    }
+                                },
                                 required = new[] { "name", "points" }
                             }
                         },

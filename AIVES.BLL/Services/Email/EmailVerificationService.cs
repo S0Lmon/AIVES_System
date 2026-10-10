@@ -1,8 +1,8 @@
-using System.Security.Cryptography;
-using System.Text;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace AIVES.BLL.Services.Email;
 

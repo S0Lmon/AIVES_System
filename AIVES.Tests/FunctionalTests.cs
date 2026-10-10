@@ -1,11 +1,11 @@
-using System.Globalization;
-using System.Net;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using AIVES.DAL.Data;
 using AIVES.DTO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
+using System.Net;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace AIVES.Tests;
 
@@ -196,7 +196,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
 
         // Writes are refused too, not just hidden: a valid antiforgery token does not get past the role check.
         var subjectName = "Student subject " + Guid.NewGuid().ToString("N")[..8];
-        var write = await Post(browser, "/", "/Catalog/CreateSubject", new() { ["Name"] = subjectName, ["Description"] = string.Empty });
+        var write = await Post(browser, "/", "/Catalog/CreateSubject", new()
+        {
+            ["Name"] = subjectName,
+            ["Description"] = string.Empty
+        });
         Assert.StartsWith("/Account/AccessDenied", write.Headers.Location!.PathAndQuery);
         using (var scope = app.Services.CreateScope())
             Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Subjects.AnyAsync(subject => subject.Name == subjectName));
@@ -234,7 +238,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         var page = await Html(await admin.GetAsync("/Admin/Users"));
         Assert.Contains(studentEmail, page);
 
-        var promoted = await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = studentId, ["role"] = AppRoles.Lecturer });
+        var promoted = await Post(admin, "/Admin/Users", "/Admin/SetRole", new()
+        {
+            ["userId"] = studentId,
+            ["role"] = AppRoles.Lecturer
+        });
         Assert.Equal(HttpStatusCode.Redirect, promoted.StatusCode);
         Assert.Contains($"{studentEmail} is now Lecturer.", await Html(await admin.GetAsync("/Admin/Users")));
         using (var scope = app.Services.CreateScope())
@@ -245,7 +253,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
 
         // A fresh sign-in carries the new role (an open session picks it up at the next stamp check).
         await Post(student, "/", "/Account/Logout", new());
-        var login = await Post(student, "/Account/Login", "/Account/Login", new() { ["Email"] = studentEmail, ["Password"] = Password });
+        var login = await Post(student, "/Account/Login", "/Account/Login", new()
+        {
+            ["Email"] = studentEmail,
+            ["Password"] = Password
+        });
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await student.GetAsync("/Question")).StatusCode);
     }
@@ -261,9 +273,17 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         using (var scope = app.Services.CreateScope())
             otherId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(otherEmail))!.Id;
 
-        await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = otherId, ["role"] = AppRoles.Admin });
+        await Post(admin, "/Admin/Users", "/Admin/SetRole", new()
+        {
+            ["userId"] = otherId,
+            ["role"] = AppRoles.Admin
+        });
         Assert.Contains("That role cannot be assigned here.", await Html(await admin.GetAsync("/Admin/Users")));
-        await Post(admin, "/Admin/Users", "/Admin/SetRole", new() { ["userId"] = adminId, ["role"] = AppRoles.Student });
+        await Post(admin, "/Admin/Users", "/Admin/SetRole", new()
+        {
+            ["userId"] = adminId,
+            ["role"] = AppRoles.Student
+        });
         Assert.Contains("You cannot change your own role.", await Html(await admin.GetAsync("/Admin/Users")));
 
         using var scope2 = app.Services.CreateScope();
@@ -306,7 +326,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             Assert.True((await users.AddToRoleAsync(user, AppRoles.Admin)).Succeeded);
             id = user.Id;
         }
-        var login = await Post(browser, "/Account/Login", "/Account/Login", new() { ["Email"] = email, ["Password"] = Password });
+        var login = await Post(browser, "/Account/Login", "/Account/Login", new()
+        {
+            ["Email"] = email,
+            ["Password"] = Password
+        });
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
         return id;
     }
@@ -709,10 +733,16 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         using (var refused = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{candidateId}/Start"))
         {
             refused.Headers.Add("RequestVerificationToken", WebUtility.HtmlDecode(token));
-            refused.Content = System.Net.Http.Json.JsonContent.Create(new { recordingConsent = false });
+            refused.Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                recordingConsent = false
+            });
             Assert.Equal(HttpStatusCode.Conflict, (await student.SendAsync(refused)).StatusCode);
         }
-        var state = await InterviewCall(student, token, $"/Interview/{candidateId}/Start", new { recordingConsent = true });
+        var state = await InterviewCall(student, token, $"/Interview/{candidateId}/Start", new
+        {
+            recordingConsent = true
+        });
         Assert.Equal("InProgress", state.GetProperty("status").GetString());
         Assert.Equal("Audio", state.GetProperty("recording").GetString());
         var turn = state.GetProperty("currentTurn");
@@ -721,7 +751,14 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(90, turn.GetProperty("timeLimitSeconds").GetInt32());
 
         var firstTurnId = turn.GetProperty("turnId").GetInt32();
-        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = firstTurnId, transcript = "Please probe this answer", inputMode = 0, responseDelayMs = 1500, speakingMs = 8000 });
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new
+        {
+            turnId = firstTurnId,
+            transcript = "Please probe this answer",
+            inputMode = 0,
+            responseDelayMs = 1500,
+            speakingMs = 8000
+        });
         // The answer's audio is uploaded after it is submitted.
         using (var upload = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{candidateId}/Recording/{firstTurnId}"))
         {
@@ -737,12 +774,22 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal("FollowUp", turn.GetProperty("kind").GetString());
         Assert.Equal("Could you explain that more precisely?", turn.GetProperty("questionText").GetString());
 
-        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "A clearer answer", inputMode = 1 });
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new
+        {
+            turnId = turn.GetProperty("turnId").GetInt32(),
+            transcript = "A clearer answer",
+            inputMode = 1
+        });
         turn = state.GetProperty("currentTurn");
         Assert.Equal("Main", turn.GetProperty("kind").GetString());
         Assert.Equal(2, turn.GetProperty("mainIndex").GetInt32());
 
-        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new { turnId = turn.GetProperty("turnId").GetInt32(), transcript = "Final answer", inputMode = 0 });
+        state = await InterviewCall(student, token, $"/Interview/{candidateId}/Answer", new
+        {
+            turnId = turn.GetProperty("turnId").GetInt32(),
+            transcript = "Final answer",
+            inputMode = 0
+        });
         Assert.Equal("Completed", state.GetProperty("status").GetString());
         Assert.Contains(app.FollowUps.Requests, request => request.Language == AppLanguage.En && request.Exchanges[^1].Answer == "Please probe this answer");
 
@@ -960,7 +1007,10 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         var row = Regex.Match(bank, "(?s)<tr[^>]*>((?:(?!</tr>).)*?Oral defence matrix(?:(?!</tr>).)*?)</tr>").Groups[1].Value;
         var id = Regex.Match(row, "name=\"id\" value=\"(\\d+)\"").Groups[1].Value;
         Assert.NotEmpty(id);
-        var deleted = await Post(browser, "/Rubric?tab=bank", "/Rubric/Delete", new() { ["id"] = id });
+        var deleted = await Post(browser, "/Rubric?tab=bank", "/Rubric/Delete", new()
+        {
+            ["id"] = id
+        });
         Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
         var after = await Html(await browser.GetAsync("/Rubric?tab=bank"));
         Assert.False(after.Contains("Oral defence matrix"),
@@ -994,7 +1044,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     private static int CountOccurrences(string haystack, string needle) =>
         Regex.Matches(haystack, Regex.Escape(needle)).Count;
 
-[Fact]
+    [Fact]
     public void VietnameseTextTableBuildsWithoutDuplicateKeys()
     {
         // A repeated key throws inside the collection initializer, so the whole table
@@ -1022,45 +1072,45 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     [SqlFact]
-public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
-{
-    using var browser = app.Browser();
-    var english = await Html(await browser.GetAsync("/Account/Login?culture=en"));
-    Assert.Contains("Resume your academic workspace", english);
-    Assert.Contains("Sign in", english);
-    Assert.DoesNotContain("Tiếp tục phiên làm việc học thuật", english);
-
-    var vietnamese = await Html(await browser.GetAsync("/Account/Login?culture=vi"));
-    Assert.Contains("Tiếp tục phiên làm việc học thuật", vietnamese);
-    Assert.Contains("Đăng nhập", vietnamese);
-    Assert.DoesNotContain("Resume your academic workspace", vietnamese);
-}
-
-[SqlFact]
-public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
-{
-    using var browser = app.Browser();
-    await SignIn(browser);
-
-    var before = await Html(await browser.GetAsync("/"));
-    Assert.Contains("Question bank", before);
-    Assert.DoesNotContain("Ngân hàng câu hỏi", before);
-
-    var form = await browser.GetAsync("/");
-    var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
-    var response = await browser.PostAsync("/Home/SetLanguage", new FormUrlEncodedContent(new Dictionary<string, string>
+    public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
     {
-        ["language"] = "Vi",
-        ["returnUrl"] = "/",
-        ["__RequestVerificationToken"] = token
-    }));
+        using var browser = app.Browser();
+        var english = await Html(await browser.GetAsync("/Account/Login?culture=en"));
+        Assert.Contains("Resume your academic workspace", english);
+        Assert.Contains("Sign in", english);
+        Assert.DoesNotContain("Tiếp tục phiên làm việc học thuật", english);
 
-    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var vietnamese = await Html(await browser.GetAsync("/Account/Login?culture=vi"));
+        Assert.Contains("Tiếp tục phiên làm việc học thuật", vietnamese);
+        Assert.Contains("Đăng nhập", vietnamese);
+        Assert.DoesNotContain("Resume your academic workspace", vietnamese);
+    }
 
-    var after = await Html(await browser.GetAsync("/"));
-    Assert.Contains("Ngân hàng câu hỏi", after);
-    Assert.DoesNotContain("Question bank", after);
-}
+    [SqlFact]
+    public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        var before = await Html(await browser.GetAsync("/"));
+        Assert.Contains("Question bank", before);
+        Assert.DoesNotContain("Ngân hàng câu hỏi", before);
+
+        var form = await browser.GetAsync("/");
+        var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+        var response = await browser.PostAsync("/Home/SetLanguage", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["language"] = "Vi",
+            ["returnUrl"] = "/",
+            ["__RequestVerificationToken"] = token
+        }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+        var after = await Html(await browser.GetAsync("/"));
+        Assert.Contains("Ngân hàng câu hỏi", after);
+        Assert.DoesNotContain("Question bank", after);
+    }
 
     [SqlFact]
     public async Task InvalidAiCountDoesNotCallGenerator()
@@ -1079,29 +1129,29 @@ public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
         Assert.Equal(calls, app.Generator.Calls);
     }
 
-[SqlFact]
-public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
-{
-    using var browser = app.Browser();
-    var email = await SignIn(browser);
-
-    var profile = await Html(await browser.GetAsync("/Profile"));
-    Assert.Contains(email, profile);
-    Assert.Contains("Sign out", profile);
-
-    var form = await browser.GetAsync("/Profile");
-    var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
-    var signedOut = await browser.PostAsync("/Profile/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
+    [SqlFact]
+    public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     {
-        ["__RequestVerificationToken"] = token
-    }));
+        using var browser = app.Browser();
+        var email = await SignIn(browser);
 
-    Assert.Equal(HttpStatusCode.Redirect, signedOut.StatusCode);
-    Assert.Equal("/Account/Login", signedOut.Headers.Location!.ToString());
+        var profile = await Html(await browser.GetAsync("/Profile"));
+        Assert.Contains(email, profile);
+        Assert.Contains("Sign out", profile);
 
-    var after = await browser.GetAsync("/Profile");
-    Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
-}
+        var form = await browser.GetAsync("/Profile");
+        var token = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+        var signedOut = await browser.PostAsync("/Profile/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token
+        }));
+
+        Assert.Equal(HttpStatusCode.Redirect, signedOut.StatusCode);
+        Assert.Equal("/Account/Login", signedOut.Headers.Location!.ToString());
+
+        var after = await browser.GetAsync("/Profile");
+        Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
+    }
 
     [SqlFact]
     public async Task AnonymousUsersAreSentToLoginFromProfile()
@@ -1274,8 +1324,8 @@ public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     }
 
 
-[SqlFact]
-public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
+    [SqlFact]
+    public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
     {
         using var browser = app.Browser();
         var response = await Post(browser, "/Account/Login", "/Account/ExternalLogin", new());

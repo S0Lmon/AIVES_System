@@ -1,6 +1,6 @@
+using AIVES.DTO;
 using System.Text;
 using System.Text.Json;
-using AIVES.DTO;
 
 namespace AIVES.BLL.Services.Interview;
 
@@ -64,9 +64,19 @@ public static class FollowUpPrompt
         type = "OBJECT",
         properties = new
         {
-            needsFollowUp = new { type = "BOOLEAN" },
-            reason = new { type = "STRING", @enum = Reasons.Keys.ToArray() },
-            followUpQuestion = new { type = "STRING" }
+            needsFollowUp = new
+            {
+                type = "BOOLEAN"
+            },
+            reason = new
+            {
+                type = "STRING",
+                @enum = Reasons.Keys.ToArray()
+            },
+            followUpQuestion = new
+            {
+                type = "STRING"
+            }
         },
         required = new[] { "needsFollowUp", "reason", "followUpQuestion" }
     };

@@ -1,5 +1,5 @@
-using AIVES.DTO;
 using AIVES.DAL.Entities;
+using AIVES.DTO;
 using Microsoft.EntityFrameworkCore;
 namespace AIVES.DAL.Data.Repositories;
 

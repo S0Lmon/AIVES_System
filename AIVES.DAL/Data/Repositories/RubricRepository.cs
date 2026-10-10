@@ -53,34 +53,34 @@ public sealed class RubricRepository(ApplicationDbContext context) : IRubricRepo
             entity.Levels.Add(level);
         }
 
-foreach (var criterionDto in dto.Criteria.OrderBy(criterion => criterion.Order))
+        foreach (var criterionDto in dto.Criteria.OrderBy(criterion => criterion.Order))
+        {
+            var criterion = new RubricCriterion
             {
-                var criterion = new RubricCriterion
-                {
-                    Rubric = entity,
-                    Criterion = criterionDto.Criterion,
-                    Description = criterionDto.Description,
-                    MaxPoints = criterionDto.MaxPoints,
-                    Order = criterionDto.Order
-                };
-                entity.Criteria.Add(criterion);
+                Rubric = entity,
+                Criterion = criterionDto.Criterion,
+                Description = criterionDto.Description,
+                MaxPoints = criterionDto.MaxPoints,
+                Order = criterionDto.Order
+            };
+            entity.Criteria.Add(criterion);
 
-                foreach (var cellDto in criterionDto.Levels)
+            foreach (var cellDto in criterionDto.Levels)
+            {
+                var level = entity.Levels.FirstOrDefault(candidate => candidate.Id == cellDto.RubricLevelId)
+                    ?? entity.Levels.FirstOrDefault(candidate => string.Equals(candidate.Name, cellDto.LevelName, StringComparison.OrdinalIgnoreCase));
+                if (level is null)
+                    continue;
+                // Added to the criterion collection so the cell is tracked, and pointed at the
+                // column so the foreign key is set once EF assigns the level an identifier.
+                criterion.Levels.Add(new RubricCriterionLevel
                 {
-                    var level = entity.Levels.FirstOrDefault(candidate => candidate.Id == cellDto.RubricLevelId)
-                        ?? entity.Levels.FirstOrDefault(candidate => string.Equals(candidate.Name, cellDto.LevelName, StringComparison.OrdinalIgnoreCase));
-                    if (level is null)
-                        continue;
-                    // Added to the criterion collection so the cell is tracked, and pointed at the
-                    // column so the foreign key is set once EF assigns the level an identifier.
-                    criterion.Levels.Add(new RubricCriterionLevel
-                    {
-                        RubricLevel = level,
-                        Descriptor = cellDto.Descriptor,
-                        Points = cellDto.Points
-                    });
-                }
+                    RubricLevel = level,
+                    Descriptor = cellDto.Descriptor,
+                    Points = cellDto.Points
+                });
             }
+        }
     }
 
     public async Task AddAsync(RubricDto dto)

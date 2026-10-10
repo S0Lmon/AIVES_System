@@ -20,14 +20,23 @@ public sealed record RubricGenerationRequest(
 
 public interface IRubricGenerator
 {
-    AiProvider Provider { get; }
-    bool IsConfigured { get; }
+    AiProvider Provider
+    {
+        get;
+    }
+    bool IsConfigured
+    {
+        get;
+    }
     Task<GeneratedRubric> GenerateAsync(RubricGenerationRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IRubricGeneratorRouter
 {
-    AiProvider? ActiveProvider { get; }
+    AiProvider? ActiveProvider
+    {
+        get;
+    }
     bool IsProviderAvailable(AiProvider provider);
     AiProvider ResolveProvider(AiProvider? requested);
     Task<GeneratedRubric> GenerateAsync(RubricGenerationRequest request, AiProvider? requestedProvider = null, CancellationToken cancellationToken = default);

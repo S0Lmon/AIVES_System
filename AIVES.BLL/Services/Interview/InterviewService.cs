@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using AIVES.BLL.Services.Operations;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 namespace AIVES.BLL.Services.Interview;
 
@@ -185,7 +185,11 @@ public sealed class InterviewService(
             return state;
         var speech = await settings.GetSpeechAsync(cancellationToken);
         var phrases = TranscriptNormalizer.Phrases(await GlossaryAsync(context, cancellationToken));
-        return state with { Speech = speech, Phrases = phrases };
+        return state with
+        {
+            Speech = speech,
+            Phrases = phrases
+        };
     }
 
     private static InterviewStateDto ToState(InterviewContext context, DateTime now)

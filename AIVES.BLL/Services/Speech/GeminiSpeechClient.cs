@@ -1,21 +1,24 @@
+using AIVES.BLL.Services.Gemini;
+using AIVES.DTO;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using AIVES.BLL.Services.Gemini;
-using AIVES.DTO;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AIVES.BLL.Services.Speech;
 
 /// <summary>Writes the kept transcript of a whole answer; null means "use the local one".</summary>
 public interface IAnswerTranscriber
 {
-    bool IsEnabled { get; }
+    bool IsEnabled
+    {
+        get;
+    }
 
     Task<string?> TranscribeAnswerAsync(ReadOnlyMemory<float> samples, AppLanguage language, IReadOnlyList<string> vocabulary,
         CancellationToken cancellationToken = default);

@@ -1,7 +1,7 @@
 using AIVES.DAL.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace AIVES.DAL.Data
 {

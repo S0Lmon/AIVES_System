@@ -35,7 +35,10 @@ public sealed class GradingTests
         public List<GradingRequest> Requests { get; } = [];
         public bool IsConfigured { get; set; } = true;
         public string ModelName => "fake-model";
-        public Func<GradingRequest, GradeSuggestion>? Answer { get; set; }
+        public Func<GradingRequest, GradeSuggestion>? Answer
+        {
+            get; set;
+        }
 
         public Task<GradeSuggestion> GradeAsync(GradingRequest request, CancellationToken cancellationToken = default)
         {
@@ -82,8 +85,15 @@ public sealed class GradingTests
         };
         var exam = new Exam
         {
-            Title = "Midterm viva", SubjectName = "SE", StartsAtUtc = Now.AddHours(-1), SlotMinutes = 30, MainQuestionCount = 2,
-            MaxFollowUpQuestions = 3, Language = "vi-VN", CreatedById = Owner, Candidates = { candidate }
+            Title = "Midterm viva",
+            SubjectName = "SE",
+            StartsAtUtc = Now.AddHours(-1),
+            SlotMinutes = 30,
+            MainQuestionCount = 2,
+            MaxFollowUpQuestions = 3,
+            Language = "vi-VN",
+            CreatedById = Owner,
+            Candidates = { candidate }
         };
         db.Exams.Add(exam);
         db.SaveChanges();

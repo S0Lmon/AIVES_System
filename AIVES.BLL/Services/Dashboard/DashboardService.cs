@@ -1,6 +1,6 @@
+using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Diagnostics;
 using AIVES.BLL.Services.Exams;
-using AIVES.BLL.Services.Catalog;
 using AIVES.DTO;
 
 namespace AIVES.BLL.Services.Dashboard;

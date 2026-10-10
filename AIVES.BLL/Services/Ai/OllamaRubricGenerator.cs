@@ -80,7 +80,11 @@ public sealed class OllamaRubricGenerator : IRubricGenerator
             prompt,
             format = "json",
             stream = false,
-            options = new { temperature = 0.3, num_ctx = 4096 }
+            options = new
+            {
+                temperature = 0.3,
+                num_ctx = 4096
+            }
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/api/generate");

@@ -127,7 +127,10 @@ public sealed class ExamServiceTests
         var (service, _, _, subjectId, _, _) = Build();
         var id = (await service.CreateAsync(Input(subjectId), Lecturer)).ExamId;
 
-        await service.UpdateAsync(id, Input(subjectId, main: 2, emails: ["z@fpt.edu.vn", "a@fpt.edu.vn"]) with { Title = "Final viva" }, Admin);
+        await service.UpdateAsync(id, Input(subjectId, main: 2, emails: ["z@fpt.edu.vn", "a@fpt.edu.vn"]) with
+        {
+            Title = "Final viva"
+        }, Admin);
         var exam = (await service.GetAsync(id, Lecturer))!;
 
         Assert.Equal("Final viva", exam.Title);
@@ -169,7 +172,12 @@ public sealed class ExamServiceTests
     public async Task TheScheduleUsesBufferAndBreaksAndStoresEverySlot()
     {
         var (service, _, _, subjectId, topicId, _) = Build();
-        var input = Input(subjectId, topicId) with { BufferMinutes = 5, BreakMinutes = 15, BreakEveryCount = 2 };
+        var input = Input(subjectId, topicId) with
+        {
+            BufferMinutes = 5,
+            BreakMinutes = 15,
+            BreakEveryCount = 2
+        };
 
         var id = (await service.CreateAsync(input, Lecturer)).ExamId;
         var exam = (await service.GetAsync(id, Lecturer))!;
@@ -189,19 +197,33 @@ public sealed class ExamServiceTests
     public async Task TheScheduleMustFitTheWindowUnlessTheLecturerAllowsTheOverflow()
     {
         var (service, _, _, subjectId, topicId, _) = Build();
-        var input = Input(subjectId, topicId) with { BufferMinutes = 5, BreakMinutes = 15, BreakEveryCount = 2 };
-        var tooSmall = input with { EndsAtUtc = input.StartsAtUtc.AddMinutes(60) }; // the schedule needs 90
+        var input = Input(subjectId, topicId) with
+        {
+            BufferMinutes = 5,
+            BreakMinutes = 15,
+            BreakEveryCount = 2
+        };
+        var tooSmall = input with
+        {
+            EndsAtUtc = input.StartsAtUtc.AddMinutes(60)
+        }; // the schedule needs 90
 
         var error = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(tooSmall, Lecturer));
         Assert.Contains("does not fit the exam window", error.Message);
 
-        var allowed = await service.CreateAsync(tooSmall with { ScheduleOverflowAllowed = true }, Lecturer);
+        var allowed = await service.CreateAsync(tooSmall with
+        {
+            ScheduleOverflowAllowed = true
+        }, Lecturer);
         var exam = (await service.GetAsync(allowed.ExamId, Lecturer))!;
         Assert.Equal(input.StartsAtUtc.AddMinutes(60), exam.EndsAtUtc);          // the window the lecturer chose
         Assert.Equal(input.StartsAtUtc.AddMinutes(90), exam.ScheduleEndsAtUtc);  // where the schedule really ends
 
         var endsBeforeStart = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CreateAsync(input with { EndsAtUtc = input.StartsAtUtc.AddMinutes(-5) }, Lecturer));
+            service.CreateAsync(input with
+            {
+                EndsAtUtc = input.StartsAtUtc.AddMinutes(-5)
+            }, Lecturer));
         Assert.Contains("must end after it starts", endsBeforeStart.Message);
     }
 
@@ -211,11 +233,17 @@ public sealed class ExamServiceTests
         var (service, _, _, subjectId, topicId, _) = Build();
 
         var lengthWithoutCount = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CreateAsync(Input(subjectId, topicId) with { BreakMinutes = 15 }, Lecturer));
+            service.CreateAsync(Input(subjectId, topicId) with
+            {
+                BreakMinutes = 15
+            }, Lecturer));
         Assert.Contains("after how many candidates", lengthWithoutCount.Message);
 
         var countWithoutLength = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CreateAsync(Input(subjectId, topicId) with { BreakEveryCount = 3 }, Lecturer));
+            service.CreateAsync(Input(subjectId, topicId) with
+            {
+                BreakEveryCount = 3
+            }, Lecturer));
         Assert.Contains("break length in minutes", countWithoutLength.Message);
     }
 
@@ -249,7 +277,10 @@ public sealed class ExamServiceTests
     public async Task ResetScheduleRegeneratesEverySlotFromTheSettings()
     {
         var (service, _, _, subjectId, topicId, _) = Build();
-        var input = Input(subjectId, topicId) with { BufferMinutes = 5 };
+        var input = Input(subjectId, topicId) with
+        {
+            BufferMinutes = 5
+        };
         var id = (await service.CreateAsync(input, Lecturer)).ExamId;
         var start = input.StartsAtUtc;
 

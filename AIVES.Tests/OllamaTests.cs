@@ -1,10 +1,8 @@
-using System.Net;
-using System.Text.Json;
 using AIVES.BLL.Services.Ai;
-using AIVES.BLL.Services.Gemini;
-using AIVES.DTO;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Text.Json;
 
 namespace AIVES.Tests;
 
@@ -19,7 +17,8 @@ public sealed class OllamaTests
     {
         content = $"Question {index}",
         expectedAnswer = $"Answer {index}",
-        bloomLevel = "Understand", difficulty = "Intermediate",
+        bloomLevel = "Understand",
+        difficulty = "Intermediate",
         followUpQuestions = new[] { $"First {index}", $"Second {index}" }
     });
 
@@ -66,7 +65,10 @@ public sealed class OllamaTests
     {
         var handler = new CountingHandler(_ => Envelope(JsonSerializer.Serialize(new
         {
-            content = "Question", expectedAnswer = "Answer", bloomLevel = "Invented", followUpQuestions = new[] { "a", "b" }
+            content = "Question",
+            expectedAnswer = "Answer",
+            bloomLevel = "Invented",
+            followUpQuestions = new[] { "a", "b" }
         })));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(handler).GenerateAsync(
@@ -126,8 +128,14 @@ public sealed class OllamaTests
 
     private sealed class CountingHandler(Func<int, string> body, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {
-        public int Calls { get; private set; }
-        public string? LastPath { get; private set; }
+        public int Calls
+        {
+            get; private set;
+        }
+        public string? LastPath
+        {
+            get; private set;
+        }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

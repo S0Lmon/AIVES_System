@@ -1,11 +1,11 @@
-using System.Net;
-using System.Text.Json;
 using AIVES.BLL.Services.Ai;
-using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Email;
+using AIVES.BLL.Services.Gemini;
 using AIVES.DTO;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Text.Json;
 
 namespace AIVES.Tests;
 
@@ -13,7 +13,10 @@ public sealed class GeminiTests
 {
     private static GeneratedVivaQuestion ValidQuestion => new()
     {
-        Content = "Explain the three layers", ExpectedAnswer = "Presentation, BLL, DAL", BloomLevel = "Understand", Difficulty = "Intermediate",
+        Content = "Explain the three layers",
+        ExpectedAnswer = "Presentation, BLL, DAL",
+        BloomLevel = "Understand",
+        Difficulty = "Intermediate",
         FollowUpQuestions = ["Why separate the layers?", "What does DAL do?"]
     };
     private static string Envelope(object questions) => JsonSerializer.Serialize(new
@@ -50,7 +53,10 @@ public sealed class GeminiTests
     }
 
     [Theory]
-    [InlineData(401)] [InlineData(403)] [InlineData(429)] [InlineData(500)]
+    [InlineData(401)]
+    [InlineData(403)]
+    [InlineData(429)]
+    [InlineData(500)]
     public async Task ProviderErrorsAreReportedWithoutLeakingResponseBody(int status)
     {
         var handler = new ResponseHandler((HttpStatusCode)status, "private-provider-detail");
@@ -59,7 +65,9 @@ public sealed class GeminiTests
     }
 
     [Theory]
-    [InlineData("{}")] [InlineData("{\"candidates\":[]}")] [InlineData("not-json")]
+    [InlineData("{}")]
+    [InlineData("{\"candidates\":[]}")]
+    [InlineData("not-json")]
     public async Task MalformedProviderEnvelopeIsAControlledError(string body)
     {
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(new(HttpStatusCode.OK, body)).GenerateAsync(Request("Test", "Test", 1)));
@@ -92,14 +100,18 @@ public sealed class GeminiTests
     [Fact]
     public async Task EmptyObjectIsNotMistakenForAValidQuestion()
     {
-        var handler = new ResponseHandler(HttpStatusCode.OK, Envelope(new { }));
+        var handler = new ResponseHandler(HttpStatusCode.OK, Envelope(new
+        {
+        }));
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(handler).GenerateAsync(Request("Test", "Test", 1)));
     }
 
     [Fact]
     public async Task ProviderMustReturnAllowedBloomAndTwoFollowUps()
     {
-        var question = ValidQuestion; question.BloomLevel = "Invalid"; question.FollowUpQuestions = [];
+        var question = ValidQuestion;
+        question.BloomLevel = "Invalid";
+        question.FollowUpQuestions = [];
         await Assert.ThrowsAsync<InvalidOperationException>(() => Generator(new(HttpStatusCode.OK, Envelope(new[] { question }))).GenerateAsync(Request("Test", "Test", 1)));
     }
 
@@ -110,7 +122,8 @@ public sealed class GeminiTests
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(11)]
+    [InlineData(0)]
+    [InlineData(11)]
     public async Task InvalidCountIsRejectedBeforeHttpRequest(int count)
     {
         var handler = new ResponseHandler(HttpStatusCode.OK, "{}");
@@ -128,16 +141,32 @@ public sealed class GeminiTests
 
     private sealed class ResponseHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
-        public int Calls { get; private set; }
-        public string? Path { get; private set; }
-        public string? Key { get; private set; }
-        public string? Body { get; private set; }
+        public int Calls
+        {
+            get; private set;
+        }
+        public string? Path
+        {
+            get; private set;
+        }
+        public string? Key
+        {
+            get; private set;
+        }
+        public string? Body
+        {
+            get; private set;
+        }
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            Calls++; Path = request.RequestUri!.AbsolutePath;
+            Calls++;
+            Path = request.RequestUri!.AbsolutePath;
             Key = request.Headers.GetValues("x-goog-api-key").Single();
             Body = await request.Content!.ReadAsStringAsync(ct);
-            return new(status) { Content = new StringContent(body) };
+            return new(status)
+            {
+                Content = new StringContent(body)
+            };
         }
     }
 }

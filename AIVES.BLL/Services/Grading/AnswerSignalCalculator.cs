@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using AIVES.DTO;
+using System.Text.RegularExpressions;
 
 namespace AIVES.BLL.Services.Grading;
 
@@ -19,7 +19,10 @@ public static partial class AnswerSignalCalculator
     {
         var asked = turns.Where(turn => turn.AnsweredAtUtc is not null).ToList();
         if (asked.Count == 0)
-            return AnswerSignals.Empty with { FollowUps = turns.Count(turn => turn.Kind == TurnKind.FollowUp) };
+            return AnswerSignals.Empty with
+            {
+                FollowUps = turns.Count(turn => turn.Kind == TurnKind.FollowUp)
+            };
 
         var answered = asked.Where(turn => !string.IsNullOrWhiteSpace(turn.Answer)).ToList();
         var delays = answered.Where(turn => turn.ResponseDelayMs is > 0).Select(turn => turn.ResponseDelayMs!.Value / 1000.0).ToList();

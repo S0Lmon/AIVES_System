@@ -158,7 +158,10 @@ public sealed class AiProviderTests
 
     private sealed class StubGenerator(AiProvider provider, bool configured) : IQuestionGenerator
     {
-        public int Calls { get; private set; }
+        public int Calls
+        {
+            get; private set;
+        }
         public AiProvider Provider { get; } = provider;
         public bool IsConfigured { get; } = configured;
 

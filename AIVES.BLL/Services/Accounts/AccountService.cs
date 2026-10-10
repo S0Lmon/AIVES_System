@@ -1,7 +1,7 @@
+using AIVES.BLL.Services.Email;
 using AIVES.DAL.Data;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
-using AIVES.BLL.Services.Email;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

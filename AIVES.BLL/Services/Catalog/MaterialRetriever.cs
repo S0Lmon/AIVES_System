@@ -1,6 +1,6 @@
+using AIVES.DTO;
 using System.Text;
 using System.Text.RegularExpressions;
-using AIVES.DTO;
 
 namespace AIVES.BLL.Services.Catalog;
 
@@ -64,7 +64,10 @@ public static partial class MaterialRetriever
             if (used + cost > budget)
             {
                 if (chosen.Count == 0)
-                    chosen.Add(passage with { Text = passage.Text[..Math.Max(0, Math.Min(passage.Text.Length, budget - passage.Material.Title.Length - 10))] });
+                    chosen.Add(passage with
+                    {
+                        Text = passage.Text[..Math.Max(0, Math.Min(passage.Text.Length, budget - passage.Material.Title.Length - 10))]
+                    });
                 continue;
             }
             chosen.Add(passage);

@@ -14,7 +14,10 @@ namespace AIVES.DAL.Entities
         }
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public string? SourceFileName { get; set; }
+        public string? SourceFileName
+        {
+            get; set;
+        }
         public MaterialSourceType SourceType { get; set; } = MaterialSourceType.Manual;
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
