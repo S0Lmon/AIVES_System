@@ -1,9 +1,8 @@
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using ClosedXML.Excel;
+using System.Text;
+using System.Text.Json;
 
 namespace AIVES.BLL.Services.Import;
 
@@ -24,29 +23,67 @@ public static class QuestionImportParser
 
     private static readonly Dictionary<string, string> Columns = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["content"] = "content", ["question"] = "content", ["câu hỏi"] = "content", ["cau hoi"] = "content", ["nội dung"] = "content",
-        ["expectedanswer"] = "answer", ["expected answer"] = "answer", ["answer"] = "answer", ["đáp án"] = "answer", ["dap an"] = "answer", ["đáp án mong đợi"] = "answer",
-        ["bloom"] = "bloom", ["bloomlevel"] = "bloom", ["bloom level"] = "bloom", ["mức bloom"] = "bloom", ["muc bloom"] = "bloom", ["mức độ"] = "bloom",
-        ["difficulty"] = "difficulty", ["độ khó"] = "difficulty", ["do kho"] = "difficulty",
-        ["followup1"] = "followup1", ["follow-up 1"] = "followup1", ["follow up 1"] = "followup1", ["câu hỏi đào sâu 1"] = "followup1",
-        ["followup2"] = "followup2", ["follow-up 2"] = "followup2", ["follow up 2"] = "followup2", ["câu hỏi đào sâu 2"] = "followup2"
+        ["content"] = "content",
+        ["question"] = "content",
+        ["câu hỏi"] = "content",
+        ["cau hoi"] = "content",
+        ["nội dung"] = "content",
+        ["expectedanswer"] = "answer",
+        ["expected answer"] = "answer",
+        ["answer"] = "answer",
+        ["đáp án"] = "answer",
+        ["dap an"] = "answer",
+        ["đáp án mong đợi"] = "answer",
+        ["bloom"] = "bloom",
+        ["bloomlevel"] = "bloom",
+        ["bloom level"] = "bloom",
+        ["mức bloom"] = "bloom",
+        ["muc bloom"] = "bloom",
+        ["mức độ"] = "bloom",
+        ["difficulty"] = "difficulty",
+        ["độ khó"] = "difficulty",
+        ["do kho"] = "difficulty",
+        ["followup1"] = "followup1",
+        ["follow-up 1"] = "followup1",
+        ["follow up 1"] = "followup1",
+        ["câu hỏi đào sâu 1"] = "followup1",
+        ["followup2"] = "followup2",
+        ["follow-up 2"] = "followup2",
+        ["follow up 2"] = "followup2",
+        ["câu hỏi đào sâu 2"] = "followup2"
     };
 
     private static readonly Dictionary<string, string> BloomAliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["1"] = "Remember", ["nhớ"] = "Remember", ["ghi nhớ"] = "Remember", ["biết"] = "Remember",
-        ["2"] = "Understand", ["hiểu"] = "Understand", ["thông hiểu"] = "Understand",
-        ["3"] = "Apply", ["vận dụng"] = "Apply", ["áp dụng"] = "Apply",
-        ["4"] = "Analyze", ["phân tích"] = "Analyze", ["analyse"] = "Analyze",
-        ["5"] = "Evaluate", ["đánh giá"] = "Evaluate",
-        ["6"] = "Create", ["sáng tạo"] = "Create"
+        ["1"] = "Remember",
+        ["nhớ"] = "Remember",
+        ["ghi nhớ"] = "Remember",
+        ["biết"] = "Remember",
+        ["2"] = "Understand",
+        ["hiểu"] = "Understand",
+        ["thông hiểu"] = "Understand",
+        ["3"] = "Apply",
+        ["vận dụng"] = "Apply",
+        ["áp dụng"] = "Apply",
+        ["4"] = "Analyze",
+        ["phân tích"] = "Analyze",
+        ["analyse"] = "Analyze",
+        ["5"] = "Evaluate",
+        ["đánh giá"] = "Evaluate",
+        ["6"] = "Create",
+        ["sáng tạo"] = "Create"
     };
 
     private static readonly Dictionary<string, string> DifficultyAliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["dễ"] = "Basic", ["cơ bản"] = "Basic", ["easy"] = "Basic",
-        ["trung bình"] = "Intermediate", ["medium"] = "Intermediate",
-        ["khó"] = "Advanced", ["nâng cao"] = "Advanced", ["hard"] = "Advanced"
+        ["dễ"] = "Basic",
+        ["cơ bản"] = "Basic",
+        ["easy"] = "Basic",
+        ["trung bình"] = "Intermediate",
+        ["medium"] = "Intermediate",
+        ["khó"] = "Advanced",
+        ["nâng cao"] = "Advanced",
+        ["hard"] = "Advanced"
     };
 
     public static QuestionImportResult Parse(Stream content, string fileName)
@@ -148,21 +185,34 @@ public static class QuestionImportParser
             var c = text[i];
             if (quoted)
             {
-                if (c == '"' && i + 1 < text.Length && text[i + 1] == '"') { field.Append('"'); i++; }
-                else if (c == '"') quoted = false;
-                else field.Append(c);
+                if (c == '"' && i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    field.Append('"');
+                    i++;
+                }
+                else if (c == '"')
+                    quoted = false;
+                else
+                    field.Append(c);
             }
-            else if (c == '"') quoted = true;
-            else if (c == delimiter) { record.Add(field.ToString()); field.Clear(); }
+            else if (c == '"')
+                quoted = true;
+            else if (c == delimiter)
+            {
+                record.Add(field.ToString());
+                field.Clear();
+            }
             else if (c == '\n' || c == '\r')
             {
-                if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n') i++;
+                if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                    i++;
                 record.Add(field.ToString());
                 field.Clear();
                 yield return record;
                 record = [];
             }
-            else field.Append(c);
+            else
+                field.Append(c);
         }
         if (field.Length > 0 || record.Count > 0)
         {

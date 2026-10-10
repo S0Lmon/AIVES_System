@@ -11,7 +11,10 @@ public sealed class EditModel(IQuestionService questions, IBloomLevelService blo
     ICatalogService catalog, ILiveUpdates live, ILogger<EditModel> logger) : PageModel, IQuestionFormPage
 {
     [BindProperty(SupportsGet = true)]
-    public int Id { get; set; }
+    public int Id
+    {
+        get; set;
+    }
 
     [BindProperty]
     public QuestionInput Input { get; set; } = new();

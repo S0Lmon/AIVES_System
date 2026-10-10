@@ -1,11 +1,11 @@
+using AIVES.BLL.Services.Ai;
+using AIVES.BLL.Services.Email;
+using AIVES.BLL.Services.Gemini;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using AIVES.BLL.Services.Email;
-using AIVES.BLL.Services.Gemini;
-using AIVES.BLL.Services.Ai;
 
 namespace AIVES.BLL.Services.Diagnostics;
 

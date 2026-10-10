@@ -1,10 +1,10 @@
-using System.Net.Mail;
 using AIVES.BLL.Services.Operations;
 using AIVES.BLL.Services.Recordings;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Logging;
+using System.Net.Mail;
 
 namespace AIVES.BLL.Services.Exams;
 

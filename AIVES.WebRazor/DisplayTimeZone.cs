@@ -10,7 +10,10 @@ public sealed class DisplayTimeZone
         Zone = string.IsNullOrWhiteSpace(id) ? Load(DefaultZoneId) : Load(id.Trim());
     }
 
-    public TimeZoneInfo Zone { get; }
+    public TimeZoneInfo Zone
+    {
+        get;
+    }
 
     public string OffsetLabel
     {

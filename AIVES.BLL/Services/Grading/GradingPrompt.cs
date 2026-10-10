@@ -1,7 +1,7 @@
+using AIVES.DTO;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using AIVES.DTO;
 
 namespace AIVES.BLL.Services.Grading;
 
@@ -77,19 +77,58 @@ public static class GradingPrompt
                     type = "OBJECT",
                     properties = new
                     {
-                        criterion = new { type = "STRING" },
-                        level = new { type = "STRING" },
-                        points = new { type = "NUMBER" },
-                        rationale = new { type = "STRING" }
+                        criterion = new
+                        {
+                            type = "STRING"
+                        },
+                        level = new
+                        {
+                            type = "STRING"
+                        },
+                        points = new
+                        {
+                            type = "NUMBER"
+                        },
+                        rationale = new
+                        {
+                            type = "STRING"
+                        }
                     },
                     required = new[] { "criterion", "level", "points", "rationale" }
                 }
             },
-            score = new { type = "NUMBER" },
-            strengths = new { type = "ARRAY", items = new { type = "STRING" } },
-            weaknesses = new { type = "ARRAY", items = new { type = "STRING" } },
-            missingPoints = new { type = "ARRAY", items = new { type = "STRING" } },
-            summary = new { type = "STRING" }
+            score = new
+            {
+                type = "NUMBER"
+            },
+            strengths = new
+            {
+                type = "ARRAY",
+                items = new
+                {
+                    type = "STRING"
+                }
+            },
+            weaknesses = new
+            {
+                type = "ARRAY",
+                items = new
+                {
+                    type = "STRING"
+                }
+            },
+            missingPoints = new
+            {
+                type = "ARRAY",
+                items = new
+                {
+                    type = "STRING"
+                }
+            },
+            summary = new
+            {
+                type = "STRING"
+            }
         },
         required = new[] { "criteria", "score", "strengths", "weaknesses", "missingPoints", "summary" }
     };

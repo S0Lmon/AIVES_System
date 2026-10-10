@@ -24,6 +24,9 @@ public sealed class ResendCodeModel(IAccountService accounts, ILogger<ResendCode
             TempData["AuthMessage"] = L10n.T("Could not send the verification code. Please try again.");
         }
 
-        return RedirectToPage("/Account/VerifyEmail", new { email });
+        return RedirectToPage("/Account/VerifyEmail", new
+        {
+            email
+        });
     }
 }

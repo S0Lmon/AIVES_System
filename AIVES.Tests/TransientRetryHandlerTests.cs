@@ -1,6 +1,6 @@
+using AIVES.BLL.Services.Ai;
 using System.Net;
 using System.Net.Http.Headers;
-using AIVES.BLL.Services.Ai;
 
 namespace AIVES.Tests;
 
@@ -78,7 +78,10 @@ public sealed class TransientRetryHandlerTests
 
     private sealed class ScriptedHandler(HttpResponseMessage[] responses) : HttpMessageHandler
     {
-        public int Calls { get; private set; }
+        public int Calls
+        {
+            get; private set;
+        }
         public List<string> Bodies { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

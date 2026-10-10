@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using AIVES.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Realtime;
 

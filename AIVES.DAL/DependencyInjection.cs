@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using AIVES.DAL.Data;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DAL.Entities;
@@ -8,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography.X509Certificates;
 namespace AIVES.DAL;
 
 public static class DependencyInjection

@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Account;
 
@@ -59,6 +59,9 @@ public sealed class VerifyEmailModel(IAccountService accounts, ILogger<VerifyEma
             TempData["AuthMessage"] = L10n.T("Could not send the verification code. Please try again.");
         }
 
-        return RedirectToPage(new { email });
+        return RedirectToPage(new
+        {
+            email
+        });
     }
 }

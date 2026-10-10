@@ -14,7 +14,10 @@ namespace AIVES.WebRazor.Pages.Subjects;
 public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : PageModel
 {
     [BindProperty(SupportsGet = true)]
-    public int Id { get; set; }
+    public int Id
+    {
+        get; set;
+    }
 
     public SubjectDto Subject { get; private set; } = null!;
     public IReadOnlyList<TopicDto> Topics { get; private set; } = [];
@@ -51,7 +54,10 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
 
         await live.EntityChangedAsync(LiveEntities.Subject, LiveActions.Updated, Id, input.Name);
         TempData["Success"] = "Đã lưu môn học.";
-        return RedirectToPage(new { Id });
+        return RedirectToPage(new
+        {
+            Id
+        });
     }
 
     public async Task<IActionResult> OnPostCreateTopicAsync([Bind(Prefix = nameof(TopicForm))] CatalogEntryInput input, CancellationToken cancellationToken)
@@ -71,14 +77,20 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
         }
 
         TempData["Success"] = "Đã thêm chủ đề.";
-        return RedirectToPage(new { Id });
+        return RedirectToPage(new
+        {
+            Id
+        });
     }
 
     public async Task<IActionResult> OnPostDeleteTopicAsync(int topicId, CancellationToken cancellationToken)
     {
         var topic = (await catalog.GetTopicsAsync(Id, cancellationToken)).FirstOrDefault(item => item.Id == topicId);
         if (topic is null)
-            return RedirectToPage(new { Id });
+            return RedirectToPage(new
+            {
+                Id
+            });
 
         try
         {
@@ -87,12 +99,18 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
         catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or InvalidOperationException)
         {
             TempData["Error"] = L10n.T(ex.Message);
-            return RedirectToPage(new { Id });
+            return RedirectToPage(new
+            {
+                Id
+            });
         }
 
         await live.EntityChangedAsync(LiveEntities.Topic, LiveActions.Deleted, topicId, topic.Name);
         TempData["Success"] = $"Đã xoá chủ đề \"{topic.Name}\".";
-        return RedirectToPage(new { Id });
+        return RedirectToPage(new
+        {
+            Id
+        });
     }
 
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)

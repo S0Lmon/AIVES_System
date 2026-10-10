@@ -4,5 +4,7 @@ namespace AIVES.WebRazor.Pages.Exams;
 
 public sealed class AiExamRoomModel : PageModel
 {
-    public void OnGet() { }
+    public void OnGet()
+    {
+    }
 }

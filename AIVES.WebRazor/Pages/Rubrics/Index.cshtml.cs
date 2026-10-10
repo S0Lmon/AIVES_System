@@ -11,8 +11,16 @@ namespace AIVES.WebRazor.Pages.Rubrics;
 public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
     IRubricGeneratorRouter generator, ILogger<IndexModel> logger) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public string? Tab { get; set; }
-    [BindProperty(SupportsGet = true)] public string? Search { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public string? Tab
+    {
+        get; set;
+    }
+    [BindProperty(SupportsGet = true)]
+    public string? Search
+    {
+        get; set;
+    }
     [BindProperty] public RubricMatrixInput Matrix { get; set; } = RubricMatrixInput.Default();
     [BindProperty] public RubricAiInput Ai { get; set; } = new();
     public IReadOnlyList<RubricDto> Rubrics { get; private set; } = [];
@@ -27,7 +35,11 @@ public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
         if (id is > 0)
         {
             var item = await rubrics.GetRubricByIdAsync(id.Value);
-            if (item is not null) { Matrix = RubricMatrixInput.From(item); Tab = "create"; }
+            if (item is not null)
+            {
+                Matrix = RubricMatrixInput.From(item);
+                Tab = "create";
+            }
         }
         await LoadAsync();
     }
@@ -39,30 +51,50 @@ public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
             var dto = Matrix.ToDto();
             var saved = dto.Id > 0 ? await rubrics.UpdateRubricAsync(dto) : await rubrics.CreateRubricAsync(dto);
             TempData["Success"] = L10n.Format("Rubric '{0}' saved successfully", saved.Name);
-            return RedirectToPage(new { tab = "bank" });
+            return RedirectToPage(new
+            {
+                tab = "bank"
+            });
         }
         catch (ArgumentException ex)
         {
-            ModelState.AddModelError(string.Empty, L10n.T(ex.Message)); Tab = "create"; await LoadAsync(); return Page();
+            ModelState.AddModelError(string.Empty, L10n.T(ex.Message));
+            Tab = "create";
+            await LoadAsync();
+            return Page();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Error saving rubric");
-            ModelState.AddModelError(string.Empty, L10n.T("An error occurred while saving the rubric")); Tab = "create"; await LoadAsync(); return Page();
+            ModelState.AddModelError(string.Empty, L10n.T("An error occurred while saving the rubric"));
+            Tab = "create";
+            await LoadAsync();
+            return Page();
         }
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        try { await rubrics.DeleteRubricAsync(id); TempData["Success"] = L10n.T("Rubric deleted successfully"); }
+        try
+        {
+            await rubrics.DeleteRubricAsync(id);
+            TempData["Success"] = L10n.T("Rubric deleted successfully");
+        }
         catch (Exception ex) { logger.LogError(ex, "Error deleting rubric {Id}", id); TempData["Error"] = L10n.T("An error occurred while deleting the rubric"); }
-        return RedirectToPage(new { tab = "bank" });
+        return RedirectToPage(new
+        {
+            tab = "bank"
+        });
     }
 
     public async Task<IActionResult> OnPostGenerateAsync(CancellationToken ct)
     {
         Tab = "ai";
-        if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
+        if (!ModelState.IsValid)
+        {
+            await LoadAsync();
+            return Page();
+        }
         try
         {
             var subjects = await catalog.GetSubjectsAsync(ct);
@@ -78,12 +110,17 @@ public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
                 var generated = await generator.GenerateAsync(new RubricGenerationRequest(subjectName, topicName,
                     Ai.CriterionCount, Ai.LevelCount, Ai.LearningOutcomes, rag.Text, rag.Sources), Ai.Provider, ct);
                 Matrix = RubricMatrixInput.From(generated);
-                Ai.HasResult = true; Ai.Sources = rag.Sources.Select(x => x.Title).ToList();
+                Ai.HasResult = true;
+                Ai.Sources = rag.Sources.Select(x => x.Title).ToList();
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
-        { logger.LogError(ex, "Rubric generation failed"); ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while generating a rubric. Please try again.")); }
-        await LoadAsync(); return Page();
+        {
+            logger.LogError(ex, "Rubric generation failed");
+            ModelState.AddModelError(string.Empty, L10n.T("Something went wrong while generating a rubric. Please try again."));
+        }
+        await LoadAsync();
+        return Page();
     }
 
     private async Task LoadAsync()
@@ -102,20 +139,38 @@ public sealed class RubricAiInput
 {
     public string Subject { get; set; } = "";
     public string Topic { get; set; } = "";
-    public int SubjectId { get; set; }
-    public int? TopicId { get; set; }
-    public string? LearningOutcomes { get; set; }
+    public int SubjectId
+    {
+        get; set;
+    }
+    public int? TopicId
+    {
+        get; set;
+    }
+    public string? LearningOutcomes
+    {
+        get; set;
+    }
     public int CriterionCount { get; set; } = 4;
     public int LevelCount { get; set; } = 4;
     public bool UseMaterials { get; set; } = true;
-    public AiProvider? Provider { get; set; }
-    public bool HasResult { get; set; }
+    public AiProvider? Provider
+    {
+        get; set;
+    }
+    public bool HasResult
+    {
+        get; set;
+    }
     public List<string> Sources { get; set; } = [];
 }
 
 public sealed class RubricMatrixInput
 {
-    public int Id { get; set; }
+    public int Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public List<RubricColumnInput> Columns { get; set; } = [];
@@ -127,11 +182,14 @@ public sealed class RubricMatrixInput
     };
     public static RubricMatrixInput From(RubricDto d) => new()
     {
-        Id = d.Id, Name = d.Name, Description = d.Description,
+        Id = d.Id,
+        Name = d.Name,
+        Description = d.Description,
         Columns = d.Levels.OrderBy(x => x.Order).Select(x => new RubricColumnInput { Name = x.Name, Points = x.Points }).ToList(),
         Rows = d.Criteria.OrderBy(x => x.Order).Select(c => new RubricRowInput
         {
-            Criterion = c.Criterion, Description = c.Description,
+            Criterion = c.Criterion,
+            Description = c.Description,
             Cells = d.Levels.OrderBy(x => x.Order).Select(level =>
             {
                 var cell = c.Levels.FirstOrDefault(x => x.RubricLevelId == level.Id);
@@ -141,7 +199,8 @@ public sealed class RubricMatrixInput
     };
     public static RubricMatrixInput From(GeneratedRubric d) => new()
     {
-        Name = d.Name, Description = d.Description,
+        Name = d.Name,
+        Description = d.Description,
         Columns = d.Levels.Select(x => new RubricColumnInput { Name = x.Name, Points = x.Points }).ToList(),
         Rows = d.Criteria.Select(c => new RubricRowInput
         {
@@ -156,11 +215,18 @@ public sealed class RubricMatrixInput
     public RubricDto ToDto()
     {
         var columns = Columns.Where(x => !string.IsNullOrWhiteSpace(x.Name)).Take(6).ToList();
-        var dto = new RubricDto { Id = Id, Name = Name.Trim(), Description = Description.Trim(),
-            Levels = columns.Select((x, i) => new RubricLevelDto { Name = x.Name.Trim(), Points = x.Points, Order = i }).ToList() };
+        var dto = new RubricDto
+        {
+            Id = Id,
+            Name = Name.Trim(),
+            Description = Description.Trim(),
+            Levels = columns.Select((x, i) => new RubricLevelDto { Name = x.Name.Trim(), Points = x.Points, Order = i }).ToList()
+        };
         for (var r = 0; r < Rows.Count && r < 10; r++)
         {
-            var row = Rows[r]; if (string.IsNullOrWhiteSpace(row.Criterion)) continue;
+            var row = Rows[r];
+            if (string.IsNullOrWhiteSpace(row.Criterion))
+                continue;
             var criterion = new RubricCriterionDto { Criterion = row.Criterion.Trim(), Description = row.Description?.Trim() ?? "", Order = dto.Criteria.Count };
             for (var c = 0; c < columns.Count; c++)
             {
@@ -172,6 +238,33 @@ public sealed class RubricMatrixInput
         return dto;
     }
 }
-public sealed class RubricColumnInput { public string Name { get; set; } = ""; public int Points { get; set; } public string? Description { get; set; } }
-public sealed class RubricRowInput { public string Criterion { get; set; } = ""; public string? Description { get; set; } public List<RubricCellInput> Cells { get; set; } = []; }
-public sealed class RubricCellInput { public string? Descriptor { get; set; } public int Points { get; set; } }
+public sealed class RubricColumnInput
+{
+    public string Name { get; set; } = ""; public int Points
+    {
+        get; set;
+    }
+    public string? Description
+    {
+        get; set;
+    }
+}
+public sealed class RubricRowInput
+{
+    public string Criterion { get; set; } = ""; public string? Description
+    {
+        get; set;
+    }
+    public List<RubricCellInput> Cells { get; set; } = [];
+}
+public sealed class RubricCellInput
+{
+    public string? Descriptor
+    {
+        get; set;
+    }
+    public int Points
+    {
+        get; set;
+    }
+}

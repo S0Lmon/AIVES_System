@@ -2,9 +2,9 @@ using AIVES.BLL.Services.Ai;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 
 namespace AIVES.BLL.Services.Gemini;
 
@@ -54,11 +54,34 @@ public sealed class GeminiQuestionGenerator : IQuestionGenerator
                         type = "OBJECT",
                         properties = new
                         {
-                            content = new { type = "STRING" },
-                            expectedAnswer = new { type = "STRING" },
-                            bloomLevel = new { type = "STRING", @enum = BloomLevels.All.ToArray() },
-                            difficulty = new { type = "STRING", @enum = QuestionDifficulties.Ordered.ToArray() },
-                            followUpQuestions = new { type = "ARRAY", minItems = 2, maxItems = 2, items = new { type = "STRING" } }
+                            content = new
+                            {
+                                type = "STRING"
+                            },
+                            expectedAnswer = new
+                            {
+                                type = "STRING"
+                            },
+                            bloomLevel = new
+                            {
+                                type = "STRING",
+                                @enum = BloomLevels.All.ToArray()
+                            },
+                            difficulty = new
+                            {
+                                type = "STRING",
+                                @enum = QuestionDifficulties.Ordered.ToArray()
+                            },
+                            followUpQuestions = new
+                            {
+                                type = "ARRAY",
+                                minItems = 2,
+                                maxItems = 2,
+                                items = new
+                                {
+                                    type = "STRING"
+                                }
+                            }
                         },
                         required = new[] { "content", "expectedAnswer", "bloomLevel", "difficulty", "followUpQuestions" }
                     }

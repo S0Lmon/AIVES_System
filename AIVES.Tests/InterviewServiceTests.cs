@@ -51,9 +51,17 @@ public sealed class InterviewServiceTests
             candidate.Questions.Add(new ExamCandidateQuestion { Order = i, Content = $"Main question {i}?", ExpectedAnswer = $"Expected {i}", BloomLevelName = "Understand" });
         db.Exams.Add(new Exam
         {
-            Title = "Viva", SubjectName = ".NET", StartsAtUtc = Now.AddMinutes(-1), SlotMinutes = 30, MainQuestionCount = questions,
-            MaxFollowUpQuestions = followUpsTotal, MaxFollowUpsPerQuestion = followUpsPerQuestion, AnswerTimeLimitSeconds = 60,
-            Language = "vi-VN", CreatedById = "lecturer", Candidates = { candidate }
+            Title = "Viva",
+            SubjectName = ".NET",
+            StartsAtUtc = Now.AddMinutes(-1),
+            SlotMinutes = 30,
+            MainQuestionCount = questions,
+            MaxFollowUpQuestions = followUpsTotal,
+            MaxFollowUpsPerQuestion = followUpsPerQuestion,
+            AnswerTimeLimitSeconds = 60,
+            Language = "vi-VN",
+            CreatedById = "lecturer",
+            Candidates = { candidate }
         });
         db.SaveChanges();
         var clock = new FixedClock(Now);

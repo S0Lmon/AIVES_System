@@ -1,9 +1,9 @@
-using System.Globalization;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace AIVES.BLL.Services.Operations;
 

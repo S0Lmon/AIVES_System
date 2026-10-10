@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using AIVES.BLL.Services;
 using AIVES.BLL.Services.Catalog;
 using AIVES.DTO;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Questions;
 
@@ -16,31 +16,55 @@ public sealed class QuestionInput
 
     [StringLength(300)]
     [Display(Name = "Nhãn ngữ cảnh")]
-    public string? Context { get; set; }
+    public string? Context
+    {
+        get; set;
+    }
 
     [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn mức Bloom.")]
     [Display(Name = "Mức Bloom")]
-    public int BloomLevelId { get; set; }
+    public int BloomLevelId
+    {
+        get; set;
+    }
 
     [Display(Name = "Rubric")]
-    public int? RubricId { get; set; }
+    public int? RubricId
+    {
+        get; set;
+    }
 
     [Display(Name = "Môn học")]
-    public int? SubjectId { get; set; }
+    public int? SubjectId
+    {
+        get; set;
+    }
 
     [Display(Name = "Chủ đề")]
-    public int? TopicId { get; set; }
+    public int? TopicId
+    {
+        get; set;
+    }
 
     [Display(Name = "Độ khó")]
-    public string? Difficulty { get; set; }
+    public string? Difficulty
+    {
+        get; set;
+    }
 
     [StringLength(5000)]
     [Display(Name = "Đáp án mong đợi")]
-    public string? ExpectedAnswer { get; set; }
+    public string? ExpectedAnswer
+    {
+        get; set;
+    }
 
     [Range(0, 10000)]
     [Display(Name = "Thứ tự hiển thị")]
-    public int DisplayOrder { get; set; }
+    public int DisplayOrder
+    {
+        get; set;
+    }
 
     [Display(Name = "Đang hoạt động")]
     public bool IsActive { get; set; } = true;
@@ -86,18 +110,24 @@ public sealed class QuestionFormOptions
 
     public static async Task<QuestionFormOptions> LoadAsync(IBloomLevelService bloomLevels, IRubricService rubrics,
         ICatalogService catalog, CancellationToken cancellationToken = default) => new()
-    {
-        BloomLevels = new SelectList((await bloomLevels.GetAllAsync()).OrderBy(level => level.Order), nameof(BloomLevelDto.Id), nameof(BloomLevelDto.Name)),
-        Rubrics = new SelectList(await rubrics.GetAllRubricsAsync(), nameof(RubricDto.Id), nameof(RubricDto.Name)),
-        Subjects = new SelectList(await catalog.GetSubjectsAsync(cancellationToken), nameof(SubjectDto.Id), nameof(SubjectDto.Name)),
-        Topics = await catalog.GetTopicsAsync(cancellationToken: cancellationToken),
-        Difficulties = new SelectList(QuestionDifficulties.Ordered)
-    };
+        {
+            BloomLevels = new SelectList((await bloomLevels.GetAllAsync()).OrderBy(level => level.Order), nameof(BloomLevelDto.Id), nameof(BloomLevelDto.Name)),
+            Rubrics = new SelectList(await rubrics.GetAllRubricsAsync(), nameof(RubricDto.Id), nameof(RubricDto.Name)),
+            Subjects = new SelectList(await catalog.GetSubjectsAsync(cancellationToken), nameof(SubjectDto.Id), nameof(SubjectDto.Name)),
+            Topics = await catalog.GetTopicsAsync(cancellationToken: cancellationToken),
+            Difficulties = new SelectList(QuestionDifficulties.Ordered)
+        };
 }
 
 /// <summary>Implemented by Create and Edit so both render the same _QuestionFields partial.</summary>
 public interface IQuestionFormPage
 {
-    QuestionInput Input { get; }
-    QuestionFormOptions Options { get; }
+    QuestionInput Input
+    {
+        get;
+    }
+    QuestionFormOptions Options
+    {
+        get;
+    }
 }

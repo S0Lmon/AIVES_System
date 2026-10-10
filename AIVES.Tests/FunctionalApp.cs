@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Email;
-using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Interview;
 using AIVES.DAL.Data;
 using AIVES.DAL.Entities;
@@ -14,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Collections.Concurrent;
 
 namespace AIVES.Tests;
 
@@ -59,13 +58,16 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
 
     public HttpClient Browser() => CreateClient(new WebApplicationFactoryClientOptions
     {
-        BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = true
+        BaseAddress = new Uri("https://localhost"),
+        AllowAutoRedirect = false,
+        HandleCookies = true
     });
 
     public async Task InitializeAsync()
     {
         var source = Environment.GetEnvironmentVariable("AIVES_TEST_SQL_CONNECTION");
-        if (string.IsNullOrWhiteSpace(source)) return;
+        if (string.IsNullOrWhiteSpace(source))
+            return;
         connectionString = new SqlConnectionStringBuilder(source)
         {
             InitialCatalog = "AIVES_FunctionalTest_" + Guid.NewGuid().ToString("N")
@@ -79,7 +81,8 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
     async Task IAsyncLifetime.DisposeAsync()
     {
         await DisposeAsync();
-        if (connectionString is null) return;
+        if (connectionString is null)
+            return;
         var connection = new SqlConnectionStringBuilder(connectionString);
         Assert.StartsWith("AIVES_FunctionalTest_", connection.InitialCatalog);
         await using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
@@ -116,7 +119,10 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
     {
         public AiProvider Provider => AiProvider.Gemini;
         public bool IsConfigured => true;
-        public int Calls { get; private set; }
+        public int Calls
+        {
+            get; private set;
+        }
 
         public AiProvider? ActiveProvider => AiProvider.Gemini;
         public bool PreferOllama => false;
@@ -129,10 +135,13 @@ public sealed class FunctionalApp : WebApplicationFactory<Program>, IAsyncLifeti
         public Task<IReadOnlyList<GeneratedVivaQuestion>> GenerateAsync(QuestionGenerationRequest request, CancellationToken ct = default)
         {
             Calls++;
-            if (request.Topic == "simulate-failure") throw new InvalidOperationException("AI test failure");
+            if (request.Topic == "simulate-failure")
+                throw new InvalidOperationException("AI test failure");
             return Task.FromResult<IReadOnlyList<GeneratedVivaQuestion>>(Enumerable.Range(1, request.Count).Select(i => new GeneratedVivaQuestion
             {
-                Content = $"Generated question {i} for {request.Topic}", ExpectedAnswer = "Expected test answer", BloomLevel = "Understand",
+                Content = $"Generated question {i} for {request.Topic}",
+                ExpectedAnswer = "Expected test answer",
+                BloomLevel = "Understand",
                 FollowUpQuestions = ["First follow up", "Second follow up"]
             }).ToList());
         }

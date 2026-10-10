@@ -1,4 +1,3 @@
-using AIVES.BLL.Services.Ai;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Logging;
@@ -39,7 +38,10 @@ public sealed class OllamaQuestionGenerator : IQuestionGenerator
         for (var index = 0; index < request.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            questions.Add(await GenerateOneAsync(request with { Count = 1 }, cancellationToken));
+            questions.Add(await GenerateOneAsync(request with
+            {
+                Count = 1
+            }, cancellationToken));
         }
 
         return questions;
@@ -58,7 +60,11 @@ public sealed class OllamaQuestionGenerator : IQuestionGenerator
                 + $"\"bloomLevel\": \"{blooms}\", \"difficulty\": \"{difficulties}\", \"followUpQuestions\": [string, string]}}.",
             format = "json",
             stream = false,
-            options = new { temperature = 0.4, num_ctx = 4096 }
+            options = new
+            {
+                temperature = 0.4,
+                num_ctx = 4096
+            }
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/api/generate");

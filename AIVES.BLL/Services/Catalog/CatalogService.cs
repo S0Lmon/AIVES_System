@@ -1,8 +1,8 @@
+using AIVES.BLL.Services.Ai;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Options;
-using AIVES.BLL.Services.Ai;
 
 namespace AIVES.BLL.Services.Catalog;
 
@@ -56,7 +56,11 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
         var name = input.Name.Trim();
         if (name.Length is < 2 or > 200)
             throw new ArgumentException(L10n.T("The subject name must be between 2 and 200 characters."), nameof(input));
-        return input with { Name = name, Description = input.Description?.Trim() ?? string.Empty };
+        return input with
+        {
+            Name = name,
+            Description = input.Description?.Trim() ?? string.Empty
+        };
     }
 
     private static TopicInput Validate(TopicInput input)
@@ -64,7 +68,11 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
         var name = input.Name.Trim();
         if (name.Length is < 2 or > 200)
             throw new ArgumentException(L10n.T("The topic name must be between 2 and 200 characters."), nameof(input));
-        return input with { Name = name, Description = input.Description?.Trim() ?? string.Empty };
+        return input with
+        {
+            Name = name,
+            Description = input.Description?.Trim() ?? string.Empty
+        };
     }
 
     private static MaterialInput Validate(MaterialInput input)
@@ -75,6 +83,10 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
             throw new ArgumentException(L10n.T("The material title must be between 2 and 300 characters."), nameof(input));
         if (content.Length is < 10)
             throw new ArgumentException(L10n.T("The material content must be at least 10 characters."), nameof(input));
-        return input with { Title = title, Content = content };
+        return input with
+        {
+            Title = title,
+            Content = content
+        };
     }
 }

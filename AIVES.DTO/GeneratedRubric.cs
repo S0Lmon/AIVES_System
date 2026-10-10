@@ -16,7 +16,10 @@ public sealed class GeneratedRubric
 public sealed class GeneratedRubricLevel
 {
     public string Name { get; set; } = string.Empty;
-    public int Points { get; set; }
+    public int Points
+    {
+        get; set;
+    }
 }
 
 /// <summary>A row, plus one descriptor per column keyed by the column name.</summary>
@@ -31,5 +34,8 @@ public sealed class GeneratedRubricCell
 {
     public string LevelName { get; set; } = string.Empty;
     public string Descriptor { get; set; } = string.Empty;
-    public int Points { get; set; }
+    public int Points
+    {
+        get; set;
+    }
 }

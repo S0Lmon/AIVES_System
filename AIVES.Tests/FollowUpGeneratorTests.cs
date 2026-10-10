@@ -1,10 +1,10 @@
-using System.Net;
-using System.Text;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Interview;
 using AIVES.DTO;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Text;
 
 namespace AIVES.Tests;
 
@@ -86,7 +86,10 @@ public sealed class FollowUpGeneratorTests
 
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
-        public HttpRequestMessage? Request { get; private set; }
+        public HttpRequestMessage? Request
+        {
+            get; private set;
+        }
         public string Body { get; private set; } = string.Empty;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

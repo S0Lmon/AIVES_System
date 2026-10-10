@@ -19,7 +19,8 @@ public sealed class QuestionTaxonomyTests
     public void BloomLevelsAreMatchedCaseInsensitivelyAndCanonicalised(string? value, bool allowed)
     {
         Assert.Equal(allowed, BloomLevels.IsAllowed(value));
-        if (!allowed) return;
+        if (!allowed)
+            return;
 
         // Canonical form is what the bank stores by name.
         Assert.Contains(BloomLevels.Normalize(value)!, BloomLevels.All);

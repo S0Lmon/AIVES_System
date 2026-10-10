@@ -1,18 +1,24 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Gemini;
 using AIVES.DTO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace AIVES.BLL.Services.Grading;
 
 /// <summary>Proposes a score for one answered main question.</summary>
 public interface IAnswerGrader
 {
-    bool IsConfigured { get; }
-    string ModelName { get; }
+    bool IsConfigured
+    {
+        get;
+    }
+    string ModelName
+    {
+        get;
+    }
 
     /// <summary>Throws when the model cannot be reached or returns something unusable.</summary>
     Task<GradeSuggestion> GradeAsync(GradingRequest request, CancellationToken cancellationToken = default);

@@ -13,7 +13,10 @@ namespace AIVES.WebRazor.Pages.Interviews;
 public sealed class MonitorModel(IExamService exams) : PageModel
 {
     public IReadOnlyList<ExamSummaryDto> Exams { get; private set; } = [];
-    public ExamDetailsDto? Exam { get; private set; }
+    public ExamDetailsDto? Exam
+    {
+        get; private set;
+    }
 
     public async Task<IActionResult> OnGetAsync(int? examId, CancellationToken cancellationToken)
     {

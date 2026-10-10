@@ -1,9 +1,8 @@
-using System.Net;
-using System.Net.Mail;
-using System.Net.Mime;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Net.Mail;
 
 namespace AIVES.BLL.Services.Email;
 

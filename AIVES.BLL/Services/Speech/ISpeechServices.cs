@@ -5,7 +5,10 @@ namespace AIVES.BLL.Services.Speech;
 /// <summary>Speech-to-text over 16 kHz mono samples in the range [-1, 1].</summary>
 public interface ISpeechToText
 {
-    bool IsAvailable { get; }
+    bool IsAvailable
+    {
+        get;
+    }
 
     /// <param name="preview">True for the live preview, which may use a faster model.</param>
     /// <param name="prompt">Words to bias recognition towards: the question and the subject's terms.</param>

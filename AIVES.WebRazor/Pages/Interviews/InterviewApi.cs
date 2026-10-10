@@ -1,6 +1,3 @@
-using System.Security.Claims;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
 using AIVES.DTO;
@@ -8,6 +5,9 @@ using AIVES.DTO.Localization;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AIVES.WebRazor.Pages.Interviews;
 
@@ -28,7 +28,11 @@ public sealed class InterviewApiModel(
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
-        try { State = await interviews.GetStateAsync(id, Email, cancellationToken); return Page(); }
+        try
+        {
+            State = await interviews.GetStateAsync(id, Email, cancellationToken);
+            return Page();
+        }
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
@@ -45,7 +49,11 @@ public sealed class InterviewApiModel(
 
     public async Task<IActionResult> OnPostRecordingAsync(int id, int turnId, IFormFile? file, CancellationToken cancellationToken)
     {
-        if (file is null || file.Length == 0) return BadRequest(new { error = L10n.T("The recording is empty.") });
+        if (file is null || file.Length == 0)
+            return BadRequest(new
+            {
+                error = L10n.T("The recording is empty.")
+            });
         try
         {
             await using var stream = file.OpenReadStream();
@@ -61,14 +69,20 @@ public sealed class InterviewApiModel(
 
     private async Task<IActionResult> RunAsync(Func<Task<InterviewStateDto>> action)
     {
-        try { return new JsonResult(await action(), JsonOptions); }
+        try
+        {
+            return new JsonResult(await action(), JsonOptions);
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { return StatusCode(StatusCodes.Status409Conflict, new { error = ex.Message }); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Interview request failed for candidate slot {CandidateId}", RouteData.Values["id"]);
             return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = L10n.T("Something went wrong. Please try again.") });
+                new
+                {
+                    error = L10n.T("Something went wrong. Please try again.")
+                });
         }
     }
 }

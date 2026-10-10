@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Operations;
@@ -7,6 +5,8 @@ using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Exams;
 
@@ -20,14 +20,26 @@ public static class ExamPageActors
 
 public sealed class ExamInputModel
 {
-    public int? Id { get; set; }
+    public int? Id
+    {
+        get; set;
+    }
     [Required, StringLength(ExamLimits.TitleMaxLength, MinimumLength = 2)]
     public string Title { get; set; } = string.Empty;
     [Range(1, int.MaxValue)]
-    public int SubjectId { get; set; }
-    public int? TopicId { get; set; }
+    public int SubjectId
+    {
+        get; set;
+    }
+    public int? TopicId
+    {
+        get; set;
+    }
     [Required]
-    public DateTime? StartsAtLocal { get; set; }
+    public DateTime? StartsAtLocal
+    {
+        get; set;
+    }
     [Range(ExamLimits.MinSlotMinutes, ExamLimits.MaxSlotMinutes)]
     public int SlotMinutes { get; set; } = 15;
     [Range(1, ExamLimits.MaxMainQuestions)]
@@ -40,21 +52,45 @@ public sealed class ExamInputModel
     public int AnswerTimeLimitSeconds { get; set; } = ExamLimits.DefaultAnswerSeconds;
     public AppLanguage Language { get; set; } = AppLanguage.Vi;
     public RecordingMode Recording { get; set; } = RecordingMode.Audio;
-    public DateTime? EndsAtLocal { get; set; }
+    public DateTime? EndsAtLocal
+    {
+        get; set;
+    }
     [Range(0, ExamLimits.MaxBufferMinutes)]
-    public int BufferMinutes { get; set; }
+    public int BufferMinutes
+    {
+        get; set;
+    }
     [Range(0, ExamLimits.MaxBreakMinutes)]
-    public int BreakMinutes { get; set; }
+    public int BreakMinutes
+    {
+        get; set;
+    }
     [Range(0, ExamLimits.MaxBreakEveryCount)]
-    public int BreakEveryCount { get; set; }
+    public int BreakEveryCount
+    {
+        get; set;
+    }
     public QuestionSelectionStrategy Strategy { get; set; } = QuestionSelectionStrategy.Balanced;
     [StringLength(ExamLimits.TermMaxLength)]
-    public string? Term { get; set; }
+    public string? Term
+    {
+        get; set;
+    }
     [StringLength(ExamLimits.ExamTypeMaxLength)]
-    public string? ExamType { get; set; }
+    public string? ExamType
+    {
+        get; set;
+    }
     [StringLength(ExamLimits.InstructionsMaxLength)]
-    public string? Instructions { get; set; }
-    public bool ScheduleOverflowAllowed { get; set; }
+    public string? Instructions
+    {
+        get; set;
+    }
+    public bool ScheduleOverflowAllowed
+    {
+        get; set;
+    }
     public string CandidateEmails { get; set; } = string.Empty;
 }
 
@@ -163,16 +199,33 @@ public sealed class IndexModel(IExamService exams) : PageModel
 
 public sealed class CalendarModel(IExamService exams, DisplayTimeZone timeZone, TimeProvider clock) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public int? Year { get; set; }
-    [BindProperty(SupportsGet = true)] public int? Month { get; set; }
-    public DateTime TargetMonth { get; private set; }
+    [BindProperty(SupportsGet = true)]
+    public int? Year
+    {
+        get; set;
+    }
+    [BindProperty(SupportsGet = true)]
+    public int? Month
+    {
+        get; set;
+    }
+    public DateTime TargetMonth
+    {
+        get; private set;
+    }
     public IReadOnlyList<ExamSummaryDto> MonthExams { get; private set; } = [];
     public IReadOnlyList<ExamSummaryDto> Upcoming { get; private set; } = [];
-    public DateTime TodayLocal { get; private set; }
+    public DateTime TodayLocal
+    {
+        get; private set;
+    }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        try { TargetMonth = new DateTime(Year ?? timeZone.ToLocal(clock.GetUtcNow().UtcDateTime).Year, Month ?? timeZone.ToLocal(clock.GetUtcNow().UtcDateTime).Month, 1); }
+        try
+        {
+            TargetMonth = new DateTime(Year ?? timeZone.ToLocal(clock.GetUtcNow().UtcDateTime).Year, Month ?? timeZone.ToLocal(clock.GetUtcNow().UtcDateTime).Month, 1);
+        }
         catch (ArgumentOutOfRangeException) { return BadRequest(); }
         var now = clock.GetUtcNow().UtcDateTime;
         TodayLocal = timeZone.ToLocal(now).Date;
@@ -205,12 +258,19 @@ public sealed class CreateModel(
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid) { await FillAsync(cancellationToken); return Page(); }
+        if (!ModelState.IsValid)
+        {
+            await FillAsync(cancellationToken);
+            return Page();
+        }
         try
         {
             var result = await Exams.CreateAsync(ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was created and questions were assigned to every candidate."), logger);
-            return RedirectToPage("Details", new { id = result.ExamId });
+            return RedirectToPage("Details", new
+            {
+                id = result.ExamId
+            });
         }
         catch (ArgumentException ex)
         {
@@ -226,16 +286,24 @@ public sealed class EditModel(
     ISystemSettingsService settings, DisplayTimeZone timeZone, ILogger<EditModel> logger)
     : ExamFormPageModel(exams, catalog, subjectAccess, settings, timeZone)
 {
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id
+    {
+        get; set;
+    }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var exam = await Exams.GetAsync(Id, Actor, cancellationToken);
-        if (exam is null) return NotFound();
+        if (exam is null)
+            return NotFound();
         if (exam.HasStarted(DateTime.UtcNow))
         {
             TempData["ExamError"] = L10n.T("This exam has already started, so its settings, candidates and questions are locked.");
-            return RedirectToPage("Details", new { id = Id });
+            return RedirectToPage("Details", new
+            {
+                id = Id
+            });
         }
         Input = FromDetails(exam, TimeZone);
         await FillAsync(cancellationToken);
@@ -245,12 +313,19 @@ public sealed class EditModel(
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
         Input.Id = Id;
-        if (!ModelState.IsValid) { await FillAsync(cancellationToken); return Page(); }
+        if (!ModelState.IsValid)
+        {
+            await FillAsync(cancellationToken);
+            return Page();
+        }
         try
         {
             var result = await Exams.UpdateAsync(Id, ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was saved and questions were assigned again."), logger);
-            return RedirectToPage("Details", new { id = Id });
+            return RedirectToPage("Details", new
+            {
+                id = Id
+            });
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -264,9 +339,16 @@ public sealed class EditModel(
 
 public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, TimeProvider clock) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id
+    {
+        get; set;
+    }
     public ExamDetailsDto Exam { get; private set; } = null!;
-    public DateTime NowUtc { get; private set; }
+    public DateTime NowUtc
+    {
+        get; private set;
+    }
     public bool Started => Exam.HasStarted(NowUtc);
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken) =>
@@ -278,34 +360,57 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         {
             var result = await exams.ReassignQuestionsAsync(Id, ExamPageActors.From(User), cancellationToken);
             TempData["ExamMessage"] = L10n.T("New questions were drawn for every candidate.");
-            if (result.ConsecutiveOverlaps > 0) TempData["ExamWarning"] = L10n.Format("The question pool is small: consecutive candidates share {0} question(s). Add questions to the subject or lower the number of main questions, then draw again.", result.ConsecutiveOverlaps);
+            if (result.ConsecutiveOverlaps > 0)
+                TempData["ExamWarning"] = L10n.Format("The question pool is small: consecutive candidates share {0} question(s). Add questions to the subject or lower the number of main questions, then draw again.", result.ConsecutiveOverlaps);
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { TempData["ExamError"] = ex.Message; }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnPostResetScheduleAsync(CancellationToken cancellationToken)
     {
-        try { await exams.ResetScheduleAsync(Id, ExamPageActors.From(User), cancellationToken); TempData["ExamMessage"] = L10n.T("The schedule was regenerated from the exam settings."); }
+        try
+        {
+            await exams.ResetScheduleAsync(Id, ExamPageActors.From(User), cancellationToken);
+            TempData["ExamMessage"] = L10n.T("The schedule was regenerated from the exam settings.");
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { TempData["ExamError"] = ex.Message; }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(CancellationToken cancellationToken)
     {
-        try { await exams.DeleteAsync(Id, ExamPageActors.From(User), cancellationToken); TempData["ExamMessage"] = L10n.T("The exam was deleted."); return RedirectToPage("Index"); }
+        try
+        {
+            await exams.DeleteAsync(Id, ExamPageActors.From(User), cancellationToken);
+            TempData["ExamMessage"] = L10n.T("The exam was deleted.");
+            return RedirectToPage("Index");
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { TempData["ExamError"] = ex.Message; return RedirectToPage(new { id = Id }); }
     }
 
     public async Task<IActionResult> OnPostAdjustSlotAsync(int order, DateTime slotStartLocal, CancellationToken cancellationToken)
     {
-        try { await exams.AdjustSlotAsync(Id, order, timeZone.ToUtc(slotStartLocal), ExamPageActors.From(User), cancellationToken); TempData["ExamMessage"] = L10n.Format("Candidate #{0} was moved to a new time.", order); }
+        try
+        {
+            await exams.AdjustSlotAsync(Id, order, timeZone.ToUtc(slotStartLocal), ExamPageActors.From(User), cancellationToken);
+            TempData["ExamMessage"] = L10n.Format("Candidate #{0} was moved to a new time.", order);
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { TempData["ExamError"] = ex.Message; }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnPostCandidateStatusAsync(int order, string? status, CancellationToken cancellationToken)
@@ -316,7 +421,10 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             if (!Enum.TryParse<CandidateStatus>(status, out var value))
             {
                 TempData["ExamError"] = L10n.T("That status does not exist.");
-                return RedirectToPage(new { id = Id });
+                return RedirectToPage(new
+                {
+                    id = Id
+                });
             }
             parsed = value;
         }
@@ -327,14 +435,18 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { TempData["ExamError"] = ex.Message; }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)
     {
         NowUtc = clock.GetUtcNow().UtcDateTime;
         var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null) return false;
+        if (exam is null)
+            return false;
         Exam = exam;
         return true;
     }

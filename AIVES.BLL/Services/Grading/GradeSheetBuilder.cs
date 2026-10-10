@@ -12,7 +12,10 @@ public sealed class ReportOptions
     public string SchoolName { get; set; } = "TRƯỜNG ĐẠI HỌC FPT";
 
     /// <summary>Unit line under the school name, e.g. the faculty or campus.</summary>
-    public string? UnitName { get; set; }
+    public string? UnitName
+    {
+        get; set;
+    }
 }
 
 /// <summary>

@@ -1,4 +1,3 @@
-using System.Text;
 using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Import;
 using AIVES.BLL.Services.Interview;
@@ -14,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace AIVES.Tests;
 
@@ -52,8 +52,17 @@ public sealed class RecordingAndInterviewTests
         candidate.Questions.Add(new ExamCandidateQuestion { Order = 1, Content = "What is SQL?", ExpectedAnswer = "A query language", BloomLevelName = "Remember" });
         db.Exams.Add(new Exam
         {
-            Title = "Viva", SubjectId = subject.Id, SubjectName = "Databases", StartsAtUtc = Now.AddMinutes(-1), SlotMinutes = 30, MainQuestionCount = 1,
-            MaxFollowUpQuestions = 2, Language = "vi-VN", CreatedById = "owner", RecordAudio = recordAudio, Candidates = { candidate }
+            Title = "Viva",
+            SubjectId = subject.Id,
+            SubjectName = "Databases",
+            StartsAtUtc = Now.AddMinutes(-1),
+            SlotMinutes = 30,
+            MainQuestionCount = 1,
+            MaxFollowUpQuestions = 2,
+            Language = "vi-VN",
+            CreatedById = "owner",
+            RecordAudio = recordAudio,
+            Candidates = { candidate }
         });
         db.SaveChanges();
         return (db, new FixedClock(Now), candidate.Id, subject.Id);

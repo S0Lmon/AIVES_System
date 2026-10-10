@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using AIVES.DAL;
 using AIVES.DAL.Data;
 using Microsoft.AspNetCore.DataProtection;
@@ -8,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace AIVES.Tests;
 

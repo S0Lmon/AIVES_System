@@ -1,23 +1,19 @@
 extern alias Razor;
-
-using System.Collections.Concurrent;
-using System.Threading.Channels;
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
 using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 using RazorRealtime = Razor::AIVES.WebRazor.Realtime;
 
 namespace AIVES.Tests;
@@ -244,7 +240,9 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 
         await student.SendAsync("StreamAnswer", CandidateId, turnId, Chunks(1));
         var seen = new List<(string Text, bool Final)>();
-        do seen.Add(await ReadAsync(transcripts.Reader)); while (!seen[^1].Final);
+        do
+            seen.Add(await ReadAsync(transcripts.Reader));
+        while (!seen[^1].Final);
 
         // Whisper's own final text is shown while Gemini works, then Gemini's is the one kept.
         Assert.Contains(seen, item => !item.Final && item.Text.StartsWith("đoạn"));
@@ -557,8 +555,14 @@ public sealed class SpeechModelTests
 /// <summary>Stands in for Gemini: returns <see cref="Text"/> (null = "use the local transcript").</summary>
 public sealed class FakeAnswerTranscriber : IAnswerTranscriber
 {
-    public bool Enabled { get; set; }
-    public string? Text { get; set; }
+    public bool Enabled
+    {
+        get; set;
+    }
+    public string? Text
+    {
+        get; set;
+    }
     public IReadOnlyList<string> LastVocabulary { get; private set; } = [];
 
     public bool IsEnabled => Enabled;

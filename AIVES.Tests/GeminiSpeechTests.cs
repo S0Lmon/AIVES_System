@@ -1,11 +1,11 @@
-using System.Net;
-using System.Text;
-using System.Text.Json.Nodes;
 using AIVES.BLL.Services.Gemini;
 using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Text;
+using System.Text.Json.Nodes;
 
 namespace AIVES.Tests;
 
@@ -120,7 +120,10 @@ public sealed class GeminiSpeechTests
     private sealed class StubFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
-            new(handler, disposeHandler: false) { BaseAddress = new Uri("https://generativelanguage.googleapis.com/") };
+            new(handler, disposeHandler: false)
+            {
+                BaseAddress = new Uri("https://generativelanguage.googleapis.com/")
+            };
     }
 
     private sealed class StubHandler : HttpMessageHandler
@@ -131,7 +134,10 @@ public sealed class GeminiSpeechTests
         public sealed record Seen(string Path, string? ApiKey, string Body);
 
         public List<Seen> Requests { get; } = [];
-        public TimeSpan Delay { get; set; }
+        public TimeSpan Delay
+        {
+            get; set;
+        }
 
         public void Respond(HttpStatusCode code, string json)
         {

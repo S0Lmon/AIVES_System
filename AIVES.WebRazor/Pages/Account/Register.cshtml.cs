@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Account;
 
@@ -50,7 +50,10 @@ public sealed class RegisterModel(IAccountService accounts, ILogger<RegisterMode
             var result = await accounts.RegisterAsync(
                 new RegisterRequest(Input.Email, Input.Password, Input.DisplayName), cancellationToken);
             if (result.Succeeded)
-                return RedirectToPage("/Account/VerifyEmail", new { email = result.User!.Email });
+                return RedirectToPage("/Account/VerifyEmail", new
+                {
+                    email = result.User!.Email
+                });
 
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, L10n.T(error));
