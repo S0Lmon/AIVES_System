@@ -11,6 +11,9 @@ public sealed class LogoutModel(IAccountService accounts) : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (User.Identity?.IsAuthenticated != true)
+            return Challenge();
+
         await accounts.LogoutAsync();
         return RedirectToPage("/Account/Login");
     }

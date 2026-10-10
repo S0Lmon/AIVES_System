@@ -1,0 +1,32 @@
+@page
+@model AIVES.WebRazor.Pages.Glossary.IndexModel
+@{
+    ViewData["Title"] = "Subject glossary";
+}
+<div class="page-heading"><div><span class="page-kicker">Speech recognition</span><h1>Subject glossary</h1><p>Terms and spoken forms help recognition, transcript correction, examinations, and grading.</p></div></div>
+@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+<form method="get" class="panel panel-body d-flex gap-2 align-items-end mb-3" style="max-width:480px">
+    <div class="flex-grow-1"><label class="form-label" for="subjectId">Subject</label><select id="subjectId" name="subjectId" class="form-select" onchange="this.form.submit()">@foreach (var s in Model.Subjects) { <option value="@s.Id" selected="@(s.Id == Model.SelectedSubjectId)">@s.Name</option> }</select></div>
+    <button class="btn btn-light">Open</button>
+</form>
+@if (Model.SelectedSubjectId == 0)
+{
+    <section class="panel empty-state"><h3>Create a subject first</h3><p>Glossary terms belong to a subject in the catalog.</p><a asp-page="/Catalog/Index" class="btn btn-primary">Open catalog</a></section>
+}
+else
+{
+    <form method="post" asp-page-handler="Add" class="panel p-4 mb-3">
+        <input type="hidden" name="subjectId" value="@Model.SelectedSubjectId" />
+        <h2 class="h4 mb-3">Add a term to @Model.SubjectName</h2>
+        <div class="row g-3"><div class="col-md-5"><label class="form-label" for="term">Technical term</label><input id="term" name="term" class="form-control" maxlength="100" required /></div>
+        <div class="col-md-5"><label class="form-label" for="spokenForms">Spoken forms</label><input id="spokenForms" name="spokenForms" class="form-control" maxlength="1000" placeholder="Separate alternatives with semicolons" /></div>
+        <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Save term</button></div></div>
+    </form>
+    <section class="panel overflow-hidden"><div class="panel-header"><h2>Glossary terms <small class="text-muted">@Model.Terms.Count</small></h2></div>
+        @if (Model.Terms.Count == 0) { <div class="empty-state"><h3>No terms yet</h3><p>Add terminology used in @Model.SubjectName.</p></div> }
+        else { <div class="table-responsive"><table class="table data-table"><thead><tr><th>Term</th><th>Recognized spoken forms</th><th class="text-end">Actions</th></tr></thead><tbody>
+            @foreach (var item in Model.Terms) { <tr><td><strong>@item.Term</strong></td><td>@(item.SpokenForms.Count == 0 ? "—" : string.Join(" · ", item.SpokenForms))</td><td class="text-end"><form method="post" asp-page-handler="Delete" class="d-inline" onsubmit="return confirm('Remove this glossary term?')"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="subjectId" value="@Model.SelectedSubjectId" /><button class="btn btn-light btn-sm text-danger">Remove</button></form></td></tr> }
+        </tbody></table></div> }
+    </section>
+}

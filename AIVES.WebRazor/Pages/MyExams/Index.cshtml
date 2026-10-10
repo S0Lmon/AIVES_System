@@ -1,0 +1,18 @@
+@page
+@model AIVES.WebRazor.Pages.MyExams.IndexModel
+@inject DisplayTimeZone TimeZone
+@{
+    ViewData["Title"] = L10n.T("My exams");
+}
+<div class="page-heading"><div><span class="page-kicker">Exams / Mine</span><h1>@L10n.T("My exams")</h1><p>@L10n.T("Your viva slots. Please be ready a few minutes before your slot starts.")</p></div></div>
+<section class="panel overflow-hidden mb-4">@if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("You are not listed for any exam yet.")</p> } else {
+<div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Your slot") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Order")</th><th>@L10n.T("Questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
+@foreach (var exam in Model.Exams) { <tr class="@(exam.EndsAtUtc < Model.NowUtc ? "text-muted" : "")"><td><strong>@exam.Title</strong><div class="small text-muted">@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</div></td>
+<td class="text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td><td>@L10n.Format("{0} of {1}", exam.Order, exam.CandidateCount)</td><td class="small">@L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)</td><td>
+@if (exam.ResultAvailable) { <a class="btn btn-sm btn-primary" asp-page="Result" asp-route-id="@exam.CandidateId">@L10n.Format("Result: {0}/10", exam.FinalScore?.ToString("0.##"))</a> }
+else if (exam.InterviewStatus == InterviewStatus.Completed) { <span class="status-label ready">@L10n.T("Completed")</span><div class="small text-muted">@L10n.T("Waiting for your lecturer to confirm the grade")</div> }
+else if (Model.NowUtc >= exam.StartsAtUtc && Model.NowUtc < exam.EndsAtUtc) { <div class="d-flex flex-column align-items-start gap-1"><a class="btn btn-sm btn-primary" asp-page="/Interviews/Interview" asp-route-id="@exam.CandidateId">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Continue") : L10n.T("Start the viva"))</a><a class="small" asp-page="/Interviews/Room" asp-route-id="@exam.CandidateId">@L10n.T("Use the Whisper interview room")</a></div> }
+else if (Model.NowUtc < exam.StartsAtUtc) { <span class="small text-muted">@L10n.T("Opens at your slot")</span> }
+else { <span class="status-label missing">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Not finished") : L10n.T("Missed"))</span> }
+</td></tr> }
+</tbody></table></div> }</section>

@@ -1,0 +1,8 @@
+@page "{id:int}"
+@model AIVES.WebRazor.Pages.Grading.AuditModel
+@{
+    ViewData["Title"] = L10n.T("Audit log");
+}
+<div class="page-heading"><div><span class="page-kicker">Grading / Audit</span><h1>@L10n.T("Audit log"): @Model.Title</h1><p>@L10n.T("Every exam change, AI proposal, score change, confirmation and recording playback, newest first. Entries cannot be edited.")</p></div><a class="btn btn-light" asp-page="Exam" asp-route-id="@Model.Id">@L10n.T("Back to the class")</a></div>
+<section class="panel overflow-hidden mb-4">@if (Model.Entries.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p> } else {
+<div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Time") (@Model.TimeZone.OffsetLabel)</th><th>@L10n.T("Who")</th><th>@L10n.T("Action")</th><th>@L10n.T("Details")</th></tr></thead><tbody>@foreach (var entry in Model.Entries) { <tr><td class="small text-nowrap">@Model.TimeZone.ToLocal(entry.AtUtc).ToString("yyyy-MM-dd HH:mm:ss")</td><td class="small">@(entry.ActorEmail ?? "—")</td><td class="small">@ViewText.Action(entry.Action)@if (entry.CandidateId is { } candidateId) { <div><a asp-page="Candidate" asp-route-id="@candidateId">@L10n.Format("Candidate #{0}", candidateId)</a></div> }</td><td class="small">@entry.Details</td></tr> }</tbody></table></div> }</section>

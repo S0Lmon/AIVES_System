@@ -11,19 +11,19 @@
 ## Kiến trúc triển khai
 
 ```text
-Internet ──HTTPS──► caddy (TLS tự động, HTTP→HTTPS, cân bằng tải round-robin)
+Internet ──HTTPS──► caddy (TLS tự động, HTTP→HTTPS)
                        │
-             web × AIVES_WEB_REPLICAS   razor × 1 (:8081, SignalR + giọng nói offline)
-                       │                    │
+                     web (Razor Pages + SignalR + giọng nói offline)
+                       │
                    sqlserver  ◄── migrate (sa, chạy một lần) ◄── db-init (tạo aives_app)
 ```
 
-Thứ tự khởi động: `sqlserver` healthy → `migrate` áp dụng migrations và seed rồi thoát → `db-init` tạo/cập nhật login `aives_app` rồi thoát → các instance `web` → `caddy`.
+Thứ tự khởi động: `sqlserver` healthy → `migrate` áp dụng migrations và seed rồi thoát → `db-init` tạo/cập nhật login `aives_app` rồi thoát → `web` → `caddy`.
 
 - **Chỉ `migrate` đổi schema** và là container duy nhất (cùng `db-init`) dùng `sa`. Các instance web chạy với `Database:MigrateOnStartup=false` và login `aives_app` chỉ có quyền `db_datareader`/`db_datawriter`, không tạo/sửa bảng được.
-- **Khóa Data Protection** (mã hóa cookie đăng nhập và antiforgery token) lưu trong bảng `DataProtectionKeys`, dùng chung giữa các instance. Người dùng không bị đăng xuất khi deploy lại hoặc khi request chuyển sang instance khác. Khóa được **mã hóa bằng chứng chỉ** `secrets/dataprotection.pfx` trước khi ghi vào database, nên lộ file backup database thôi thì không giả mạo được cookie. Chứng chỉ được nạp vào container dưới dạng Docker secret, không nằm trong image hay Git.
+- **Khóa Data Protection** (mã hóa cookie đăng nhập và antiforgery token) lưu trong bảng `DataProtectionKeys`. Khóa được **mã hóa bằng chứng chỉ** `secrets/dataprotection.pfx` trước khi ghi vào database, nên lộ file backup database thôi thì không giả mạo được cookie. Chứng chỉ được nạp vào container dưới dạng Docker secret, không nằm trong image hay Git.
 - App không tự chuyển hướng HTTPS khi `ReverseProxy:TerminatesHttps=true` (compose đã đặt sẵn) vì Caddy đã làm việc này.
-- **Web không mở port ra ngoài**; chỉ `caddy` nhận traffic. Caddy tự lấy chứng chỉ Let's Encrypt cho `AIVES_DOMAIN` và tự phát hiện instance web mới sau mỗi 10 giây.
+- **Web không mở port ra ngoài**; chỉ `caddy` nhận traffic. Caddy tự lấy chứng chỉ Let's Encrypt cho `AIVES_DOMAIN`.
 - `GET /health` trả `Healthy` khi instance kết nối được database; Docker dùng nó làm healthcheck của `web`.
 
 ## Cài Docker trên Ubuntu
@@ -62,13 +62,13 @@ Các biến bắt buộc:
 
 Hai mật khẩu SQL phải đủ mạnh (tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký hiệu) và không chứa dấu chấm phẩy, dấu nháy đơn hoặc ký tự `$`. Điền Gemini API key. Google OAuth và Gmail SMTP có thể để trống nếu chưa dùng.
 
-Biến tùy chọn: `AIVES_WEB_REPLICAS` (số instance web, mặc định 2), `AIVES_HTTP_PORT`/`AIVES_HTTPS_PORT` (mặc định 80/443), `ADMIN_EMAIL` (email được cấp quyền Admin), `REGISTRATION_EMAIL_DOMAINS` (tên miền email được phép đăng ký, phân tách bằng dấu phẩy, mặc định `gmail.com,fpt.edu.vn`).
+Biến tùy chọn: `AIVES_HTTP_PORT`/`AIVES_HTTPS_PORT` (mặc định 80/443), `ADMIN_EMAIL` (email được cấp quyền Admin), `REGISTRATION_EMAIL_DOMAINS` (tên miền email được phép đăng ký, phân tách bằng dấu phẩy, mặc định `gmail.com,fpt.edu.vn`).
 
 `GMAIL_USERNAME` có thể là tài khoản Gmail hoặc Google Workspace (ví dụ email `@fpt.edu.vn`). Google chỉ cho đăng nhập SMTP bằng **App Password** (https://myaccount.google.com/apppasswords, cần bật xác minh 2 bước); mật khẩu đăng nhập thường bị từ chối với lỗi `534 5.7.9`. Một số trường tắt App Password cho tài khoản Workspace — khi đó hãy dùng một tài khoản Gmail riêng để gửi.
 
 ## Cấu trúc solution
 
-WebMVC là Presentation; BLL xử lý nghiệp vụ; DAL chứa EF Core, repository và migrations; DTO chứa dữ liệu trao đổi. Dockerfile restore cả bốn project trước khi publish. Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md) và lệnh EF Core với `--project AIVES.DAL --startup-project AIVES.WebMVC`. Các biến cấu hình triển khai giữ nguyên.
+WebRazor là Presentation; BLL xử lý nghiệp vụ; DAL chứa EF Core, repository và migrations; DTO chứa dữ liệu trao đổi. Dockerfile restore các project cần thiết trước khi publish. Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md) và lệnh EF Core với `--project AIVES.DAL --startup-project AIVES.WebRazor`.
 
 ## Kiểm tra cấu hình (preflight)
 
@@ -170,15 +170,9 @@ docker compose logs quicktunnel | Select-String "trycloudflare.com"
 - *Windows Update → Advanced options → Active hours*: tránh tự khởi động lại trong giờ sử dụng.
 - Không chạy `docker compose down -v` (xóa database).
 
-## Site Razor Pages và phỏng vấn bằng giọng nói
+## Phỏng vấn bằng giọng nói
 
-Service `razor` chạy site `AIVES.WebRazor` (Razor Pages + SignalR; giám khảo AI đọc câu hỏi và nghe câu trả lời ngay trên máy chủ). Nó dùng chung database, login `aives_app`, khóa Data Protection và volume `aives-recordings` với site MVC, nên dùng chung tài khoản và bản ghi âm. Caddy phục vụ nó ở site `:8081` (trên máy chủ: `http://127.0.0.1:8089`). Với `COMPOSE_PROFILES=quicktunnel`, container `quicktunnel-razor` cấp thêm một địa chỉ `https://*.trycloudflare.com` riêng:
-
-```bash
-docker compose logs quicktunnel-razor | grep trycloudflare.com
-```
-
-Có tên miền thì đặt `AIVES_RAZOR_SITE` là hostname riêng (ví dụ `razor.example.com`) và thêm hostname đó vào Cloudflare Tunnel, trỏ tới `http://caddy:8081`. Micro của trình duyệt chỉ hoạt động trên HTTPS (hoặc `localhost`).
+WebRazor cung cấp giao diện duy nhất (Razor Pages + SignalR; giám khảo AI đọc câu hỏi và nghe câu trả lời ngay trên máy chủ). Trình duyệt truy cập cùng hostname qua Caddy; micro chỉ hoạt động trên HTTPS (hoặc `localhost`).
 
 **Model giọng nói** không nằm trong image hay Git. Tải một lần trên máy chủ, compose mount chỉ đọc vào container (`SPEECH_MODELS_DIR`, mặc định `./AIVES.WebRazor/App_Data/speech-models`):
 
@@ -191,13 +185,7 @@ Có tên miền thì đặt `AIVES_RAZOR_SITE` là hostname riêng (ví dụ `ra
 - Chỉ chạy **một** instance, vì danh sách người online và phiên trả lời đang nói nằm trong bộ nhớ. Muốn nhiều instance thì cần SignalR backplane (ví dụ Redis) và sticky session.
 - Thiếu model thì phòng thi tự chuyển sang gõ câu trả lời.
 
-## Scale số instance web
-
-```bash
-docker compose up -d --scale web=4 --no-recreate
-```
-
-Hoặc đặt `AIVES_WEB_REPLICAS=4` trong `.env` rồi `docker compose up -d`. Caddy tự đưa instance mới vào vòng cân bằng tải trong khoảng 10 giây. Mỗi instance web dùng khoảng 150–300 MB RAM; SQL Server bản Express giới hạn khoảng 1,4 GB bộ nhớ đệm và database 10 GB, nên khi dữ liệu hoặc tải tăng cần chuyển `MSSQL_PID` sang bản phù hợp (có bản quyền) hoặc tách database sang máy riêng.
+`PresenceTracker` và các phiên trả lời trực tiếp hiện lưu trong bộ nhớ, vì vậy triển khai một instance. Mở rộng ngang cần bổ sung SignalR backplane và lưu trữ chia sẻ cho trạng thái phiên trước khi thêm replicas. SQL Server Express giới hạn khoảng 1,4 GB bộ nhớ đệm và database 10 GB; khi tải hoặc dữ liệu tăng cần chuyển `MSSQL_PID` sang bản phù hợp (có bản quyền) hoặc tách database sang máy riêng.
 
 ## Ollama (tùy chọn)
 

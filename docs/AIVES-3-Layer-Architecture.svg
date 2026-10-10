@@ -4,25 +4,25 @@
 </defs>
 <rect width="2000" height="1420" fill="#111111"/>
 <text x="1000" y="50" font-size="36" fill="#cfd6e4" font-weight="bold" text-anchor="middle">AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP</text>
-<text x="1000" y="82" font-size="16" fill="#a9b0bd" font-weight="normal" text-anchor="middle">Theo codebase hiện tại · ASP.NET Core MVC / .NET 10 · DTO dùng chung · mũi tên nét liền = request, nét đứt = response</text>
+<text x="1000" y="82" font-size="16" fill="#a9b0bd" font-weight="normal" text-anchor="middle">Theo codebase hiện tại · ASP.NET Core Razor Pages / .NET 10 · DTO dùng chung · mũi tên nét liền = request, nét đứt = response</text>
 <rect x="350" y="118" width="1280" height="227" rx="22" fill="#0f1a30" stroke="#5b8def" stroke-width="1.8"/>
 <line x1="350" y1="172" x2="1630" y2="172" stroke="#5b8def" stroke-width="1.4"/>
-<text x="990" y="154" font-size="23" fill="#6ea0ff" font-weight="bold" text-anchor="middle">1. PRESENTATION LAYER – AIVES.WebMVC</text>
+<text x="990" y="154" font-size="23" fill="#6ea0ff" font-weight="bold" text-anchor="middle">1. PRESENTATION LAYER – AIVES.WebRazor</text>
 <rect x="385" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="580.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Razor Views</text>
+<text x="580.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Razor Pages</text>
 <text x="580.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Home · Account · Admin · Catalog</text>
 <text x="580.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Question · Rubric · Exam · MyExams</text>
 <text x="580.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Interview · Profile · Shared layout</text>
 <rect x="795" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="990.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Controllers</text>
-<text x="990.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Account · Admin · AiExamRoom · Catalog</text>
-<text x="990.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Exam · Home · Interview · MyExams</text>
-<text x="990.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Profile · Question · Rubric</text>
+<text x="990.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">PageModels / handlers</text>
+<text x="990.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Account · Admin · Catalog · Exam</text>
+<text x="990.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Grading · Interview · MyExams</text>
+<text x="990.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Profile · Question · Reports · Rubric</text>
 <rect x="1205" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="1400.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">ViewModels / Client JS</text>
+<text x="1400.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Page models / Client JS</text>
 <text x="1400.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">ViewModels · Policy Staff / Admin</text>
 <text x="1400.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">interview.js: Web Speech STT / TTS</text>
-<text x="1400.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">MVC · cookie · Google OAuth</text>
+<text x="1400.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Razor Pages · cookie · Google OAuth</text>
 <rect x="350" y="430" width="1280" height="348" rx="22" fill="#0e1f18" stroke="#4cb58a" stroke-width="1.8"/>
 <line x1="350" y1="484" x2="1630" y2="484" stroke="#4cb58a" stroke-width="1.4"/>
 <text x="990" y="466" font-size="23" fill="#4cb58a" font-weight="bold" text-anchor="middle">2. BUSINESS LOGIC LAYER – AIVES.BLL</text>

@@ -11,16 +11,16 @@
         <mxCell id="3" value="" style="rounded=1;fillColor=#14191f;strokeColor=#558dff;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="380" y="140" width="1580" height="300" />
         </mxCell>
-        <mxCell id="4" value="1. PRESENTATION LAYER – AIVES.WebMVC" style="text;html=1;fontColor=#558dff;fontSize=28;fontStyle=1;align=center;" vertex="1" parent="1">
+        <mxCell id="4" value="1. PRESENTATION LAYER – AIVES.WebRazor" style="text;html=1;fontColor=#558dff;fontSize=28;fontStyle=1;align=center;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="380" y="140" width="1580" height="65" />
         </mxCell>
-        <mxCell id="5" value="&lt;b&gt;Razor Views&lt;/b&gt;&lt;br/&gt;Home · Account · Question&lt;br/&gt;AiExamRoom / QuestionGenerator" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
+        <mxCell id="5" value="&lt;b&gt;Razor Pages&lt;/b&gt;&lt;br/&gt;Home · Account · Question&lt;br/&gt;Exam · Rubric · Catalog · Admin" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="425" y="245" width="460" height="150" />
         </mxCell>
-        <mxCell id="6" value="&lt;b&gt;Controllers&lt;/b&gt;&lt;br/&gt;Home · Account&lt;br/&gt;Question · AiExamRoom" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
+        <mxCell id="6" value="&lt;b&gt;PageModels / handlers&lt;/b&gt;&lt;br/&gt;Home · Account&lt;br/&gt;Question · Exam · Grading · Reports" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="940" y="245" width="460" height="150" />
         </mxCell>
-        <mxCell id="7" value="&lt;b&gt;ViewModels / HTTP&lt;/b&gt;&lt;br/&gt;Account · Question · Rubric · AI&lt;br/&gt;MVC · cookie · Google OAuth" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
+        <mxCell id="7" value="&lt;b&gt;Page models / HTTP&lt;/b&gt;&lt;br/&gt;Account · Question · Rubric · AI&lt;br/&gt;Razor Pages · cookie · Google OAuth · SignalR" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
           <mxGeometry as="geometry" x="1455" y="245" width="460" height="150" />
         </mxCell>
         <mxCell id="8" value="&lt;b&gt;Giảng viên / Người dùng&lt;/b&gt;&lt;br/&gt;Trình duyệt web" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#242a34;strokeColor=#c6cedf;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">

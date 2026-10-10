@@ -1,0 +1,6 @@
+@page "/Exam/Edit/{id:int}"
+@model AIVES.WebRazor.Pages.Exams.EditModel
+@{
+    ViewData["Title"] = L10n.T("Edit exam");
+}
+<partial name="_ExamForm" model="Model" />

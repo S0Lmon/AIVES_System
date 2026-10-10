@@ -1,27 +1,162 @@
-@page
+@page "{first:regex(^(Home)$)?}/{handler:regex(^(Index|Stats)$)?}"
 @model IndexModel
+@inject AIVES.WebRazor.DisplayTimeZone TimeZone
 @{
-    ViewData["Title"] = "Tổng quan";
+    ViewData["Title"] = L10n.T("Dashboard");
 }
 <div class="welcome-row">
     <div>
-        <span class="page-kicker">Razor Pages · SignalR</span>
-        <h1>Xin chào, @AivesHub.DisplayName(User)</h1>
-        <p>Mọi thay đổi của đồng nghiệp hiện ra ở đây ngay lập tức, không cần tải lại trang.</p>
+        <span class="page-kicker">AIVES / Dashboard</span>
+        <h1>@L10n.Format("Hello, {0}", AivesHub.DisplayName(User))</h1>
+        <p>@L10n.T("Your exams, academic workspace and system activity in one place.")</p>
     </div>
-    @if (Model.IsStaff)
-    {
-        <a asp-page="/Questions/Create" class="btn btn-primary">+ Thêm câu hỏi</a>
-    }
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        @if (Model.IsStaff)
+        {
+            <a asp-page="/Questions/Create" class="btn btn-primary">+ @L10n.T("Add question")</a>
+        }
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-page="/Profile/Index" class="btn btn-light">@L10n.T("Profile")</a>
+        }
+        <a asp-page="/Privacy" class="btn btn-light">@L10n.T("Data policy")</a>
+    </div>
 </div>
+
+@if (Model.AdminDashboard is { } admin)
+{
+    var passed = (admin.Health.DbOk ? 1 : 0) + (admin.Health.GeminiOk ? 1 : 0) + (admin.Health.OllamaOk ? 1 : 0) + (admin.Health.SmtpOk ? 1 : 0);
+    var failed = 4 - passed;
+    <div class="page-heading">
+        <div><span class="page-kicker">AIVES / Dashboard</span><h2>@L10n.T("System overview")</h2><p>@L10n.T("System-wide counts and service health.")</p></div>
+        <div class="d-flex flex-wrap gap-2 align-items-center"><span class="status-label @(failed == 0 ? "ready" : "missing")">@(failed == 0 ? L10n.T("System healthy") : L10n.T("Configuration incomplete"))</span><a asp-page="/Admin/Index" class="btn btn-light">@L10n.T("System check")</a></div>
+    </div>
+    <div class="check-summary">
+        <article class="check-summary-card is-critical"><span class="check-summary-label">@L10n.T("Missing / errors")</span><strong>@failed</strong><small>@L10n.T("Configuration needed before the feature runs")</small></article>
+        <article class="check-summary-card is-warning"><span class="check-summary-label">@L10n.T("Warnings")</span><strong>0</strong><small>@L10n.T("Optional, but worth reviewing")</small></article>
+        <article class="check-summary-card is-ok"><span class="check-summary-label">@L10n.T("Configured")</span><strong>@passed</strong><small>@L10n.T("Services ready to use")</small></article>
+    </div>
+    <div class="metric-grid mb-4">
+        <div class="panel metric-card"><div><strong>@admin.TotalUsers</strong><small>@L10n.T("Total users")</small></div></div>
+        <div class="panel metric-card"><div><strong>@admin.TotalExams</strong><small>@L10n.T("Total exams")</small></div></div>
+        <div class="panel metric-card"><div><strong>@admin.TotalQuestions</strong><small>@L10n.T("Total questions")</small></div></div>
+        <div class="panel metric-card"><div><strong>@admin.TotalRubrics</strong><small>@L10n.T("Total rubrics")</small></div></div>
+        <div class="panel metric-card"><div><strong>@admin.TotalSubjects</strong><small>@L10n.T("Subjects")</small></div></div>
+        <div class="panel metric-card"><div><strong>@admin.ActiveExamsNow</strong><small>@L10n.T("Active exams now")</small></div></div>
+    </div>
+    <section class="panel mb-4">
+        <div class="panel-header"><h2>@L10n.T("Service status")</h2></div>
+        <div class="panel-body detail-grid">
+            <div class="detail-item"><small>@L10n.T("Database")</small><strong>@(admin.Health.DbOk ? L10n.T("OK") : L10n.T("Not configured"))</strong></div>
+            <div class="detail-item"><small>Gemini</small><strong>@(admin.Health.GeminiOk ? L10n.T("OK") : L10n.T("Not configured"))</strong></div>
+            <div class="detail-item"><small>Ollama</small><strong>@(admin.Health.OllamaOk ? L10n.T("OK") : L10n.T("Not configured"))</strong></div>
+            <div class="detail-item"><small>SMTP</small><strong>@(admin.Health.SmtpOk ? L10n.T("OK") : L10n.T("Not configured"))</strong></div>
+        </div>
+    </section>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a asp-page="/Admin/Users" class="btn btn-light">@L10n.T("Users")</a>
+        <a asp-page="/Admin/Subjects" class="btn btn-light">@L10n.T("Lecturers per subject")</a>
+        <a asp-page="/Admin/Settings" class="btn btn-light">@L10n.T("Speech settings")</a>
+        <a asp-page="/Admin/Audit" class="btn btn-light">@L10n.T("Audit log")</a>
+    </div>
+}
+else if (Model.LecturerDashboard is { } lecturer)
+{
+    <div class="page-heading"><div><span class="page-kicker">AIVES / Dashboard</span><h2>@L10n.T("Lecturer Dashboard")</h2><p>@L10n.T("Your exams and question bank status.")</p></div></div>
+    <div class="metric-grid mb-4">
+        <div class="panel metric-card"><div><strong>@lecturer.MyUpcomingExams.Count</strong><small>@L10n.T("Upcoming exams")</small></div></div>
+        <div class="panel metric-card"><div><strong>@lecturer.MyPastExams.Count</strong><small>@L10n.T("Past exams")</small></div></div>
+        <div class="panel metric-card"><div><strong>@lecturer.QuestionBank.Total</strong><small>@L10n.T("Question bank")</small></div></div>
+        <div class="panel metric-card"><div><strong>@lecturer.QuestionBank.Active</strong><small>@L10n.T("Active questions")</small></div></div>
+        <div class="panel metric-card"><div><strong>@lecturer.Rubrics.Total</strong><small>@L10n.T("Rubrics")</small></div></div>
+        <div class="panel metric-card"><div><strong>@lecturer.Subjects.Total</strong><small>@L10n.T("Subjects")</small></div></div>
+    </div>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("Exams in the next 7 days")</h2><a asp-page="/Exams/Index" class="btn btn-sm btn-light">@L10n.T("Schedule")</a></div>
+        @if (Model.UpcomingLecturerExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No upcoming exams.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Starts at")</th><th>@L10n.T("Candidates")</th></tr></thead><tbody>
+            @foreach (var exam in Model.UpcomingLecturerExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("All upcoming exams")</h2></div>
+        @if (lecturer.MyUpcomingExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No upcoming exams.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Starts at")</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in lecturer.MyUpcomingExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td><a asp-page="/Exams/Details" asp-route-id="@exam.Id" class="btn btn-sm btn-light">@L10n.T("View")</a></td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("Past exams")</h2></div>
+        @if (lecturer.MyPastExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Date")</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in lecturer.MyPastExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td><a asp-page="/Exams/Details" asp-route-id="@exam.Id" class="btn btn-sm btn-light">@L10n.T("View")</a></td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel mb-4">
+        <div class="panel-header"><h2>@L10n.T("Workspace status")</h2></div>
+        <div class="panel-body detail-grid">
+            <div class="detail-item"><small>@L10n.T("Questions with rubric")</small><strong>@lecturer.QuestionBank.WithRubric / @lecturer.QuestionBank.Total</strong></div>
+            <div class="detail-item"><small>@L10n.T("Bloom levels represented")</small><strong>@lecturer.QuestionBank.BloomSpread</strong></div>
+            <div class="detail-item"><small>@L10n.T("Rubrics with criteria")</small><strong>@lecturer.Rubrics.WithCriteria / @lecturer.Rubrics.Total</strong></div>
+            <div class="detail-item"><small>@L10n.T("Subjects with topics / materials")</small><strong>@lecturer.Subjects.WithTopics / @lecturer.Subjects.WithMaterials</strong></div>
+        </div>
+    </section>
+}
+else if (Model.StudentDashboard is { } student)
+{
+    var nowUtc = DateTime.UtcNow;
+    <div class="page-heading"><div><span class="page-kicker">AIVES / Dashboard</span><h2>@L10n.T("Dashboard")</h2><p>@L10n.T("Your upcoming viva exams and results.")</p></div><a asp-page="/Interviews/Index" class="btn btn-light">@L10n.T("My exams")</a></div>
+    <div class="metric-grid mb-4">
+        <div class="panel metric-card"><div><strong>@student.UpcomingCount</strong><small>@L10n.T("Upcoming exams")</small></div></div>
+        <div class="panel metric-card"><div><strong>@student.CompletedCount</strong><small>@L10n.T("Completed exams")</small></div></div>
+        <div class="panel metric-card"><div><strong>@(student.AverageScore?.ToString("0.##") ?? "—")</strong><small>@L10n.T("Average score")</small></div></div>
+    </div>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("Upcoming exams")</h2></div>
+        @if (student.UpcomingExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No upcoming exams.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Your time")</th><th>@L10n.T("Questions")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in student.UpcomingExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName @(exam.TopicName is null ? "" : "· " + exam.TopicName)</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.MainQuestionCount</td><td>@if (nowUtc >= exam.StartsAtUtc && nowUtc < exam.EndsAtUtc) { <a asp-page="/Interviews/Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@L10n.T("Open exam")</a> } else { <a asp-page="/Interviews/Index" class="btn btn-sm btn-light">@L10n.T("View schedule")</a> }</td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("Past exams and results")</h2></div>
+        @if (student.PastExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Date")</th><th>@L10n.T("Result")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in student.PastExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@(exam.ResultAvailable && exam.FinalScore.HasValue ? exam.FinalScore.Value.ToString("0.##") : L10n.T("Not available"))</td><td>@if (exam.ResultAvailable) { <a asp-page="/MyExams/Result" asp-route-id="@exam.ExamId" class="btn btn-sm btn-light">@L10n.T("View result")</a> }</td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+}
+else if (User.Identity?.IsAuthenticated != true)
+{
+    <section class="panel p-4 mb-4">
+        <h2>@L10n.T("Sign in to open your dashboard")</h2>
+        <p>@L10n.T("Use your AIVES account to view exams, results and your academic workspace.")</p>
+        <a asp-page="/Account/Login" class="btn btn-primary">@L10n.T("Sign in")</a>
+    </section>
+}
 
 @if (Model.IsStaff && Model.Numbers is { } stats)
 {
-    <div class="metric-grid mb-4" data-stats-url="@Url.Page("/Index", "Stats")">
-        <div class="panel metric-card stat-card"><div><strong data-stat="questions">@stats.Questions</strong><small>Câu hỏi trong ngân hàng</small></div></div>
-        <div class="panel metric-card stat-card"><div><strong data-stat="activeQuestions">@stats.ActiveQuestions</strong><small>Câu hỏi đang hoạt động</small></div></div>
-        <div class="panel metric-card stat-card"><div><strong data-stat="subjects">@stats.Subjects</strong><small>Môn học · <span data-stat="topics">@stats.Topics</span> chủ đề</small></div></div>
-        <div class="panel metric-card stat-card"><div><strong data-stat="rubrics">@stats.Rubrics</strong><small>Rubric</small></div></div>
+    <div class="metric-grid mb-4" data-stats-url="@Url.Page("/Index", "Stats", new { first = "Home" })">
+        <div class="panel metric-card stat-card"><div><strong data-stat="questions">@stats.Questions</strong><small>@L10n.T("Questions in the bank")</small></div></div>
+        <div class="panel metric-card stat-card"><div><strong data-stat="activeQuestions">@stats.ActiveQuestions</strong><small>@L10n.T("Active questions")</small></div></div>
+        <div class="panel metric-card stat-card"><div><strong data-stat="subjects">@stats.Subjects</strong><small>@L10n.T("Subjects") · <span data-stat="topics">@stats.Topics</span> @L10n.T("topics")</small></div></div>
+        <div class="panel metric-card stat-card"><div><strong data-stat="rubrics">@stats.Rubrics</strong><small>@L10n.T("Rubrics")</small></div></div>
     </div>
 }
 
@@ -29,16 +164,13 @@
     @if (Model.IsStaff)
     {
         <section class="panel">
-            <div class="panel-header">
-                <h2>Hoạt động trực tiếp</h2>
-                <small class="text-muted">Kể từ khi bạn mở trang này</small>
-            </div>
+            <div class="panel-header"><h2>@L10n.T("Live activity")</h2><small class="text-muted">@L10n.T("Since you opened this page")</small></div>
             <ul class="activity-feed" data-activity-feed hidden></ul>
-            <p class="activity-empty" data-activity-empty>Chưa có thay đổi nào. Hãy mở một tab khác (hoặc đăng nhập tài khoản khác) và thêm / sửa / xoá một câu hỏi để thấy cập nhật real-time.</p>
+            <p class="activity-empty" data-activity-empty>@L10n.T("No changes yet. Open another tab and add, edit or delete a question to see live updates.")</p>
         </section>
     }
     <section class="panel">
-        <div class="panel-header"><h2>Đang online</h2><span class="badge-soft"><span data-online-count>0</span> người</span></div>
+        <div class="panel-header"><h2>@L10n.T("Online now")</h2><span class="badge-soft"><span data-online-count>0</span> @L10n.T("people")</span></div>
         <ul class="activity-feed" data-online-board></ul>
     </section>
 </div>
@@ -93,7 +225,7 @@
                 title.textContent = change.title;
                 body.append(line, title);
                 const time = document.createElement('time');
-                time.textContent = new Date(change.atUtc).toLocaleTimeString('vi-VN');
+                time.textContent = new Date(change.atUtc).toLocaleTimeString();
                 item.append(dot, body, time);
                 feed.prepend(item);
                 while (feed.children.length > 30) feed.lastElementChild.remove();

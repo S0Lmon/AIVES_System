@@ -11,13 +11,13 @@ public static class AuthorizationPolicies
 {
     /// <summary>Lecturers and administrators: the question bank, rubric bank and catalogue.</summary>
     public const string Staff = "Staff";
+    public const string Admin = "Admin";
 }
 
 public static class RazorPresentation
 {
-    // Cookies are not scoped by port, so this site must not reuse the MVC site's "AIVES.Auth"
-    // when both run on localhost.
-    public const string AuthCookieName = "AIVES.Razor.Auth";
+    public const string AuthCookieName = "AIVES.Auth";
+    public const string LanguageCookieName = "AIVES.Language";
 
     public static IServiceCollection AddRazorPresentation(this IServiceCollection services, IConfiguration configuration)
     {
@@ -33,22 +33,42 @@ public static class RazorPresentation
             options.SlidingExpiration = true;
         });
 
+        var googleClientId = configuration["Authentication:Google:ClientId"];
+        var googleClientSecret = configuration["Authentication:Google:ClientSecret"];
+        if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+        {
+            services.AddAuthentication().AddGoogle(options =>
+            {
+                options.ClientId = googleClientId;
+                options.ClientSecret = googleClientSecret;
+            });
+        }
+
         services.AddAuthorizationBuilder()
-            .AddPolicy(AuthorizationPolicies.Staff, policy => policy.RequireRole(AppRoles.Admin, AppRoles.Lecturer));
+            .AddPolicy(AuthorizationPolicies.Staff, policy => policy.RequireRole(AppRoles.Admin, AppRoles.Lecturer))
+            .AddPolicy(AuthorizationPolicies.Admin, policy => policy.RequireRole(AppRoles.Admin));
 
         // Authorization lives in conventions, so a new page in a folder is protected by default.
         services.AddRazorPages(options =>
         {
+            options.Conventions.AddPageRoute("/Questions/Index", "/Questions");
             options.Conventions.AuthorizeFolder("/");
             options.Conventions.AllowAnonymousToFolder("/Account");
             options.Conventions.AllowAnonymousToPage("/Error");
             options.Conventions.AuthorizeFolder("/Questions", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Subjects", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Rubrics", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Catalog", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Glossary", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Exams", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Grading", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Reports", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizeFolder("/Admin", AuthorizationPolicies.Admin);
             options.Conventions.AuthorizePage("/Interviews/Monitor", AuthorizationPolicies.Staff);
         });
 
         services.AddHttpContextAccessor();
+        services.AddSingleton<DisplayTimeZone>();
         services.AddSignalR(options =>
             {
                 // Room for audio chunks that arrive while Whisper is busy with the previous ones.
@@ -63,13 +83,13 @@ public static class RazorPresentation
         services.AddSingleton<AnswerSessions>();
         services.AddScoped<ILiveUpdates, LiveUpdates>();
 
-        // Vietnamese first; BLL messages are English keys that L10n translates for this culture.
         services.Configure<RequestLocalizationOptions>(options =>
         {
             var supported = AppLanguageExtensions.Supported.Select(language => new CultureInfo(language.ToCultureCode())).ToList();
-            options.DefaultRequestCulture = new RequestCulture(AppLanguage.Vi.ToCultureCode());
+            options.DefaultRequestCulture = new RequestCulture(AppLanguageExtensions.Default);
             options.SupportedCultures = supported;
             options.SupportedUICultures = supported;
+            options.RequestCultureProviders = [new AppLanguageCultureProvider(LanguageCookieName)];
         });
         return services;
     }

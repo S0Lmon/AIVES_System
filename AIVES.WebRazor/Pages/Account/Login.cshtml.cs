@@ -14,6 +14,8 @@ public sealed class LoginModel(IAccountService accounts, ILogger<LoginModel> log
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
 
+    public bool IsGoogleConfigured => accounts.IsGoogleConfigured;
+
     public sealed class LoginInput
     {
         [Required(ErrorMessage = "Vui lòng nhập email.")]

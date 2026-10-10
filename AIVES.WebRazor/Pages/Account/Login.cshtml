@@ -23,7 +23,12 @@
             <label asp-for="Input.RememberMe" class="form-check-label"></label>
         </div>
         <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
-        <p class="form-text mt-3 mb-0">Dùng chung tài khoản với trang AIVES (MVC). Đăng ký và xác minh email vẫn thực hiện ở trang đó.</p>
+        <div class="auth-divider"><span>@L10n.T("or")</span></div>
+        @if (Model.IsGoogleConfigured)
+        {
+            <button type="submit" formaction="/Account/ExternalLogin" class="btn btn-light w-100">@L10n.T("Sign in with Google")</button>
+        }
+        <p class="auth-switch">@L10n.T("No account yet?") <a asp-page="/Account/Register">@L10n.T("Register with your email")</a></p>
     </form>
 </div>
 @section Scripts {

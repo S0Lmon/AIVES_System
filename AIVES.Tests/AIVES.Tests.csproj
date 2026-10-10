@@ -22,9 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AIVES.WebMVC\AIVES.WebMVC.csproj" />
-    <!-- Both web projects declare a global Program class, so the Razor Pages one is aliased. -->
-    <ProjectReference Include="..\AIVES.WebRazor\AIVES.WebRazor.csproj" Aliases="Razor" />
+    <ProjectReference Include="..\AIVES.WebRazor\AIVES.WebRazor.csproj" Aliases="global,Razor" />
     <ProjectReference Include="..\AIVES.BLL\AIVES.BLL.csproj" />
     <ProjectReference Include="..\AIVES.DAL\AIVES.DAL.csproj" />
     <ProjectReference Include="..\AIVES.DTO\AIVES.DTO.csproj" />
