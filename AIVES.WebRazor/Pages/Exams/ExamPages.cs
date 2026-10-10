@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.Security.Claims;
 using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Exams;
@@ -77,6 +76,8 @@ public abstract class ExamFormPageModel(
     public string TimeZoneLabel => timeZone.OffsetLabel;
     protected IExamService Exams => exams;
     protected ExamActor Actor => ExamPageActors.From(User);
+    protected ISystemSettingsService Settings => settings;
+    protected DisplayTimeZone TimeZone => timeZone;
 
     protected async Task FillAsync(CancellationToken cancellationToken)
     {
@@ -194,10 +195,11 @@ public sealed class CreateModel(
 {
     public async Task OnGetAsync(DateTime? startsAt, CancellationToken cancellationToken)
     {
-        var start = startsAt ?? timeZone.ToLocal(DateTime.UtcNow).Date.AddHours(timeZone.ToLocal(DateTime.UtcNow).Hour + 1);
+        var localNow = TimeZone.ToLocal(DateTime.UtcNow);
+        var start = startsAt ?? localNow.Date.AddHours(localNow.Hour + 1);
         Input.StartsAtLocal = start;
         Input.EndsAtLocal = start.AddHours(4);
-        Input.Language = (await settings.GetSpeechAsync(cancellationToken)).DefaultLanguage;
+        Input.Language = (await Settings.GetSpeechAsync(cancellationToken)).DefaultLanguage;
         await FillAsync(cancellationToken);
     }
 
@@ -235,7 +237,7 @@ public sealed class EditModel(
             TempData["ExamError"] = L10n.T("This exam has already started, so its settings, candidates and questions are locked.");
             return RedirectToPage("Details", new { id = Id });
         }
-        Input = FromDetails(exam, timeZone);
+        Input = FromDetails(exam, TimeZone);
         await FillAsync(cancellationToken);
         return Page();
     }
@@ -260,12 +262,11 @@ public sealed class EditModel(
     }
 }
 
-public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, TimeProvider clock, ILogger<DetailsModel> logger) : PageModel
+public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, TimeProvider clock) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int Id { get; set; }
     public ExamDetailsDto Exam { get; private set; } = null!;
     public DateTime NowUtc { get; private set; }
-    public DisplayTimeZone TimeZone { get; } = timeZone;
     public bool Started => Exam.HasStarted(NowUtc);
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken) =>

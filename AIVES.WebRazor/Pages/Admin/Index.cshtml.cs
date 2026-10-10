@@ -9,7 +9,8 @@ public sealed class IndexModel(ISystemCheckService systemChecks, ILogger<IndexMo
 {
     public SystemCheckReportDto Report { get; private set; } =
         new("Unknown", DateTimeOffset.UtcNow,
-            new DatabaseDiagnosticsDto(false, string.Empty, string.Empty, [], 0, 0, 0, 0, 0), []);
+            new DatabaseDiagnosticsDto(false, string.Empty, string.Empty, [], 0, 0, 0, 0, 0),
+            [new SystemCheckItemDto("Unknown", string.Empty, string.Empty, SystemCheckStatus.Critical)]);
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {

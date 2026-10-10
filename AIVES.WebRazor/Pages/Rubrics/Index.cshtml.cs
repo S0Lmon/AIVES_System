@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace AIVES.WebRazor.Pages.Rubrics;
 
-public sealed class IndexModel(IRubricService rubrics, IBloomLevelService blooms, ICatalogService catalog,
+public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
     IRubricGeneratorRouter generator, ILogger<IndexModel> logger) : PageModel
 {
     [BindProperty(SupportsGet = true)] public string? Tab { get; set; }

@@ -1,6 +1,7 @@
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Grading;
 using AIVES.DTO;
+using AIVES.WebRazor.Pages.Exams;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 

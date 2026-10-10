@@ -10,7 +10,7 @@
     <section class="form-section"><div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Exam")</h2><p>@L10n.T("Name the session and choose where its questions come from.")</p></div></div>
         <div class="row g-3">
             <div class="col-12"><label asp-for="Input.Title" class="form-label">@L10n.T("Title")</label><input asp-for="Input.Title" class="form-control" maxlength="@ExamLimits.TitleMaxLength" /></div>
-            <div class="col-md-6"><label asp-for="Input.SubjectId" class="form-label">@L10n.T("Subject")</label><select asp-for="Input.SubjectId" class="form-select"><option value="0">@L10n.T("Choose a subject")</option>@foreach (var subject in Model.Subjects) { <option value="@subject.Id">@subject.Name</option> }</select></div>
+            <div class="col-md-6"><label asp-for="Input.SubjectId" class="form-label">@L10n.T("Subject")</label><select asp-for="Input.SubjectId" class="form-select" id="examSubject"><option value="0">@L10n.T("Choose a subject")</option>@foreach (var subject in Model.Subjects) { <option value="@subject.Id">@subject.Name</option> }</select></div>
             <div class="col-md-6"><label asp-for="Input.TopicId" class="form-label">@L10n.T("Topic")</label><select asp-for="Input.TopicId" class="form-select"><option value="">@L10n.T("Any topic")</option>@foreach (var topic in Model.Topics) { <option value="@topic.Id" data-subject="@topic.SubjectId">@topic.Name</option> }</select></div>
             <div class="col-md-6"><label asp-for="Input.Term" class="form-label">@L10n.T("Term / semester")</label><input asp-for="Input.Term" class="form-control" maxlength="@ExamLimits.TermMaxLength" /></div>
             <div class="col-md-6"><label asp-for="Input.ExamType" class="form-label">@L10n.T("Examination type")</label><input asp-for="Input.ExamType" class="form-control" maxlength="@ExamLimits.ExamTypeMaxLength" /></div>
@@ -25,20 +25,34 @@
         <div class="col-md-6"><label asp-for="Input.BreakEveryCount" class="form-label">@L10n.T("Break after every N candidates")</label><input asp-for="Input.BreakEveryCount" type="number" class="form-control" /></div>
     </div></section>
     <section class="form-section"><div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Questions per candidate")</h2><p>@L10n.T("Main questions are fixed per candidate; follow-up questions are the most the examiner may add.")</p></div></div><div class="row g-3">
-        <div class="col-md-6"><label asp-for="Input.Strategy" class="form-label">@L10n.T("Question selection strategy")</label><select asp-for="Input.Strategy" asp-items="Html.GetEnumSelectList<QuestionSelectionStrategy>()" class="form-select"></select></div>
-        <div class="col-md-6"><label asp-for="Input.MainQuestionCount" class="form-label">@L10n.T("Main questions")</label><input asp-for="Input.MainQuestionCount" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label><input asp-for="Input.MaxFollowUpQuestions" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.MaxFollowUpsPerQuestion" class="form-label">@L10n.T("Follow-ups per question")</label><input asp-for="Input.MaxFollowUpsPerQuestion" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.AnswerTimeLimitSeconds" class="form-label">@L10n.T("Answer time limit (seconds)")</label><input asp-for="Input.AnswerTimeLimitSeconds" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.Language" class="form-label">@L10n.T("Interview language")</label><select asp-for="Input.Language" asp-items="@(new SelectList(Model.Languages))" class="form-select"></select></div>
-        <div class="col-md-6"><label asp-for="Input.Recording" class="form-label">@L10n.T("Recording")</label><select asp-for="Input.Recording" asp-items="Html.GetEnumSelectList<RecordingMode>()" class="form-select"></select></div>
+        <div class="col-md-6"><label asp-for="Input.Strategy" class="form-label">@L10n.T("Question selection strategy")</label><select asp-for="Input.Strategy" class="form-select"><option value="@QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option><option value="@QuestionSelectionStrategy.Random">@L10n.T("Random: draw each set purely at random")</option></select></div>
+        <div class="col-md-6"><label asp-for="Input.MainQuestionCount" class="form-label">@L10n.T("Main questions")</label><input asp-for="Input.MainQuestionCount" type="number" min="1" max="@ExamLimits.MaxMainQuestions" class="form-control" /></div>
+        <div class="col-md-6"><label asp-for="Input.MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label><input asp-for="Input.MaxFollowUpQuestions" type="number" min="0" max="@ExamLimits.MaxFollowUpQuestions" class="form-control" /></div>
+        <div class="col-md-6"><label asp-for="Input.MaxFollowUpsPerQuestion" class="form-label">@L10n.T("Follow-ups per question")</label><input asp-for="Input.MaxFollowUpsPerQuestion" type="number" min="0" max="@ExamLimits.MaxFollowUpsPerQuestionLimit" class="form-control" /></div>
+        <div class="col-md-6"><label asp-for="Input.AnswerTimeLimitSeconds" class="form-label">@L10n.T("Answer time limit (seconds)")</label><input asp-for="Input.AnswerTimeLimitSeconds" type="number" min="@ExamLimits.MinAnswerSeconds" max="@ExamLimits.MaxAnswerSeconds" class="form-control" /></div>
+        <div class="col-md-6"><label asp-for="Input.Language" class="form-label">@L10n.T("Interview language")</label><select asp-for="Input.Language" class="form-select">@if (Model.Languages.Contains(AppLanguage.Vi)) { <option value="@AppLanguage.Vi">Tiếng Việt</option> }@if (Model.Languages.Contains(AppLanguage.En)) { <option value="@AppLanguage.En">English</option> }</select></div>
+        <div class="col-md-6"><label asp-for="Input.Recording" class="form-label">@L10n.T("Record the viva")</label><select asp-for="Input.Recording" class="form-select"><option value="@RecordingMode.Audio">@L10n.T("Audio of every answer")</option><option value="@RecordingMode.AudioVideo">@L10n.T("Audio and camera video")</option><option value="@RecordingMode.None">@L10n.T("Do not record")</option></select><div class="form-text">@L10n.T("Kept encrypted as evidence for grade appeals. Students must agree before they start; only you and administrators can play it.")</div></div>
     </div></section>
-    <section class="form-section"><div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("Paste one email per line, or separate addresses with commas or semicolons.")</p></div></div>
-        <label asp-for="Input.CandidateEmails" class="form-label">@L10n.T("Candidate email addresses")</label><textarea asp-for="Input.CandidateEmails" rows="7" class="form-control"></textarea>
+    <section class="form-section"><div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("One email per line, in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
+        <label asp-for="Input.CandidateEmails" class="form-label">@L10n.T("Candidate emails")</label><textarea asp-for="Input.CandidateEmails" rows="8" class="form-control" placeholder="student1@fpt.edu.vn&#10;student2@fpt.edu.vn"></textarea>
+        <label asp-for="Input.Instructions" class="form-label mt-3">@L10n.T("Instructions or notes")</label><textarea asp-for="Input.Instructions" rows="3" maxlength="@ExamLimits.InstructionsMaxLength" class="form-control"></textarea>
     </section>
-    <section class="form-section"><label asp-for="Input.Instructions" class="form-label">@L10n.T("Instructions")</label><textarea asp-for="Input.Instructions" rows="3" class="form-control"></textarea>
-        <div class="form-check mt-3"><input asp-for="Input.ScheduleOverflowAllowed" class="form-check-input" /><label asp-for="Input.ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run beyond the exam end time")</label></div>
-    </section>
-    <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">@L10n.T("Save")</button><a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a></div>
+    <div class="form-check mb-3"><input asp-for="Input.ScheduleOverflowAllowed" class="form-check-input" /><label asp-for="Input.ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run past the end time")</label><div class="form-text">@L10n.T("Tick this only if you accept that the last slots end after the chosen end time.")</div></div>
+    <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>@if (editing) { <a asp-page="Details" asp-route-id="@Model.Input.Id" class="btn btn-light">@L10n.T("Cancel")</a> } else { <a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a> }</div>
 </form></div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script>
+    (() => {
+        const subject = document.getElementById('examSubject');
+        const topic = document.getElementById('Input_TopicId');
+        if (!subject || !topic) return;
+        const filterTopics = () => {
+            for (const option of topic.options) {
+                if (!option.value) continue;
+                option.hidden = subject.value && option.dataset.subject !== subject.value;
+                if (option.hidden && option.selected) topic.value = '';
+            }
+        };
+        subject.addEventListener('change', filterTopics);
+        filterTopics();
+    })();
+</script> }

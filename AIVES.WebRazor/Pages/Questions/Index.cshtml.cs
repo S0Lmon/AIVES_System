@@ -106,7 +106,7 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
         var subject = (await catalog.GetSubjectsAsync(ct)).FirstOrDefault(x => x.Id == Bulk.SubjectId);
         var topic = Bulk.TopicId is null ? null : (await catalog.GetTopicsAsync(Bulk.SubjectId, ct)).FirstOrDefault(x => x.Id == Bulk.TopicId);
         if (subject is null) ModelState.AddModelError(string.Empty, L10n.T("Pick a subject from the catalogue before generating."));
-        if (Bulk.Total is < 1 or > 30) ModelState.AddModelError(nameof(Bulk.Total), L10n.T("Choose between 1 and 30 questions."));
+        if (!Bulk.TryAllocate(out var counts, out var problem)) ModelState.AddModelError(string.Empty, problem ?? L10n.T("The bulk plan could not be split."));
         if (ModelState.IsValid && subject is not null)
         {
             try
@@ -115,15 +115,24 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
                     $"{subject.Name} {topic?.Name} {Bulk.LearningOutcomes}", ct) : RagContext.Empty;
                 var levels = (await bloomLevels.GetAllAsync()).OrderBy(x => x.Order).ToList();
                 var result = new List<GeneratedQuestionInput>();
-                for (var i = 0; i < Bulk.Total; i++)
+                var skipped = new List<string>();
+                foreach (var row in Bulk.Plan)
                 {
-                    var level = levels[i % Math.Max(1, levels.Count)];
-                    var batch = await generator.GenerateAsync(new QuestionGenerationRequest(subject.Name, topic?.Name ?? "",
-                        Bulk.LearningOutcomes?.Trim(), 1, rag.Text, rag.Sources, level.Name,
-                        QuestionDifficulties.Normalize(Bulk.DifficultyFrom), QuestionDifficulties.Normalize(Bulk.DifficultyTo)), Bulk.Provider, ct);
-                    result.AddRange(batch.Select(x => new GeneratedQuestionInput { Content = x.Content, ExpectedAnswer = x.ExpectedAnswer,
-                        BloomLevel = level.Name, Difficulty = QuestionDifficulties.Normalize(x.Difficulty) ?? "" }));
+                    var count = counts.GetValueOrDefault(row.Id);
+                    if (count == 0) continue;
+                    var levelName = levels.FirstOrDefault(x => x.Id == row.Id)?.Name ?? row.Name;
+                    try
+                    {
+                        var batch = await generator.GenerateAsync(new QuestionGenerationRequest(subject.Name, topic?.Name ?? "",
+                            Bulk.LearningOutcomes?.Trim(), count, rag.Text, rag.Sources, levelName,
+                            QuestionDifficulties.Normalize(Bulk.DifficultyFrom), QuestionDifficulties.Normalize(Bulk.DifficultyTo)), Bulk.Provider, ct);
+                        result.AddRange(batch.Select(x => new GeneratedQuestionInput { Content = x.Content, ExpectedAnswer = x.ExpectedAnswer,
+                            BloomLevel = levelName, Difficulty = QuestionDifficulties.Normalize(x.Difficulty) ?? "" }));
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogWarning(ex, "Bulk generation skipped {BloomLevel}", levelName); skipped.Add(levelName); }
                 }
+                if (result.Count == 0) ModelState.AddModelError(string.Empty, L10n.T("Could not generate questions right now. Please try again later."));
+                if (skipped.Count > 0 && result.Count > 0) ModelState.AddModelError(string.Empty, L10n.Format("No questions came back for {0}. Everything else was generated.", string.Join(", ", skipped)));
                 Bulk.SubjectName = subject.Name; Bulk.TopicName = topic?.Name ?? ""; Bulk.Results = result; Bulk.HasResult = true;
                 Bulk.Sources = rag.Sources.Select(x => x.Title).ToList();
             }
@@ -226,6 +235,19 @@ public sealed class BulkInput : AiInput
 {
     public int Total { get; set; } = 5; public string? DifficultyFrom { get; set; } public string? DifficultyTo { get; set; }
     public List<BulkLevelInput> Plan { get; set; } = [];
+    public bool TryAllocate(out Dictionary<int, int> counts, out string? problem)
+    {
+        counts = []; problem = null;
+        if (Plan.Count == 0) { problem = L10n.T("There are no Bloom levels to split the questions across."); return false; }
+        if (Plan.Any(x => x.Min < 0 || x.Max < x.Min)) { problem = L10n.T("Each Bloom range must end at or above its minimum."); return false; }
+        var min = Plan.Sum(x => x.Min); var max = Plan.Sum(x => x.Max);
+        if (Total is < 1 or > 30 || Total < min || Total > max)
+        { problem = L10n.Format("Ask for between {0} and {1} questions to fit your per level ranges.", min, max); return false; }
+        counts = Plan.ToDictionary(x => x.Id, x => x.Min);
+        var remaining = Total - min;
+        foreach (var row in Plan) { var add = Math.Min(remaining, row.Max - row.Min); counts[row.Id] += add; remaining -= add; }
+        return remaining == 0;
+    }
 }
 public sealed class BulkLevelInput { public int Id { get; set; } public string Name { get; set; } = ""; public int Min { get; set; } public int Max { get; set; } = 5; }
 public sealed class GeneratedQuestionInput

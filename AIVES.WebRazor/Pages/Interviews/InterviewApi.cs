@@ -5,11 +5,14 @@ using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
+using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace AIVES.WebRazor.Pages.Interviews;
 
+[RequestSizeLimit(32 * 1024 * 1024)]
+[RequestFormLimits(MultipartBodyLengthLimit = 32 * 1024 * 1024)]
 public sealed class InterviewApiModel(
     IInterviewService interviews,
     IRecordingService recordings,
@@ -40,8 +43,6 @@ public sealed class InterviewApiModel(
             request.TurnId, request.Transcript ?? string.Empty, request.InputMode,
             request.ResponseDelayMs, request.SpeakingMs), cancellationToken));
 
-    [RequestSizeLimit(32 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 32 * 1024 * 1024)]
     public async Task<IActionResult> OnPostRecordingAsync(int id, int turnId, IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0) return BadRequest(new { error = L10n.T("The recording is empty.") });
@@ -49,7 +50,7 @@ public sealed class InterviewApiModel(
         {
             await using var stream = file.OpenReadStream();
             await recordings.SaveAsync(id, Email, turnId, stream, file.ContentType ?? string.Empty, cancellationToken);
-            return NoContent();
+            return StatusCode(StatusCodes.Status204NoContent);
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { error = ex.Message }); }
@@ -62,7 +63,7 @@ public sealed class InterviewApiModel(
     {
         try { return new JsonResult(await action(), JsonOptions); }
         catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { return StatusCode(StatusCodes.Status409Conflict, new { error = ex.Message }); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Interview request failed for candidate slot {CandidateId}", RouteData.Values["id"]);

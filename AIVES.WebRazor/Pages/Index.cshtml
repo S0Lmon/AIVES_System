@@ -1,7 +1,6 @@
-@page
-@page "/Home/Index"
-@page "/Home/SetLanguage/{handler=SetLanguage}"
+@page "{first:regex(^(Home)$)?}/{handler:regex(^(Index|Stats)$)?}"
 @model IndexModel
+@inject AIVES.WebRazor.DisplayTimeZone TimeZone
 @{
     ViewData["Title"] = L10n.T("Dashboard");
 }
@@ -16,17 +15,10 @@
         {
             <a asp-page="/Questions/Create" class="btn btn-primary">+ @L10n.T("Add question")</a>
         }
-        <div class="language-switch">
-            @foreach (var language in AppLanguageExtensions.Supported)
-            {
-                var current = L10n.Current == language;
-                <form method="post" action="/Home/SetLanguage" class="language-form">
-                    <input type="hidden" name="language" value="@language" />
-                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                    <button type="submit" class="language-option @(current ? "is-current" : "")" title="@language.GetShortLabel()" lang="@language.ToCultureCode()">@language.GetShortLabel()</button>
-                </form>
-            }
-        </div>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-page="/Profile/Index" class="btn btn-light">@L10n.T("Profile")</a>
+        }
         <a asp-page="/Privacy" class="btn btn-light">@L10n.T("Data policy")</a>
     </div>
 </div>
@@ -85,7 +77,27 @@ else if (Model.LecturerDashboard is { } lecturer)
         else
         {
             <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Starts at")</th><th>@L10n.T("Candidates")</th></tr></thead><tbody>
-            @foreach (var exam in Model.UpcomingLecturerExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@exam.StartsAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td></tr> }
+            @foreach (var exam in Model.UpcomingLecturerExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("All upcoming exams")</h2></div>
+        @if (lecturer.MyUpcomingExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("No upcoming exams.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Starts at")</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in lecturer.MyUpcomingExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td><a asp-page="/Exams/Details" asp-route-id="@exam.Id" class="btn btn-sm btn-light">@L10n.T("View")</a></td></tr> }
+            </tbody></table></div>
+        }
+    </section>
+    <section class="panel overflow-hidden mb-4">
+        <div class="panel-header"><h2>@L10n.T("Past exams")</h2></div>
+        @if (lecturer.MyPastExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p> }
+        else
+        {
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Date")</th><th>@L10n.T("Candidates")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in lecturer.MyPastExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.CandidateCount</td><td><a asp-page="/Exams/Details" asp-route-id="@exam.Id" class="btn btn-sm btn-light">@L10n.T("View")</a></td></tr> }
             </tbody></table></div>
         }
     </section>
@@ -101,6 +113,7 @@ else if (Model.LecturerDashboard is { } lecturer)
 }
 else if (Model.StudentDashboard is { } student)
 {
+    var nowUtc = DateTime.UtcNow;
     <div class="page-heading"><div><span class="page-kicker">AIVES / Dashboard</span><h2>@L10n.T("Dashboard")</h2><p>@L10n.T("Your upcoming viva exams and results.")</p></div><a asp-page="/Interviews/Index" class="btn btn-light">@L10n.T("My exams")</a></div>
     <div class="metric-grid mb-4">
         <div class="panel metric-card"><div><strong>@student.UpcomingCount</strong><small>@L10n.T("Upcoming exams")</small></div></div>
@@ -113,7 +126,7 @@ else if (Model.StudentDashboard is { } student)
         else
         {
             <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Your time")</th><th>@L10n.T("Questions")</th><th></th></tr></thead><tbody>
-            @foreach (var exam in student.UpcomingExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName @(exam.TopicName is null ? "" : "· " + exam.TopicName)</td><td>@exam.StartsAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td><td>@exam.MainQuestionCount</td><td><a asp-page="/Interviews/Index" class="btn btn-sm btn-primary">@L10n.T("Open exam")</a></td></tr> }
+            @foreach (var exam in student.UpcomingExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName @(exam.TopicName is null ? "" : "· " + exam.TopicName)</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@exam.MainQuestionCount</td><td>@if (nowUtc >= exam.StartsAtUtc && nowUtc < exam.EndsAtUtc) { <a asp-page="/Interviews/Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@L10n.T("Open exam")</a> } else { <a asp-page="/Interviews/Index" class="btn btn-sm btn-light">@L10n.T("View schedule")</a> }</td></tr> }
             </tbody></table></div>
         }
     </section>
@@ -122,8 +135,8 @@ else if (Model.StudentDashboard is { } student)
         @if (student.PastExams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("Nothing recorded yet.")</p> }
         else
         {
-            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Date")</th><th>@L10n.T("Result")</th></tr></thead><tbody>
-            @foreach (var exam in student.PastExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@exam.StartsAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td><td>@(exam.ResultAvailable && exam.FinalScore.HasValue ? exam.FinalScore.Value.ToString("0.##") : L10n.T("Not available"))</td></tr> }
+            <div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Subject")</th><th>@L10n.T("Date")</th><th>@L10n.T("Result")</th><th></th></tr></thead><tbody>
+            @foreach (var exam in student.PastExams) { <tr><td>@exam.Title</td><td>@exam.SubjectName</td><td>@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm")</td><td>@(exam.ResultAvailable && exam.FinalScore.HasValue ? exam.FinalScore.Value.ToString("0.##") : L10n.T("Not available"))</td><td>@if (exam.ResultAvailable) { <a asp-page="/MyExams/Result" asp-route-id="@exam.ExamId" class="btn btn-sm btn-light">@L10n.T("View result")</a> }</td></tr> }
             </tbody></table></div>
         }
     </section>
@@ -139,7 +152,7 @@ else if (User.Identity?.IsAuthenticated != true)
 
 @if (Model.IsStaff && Model.Numbers is { } stats)
 {
-    <div class="metric-grid mb-4" data-stats-url="@Url.Page("/Index", "Stats")">
+    <div class="metric-grid mb-4" data-stats-url="@Url.Page("/Index", "Stats", new { first = "Home" })">
         <div class="panel metric-card stat-card"><div><strong data-stat="questions">@stats.Questions</strong><small>@L10n.T("Questions in the bank")</small></div></div>
         <div class="panel metric-card stat-card"><div><strong data-stat="activeQuestions">@stats.ActiveQuestions</strong><small>@L10n.T("Active questions")</small></div></div>
         <div class="panel metric-card stat-card"><div><strong data-stat="subjects">@stats.Subjects</strong><small>@L10n.T("Subjects") · <span data-stat="topics">@stats.Topics</span> @L10n.T("topics")</small></div></div>

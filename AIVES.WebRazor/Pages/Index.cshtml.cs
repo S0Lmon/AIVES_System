@@ -3,7 +3,6 @@ using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Dashboard;
 using AIVES.BLL.Services.Exams;
 using AIVES.DTO;
-using AIVES.DTO.Localization;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -64,22 +63,11 @@ public sealed class IndexModel(
             Numbers = await LoadStatsAsync(cancellationToken);
     }
 
+    public Task OnGetIndexAsync(CancellationToken cancellationToken) => OnGetAsync(cancellationToken);
+
     /// <summary>GET ?handler=Stats — the dashboard re-reads its counters after a live change.</summary>
     public async Task<IActionResult> OnGetStatsAsync(CancellationToken cancellationToken) =>
         AivesHub.IsStaff(User) ? new JsonResult(await LoadStatsAsync(cancellationToken)) : Forbid();
-
-    public IActionResult OnPostSetLanguage(AppLanguage language, string? returnUrl)
-    {
-        Response.Cookies.Append(RazorPresentation.LanguageCookieName, language.ToCultureCode(), new CookieOptions
-        {
-            Expires = DateTimeOffset.UtcNow.AddYears(1),
-            IsEssential = true,
-            HttpOnly = false,
-            SameSite = SameSiteMode.Lax
-        });
-
-        return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : Url.Page("/Index")!);
-    }
 
     private async Task<Stats> LoadStatsAsync(CancellationToken cancellationToken)
     {

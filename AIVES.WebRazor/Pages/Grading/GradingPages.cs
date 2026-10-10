@@ -6,6 +6,7 @@ using AIVES.BLL.Services.Operations;
 using AIVES.BLL.Services.Recordings;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
+using AIVES.WebRazor.Pages.Exams;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -96,7 +97,7 @@ public sealed class CandidateModel(
         if (recording is null) return NotFound();
         Response.Headers.CacheControl = "no-store, private";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
-        return File(recording.Data, recording.ContentType, enableRangeProcessing: true);
+        return new FileContentResult(recording.Data, recording.ContentType) { EnableRangeProcessing = true };
     }
 
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)

@@ -21,7 +21,7 @@
             <div class="col-md-2"><label class="form-label" for="bloom">Bloom level</label><select id="bloom" name="bloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">All levels</option></select></div>
             <div class="col-md-2"><label class="form-label" for="rubric">Rubric</label><select id="rubric" name="rubricId" asp-items="Model.Rubrics" class="form-select"><option value="">All rubrics</option></select></div>
             <div class="col-md-2"><label class="form-label" for="subject">Subject</label><select id="subject" name="subjectId" class="form-select"><option value="">All subjects</option>@foreach (var x in Model.Subjects) { <option value="@x.Id" selected="@(x.Id == Model.SubjectId)">@x.Name</option> }</select></div>
-            <div class="col-md-2"><label class="form-label" for="topic">Topic</label><select id="topic" name="topicId" class="form-select"><option value="">All topics</option>@foreach (var x in Model.Topics) { <option value="@x.Id" selected="@(x.Id == Model.TopicId)">@x.Name</option> }</select></div>
+            <div class="col-md-2"><label class="form-label" for="topic">Topic</label><select id="topic" name="topicId" class="form-select"><option value="">All topics</option>@foreach (var x in Model.Topics) { <option value="@x.Id" data-subject-id="@x.SubjectId" selected="@(x.Id == Model.TopicId)">@x.Name</option> }</select></div>
             <div class="col-md-1 form-check"><input class="form-check-input" type="checkbox" name="activeOnly" value="true" id="activeOnly" checked="@Model.ActiveOnly" /><label class="form-check-label" for="activeOnly">Active</label></div>
             <div class="col-12 d-flex gap-2"><button class="btn btn-primary" type="submit">Filter</button><a class="btn btn-light" asp-page="./Index">Reset</a></div>
         </form>
@@ -35,8 +35,8 @@ else if (Model.ActiveTab == "create")
         <div class="panel-header"><h2>Create a question</h2></div><div class="panel-body">
             <div class="mb-3"><label asp-for="Editor.Content" class="form-label">Question</label><textarea asp-for="Editor.Content" class="form-control" rows="5"></textarea><span asp-validation-for="Editor.Content" class="text-danger small"></span></div>
             <div class="mb-3"><label asp-for="Editor.ExpectedAnswer" class="form-label">Expected answer / key points</label><textarea asp-for="Editor.ExpectedAnswer" class="form-control" rows="4"></textarea></div>
-            <div class="row g-3"><div class="col-md-6"><label asp-for="Editor.SubjectId" class="form-label">Subject</label><select asp-for="Editor.SubjectId" class="form-select"><option value="">No subject</option>@foreach (var x in Model.Subjects) { <option value="@x.Id">@x.Name</option> }</select></div>
-            <div class="col-md-6"><label asp-for="Editor.TopicId" class="form-label">Topic</label><select asp-for="Editor.TopicId" class="form-select"><option value="">No topic</option>@foreach (var x in Model.Topics) { <option value="@x.Id">@x.Name</option> }</select></div>
+            <div class="row g-3"><div class="col-md-6"><label asp-for="Editor.SubjectId" class="form-label">Subject</label><select asp-for="Editor.SubjectId" id="create-subject" class="form-select"><option value="">No subject</option>@foreach (var x in Model.Subjects) { <option value="@x.Id">@x.Name</option> }</select></div>
+            <div class="col-md-6"><label asp-for="Editor.TopicId" class="form-label">Topic</label><select asp-for="Editor.TopicId" id="create-topic" class="form-select"><option value="">No topic</option>@foreach (var x in Model.Topics) { <option value="@x.Id" data-subject-id="@x.SubjectId">@x.Name</option> }</select></div>
             <div class="col-md-6"><label asp-for="Editor.BloomLevelId" class="form-label">Bloom level</label><select asp-for="Editor.BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Select level</option></select><span asp-validation-for="Editor.BloomLevelId" class="text-danger small"></span></div>
             <div class="col-md-6"><label asp-for="Editor.RubricId" class="form-label">Rubric</label><select asp-for="Editor.RubricId" asp-items="Model.Rubrics" class="form-select"><option value="">No rubric</option></select></div>
             <div class="col-md-6"><label asp-for="Editor.Difficulty" class="form-label">Difficulty</label><select asp-for="Editor.Difficulty" class="form-select"><option value="">Not set</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div>
@@ -73,10 +73,12 @@ else if (Model.ActiveTab == "ai" || Model.ActiveTab == "bulk")
     }
     <form method="post" asp-page-handler="@(isBulk ? "GenerateBulk" : "Generate")" class="panel form-panel">
         <div class="panel-header"><h2>@(isBulk ? "Generate a question batch" : "Generate one question")</h2></div><div class="panel-body"><div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-            <div class="row g-3"><div class="col-md-6"><label class="form-label">Subject</label><select name="@(isBulk ? "Bulk.SubjectId" : "Ai.SubjectId")" class="form-select" required><option value="">Choose subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
-            <div class="col-md-6"><label class="form-label">Topic</label><select name="@(isBulk ? "Bulk.TopicId" : "Ai.TopicId")" class="form-select"><option value="">Any topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id">@t.Name</option> }</select></div>
+            <div class="row g-3"><div class="col-md-6"><label class="form-label">Subject</label><select id="@(isBulk ? "bulk-subject" : "ai-subject")" name="@(isBulk ? "Bulk.SubjectId" : "Ai.SubjectId")" class="form-select" required><option value="">Choose subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
+            <div class="col-md-6"><label class="form-label">Topic</label><select id="@(isBulk ? "bulk-topic" : "ai-topic")" name="@(isBulk ? "Bulk.TopicId" : "Ai.TopicId")" class="form-select"><option value="">Any topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id" data-subject-id="@t.SubjectId">@t.Name</option> }</select></div>
             @if (!isBulk) { <div class="col-md-6"><label class="form-label">Bloom level</label><select name="Ai.BloomLevelId" asp-items="Model.BloomLevels" class="form-select"><option value="">Let AI decide</option></select></div><div class="col-md-6"><label class="form-label">Difficulty</label><select name="Ai.Difficulty" class="form-select"><option value="">Let AI decide</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div> }
-            else { <div class="col-md-4"><label class="form-label">Total (1–30)</label><input name="Bulk.Total" value="@Model.Bulk.Total" type="number" min="1" max="30" class="form-control" /></div><div class="col-md-4"><label class="form-label">Difficulty from</label><select name="Bulk.DifficultyFrom" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div><div class="col-md-4"><label class="form-label">Difficulty to</label><select name="Bulk.DifficultyTo" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div> }
+            else { <div class="col-md-4"><label class="form-label">Total (1–30)</label><input name="Bulk.Total" value="@Model.Bulk.Total" type="number" min="1" max="30" class="form-control" /></div><div class="col-md-4"><label class="form-label">Difficulty from</label><select name="Bulk.DifficultyFrom" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div><div class="col-md-4"><label class="form-label">Difficulty to</label><select name="Bulk.DifficultyTo" class="form-select"><option value="">AI decides</option>@foreach (var d in AIVES.DTO.QuestionDifficulties.Ordered) { <option value="@d">@d</option> }</select></div>
+                <div class="col-12"><h3 class="h5">Bloom-level ranges</h3><div class="table-responsive"><table class="table data-table compact"><thead><tr><th>Level</th><th>Minimum</th><th>Maximum</th></tr></thead><tbody>@for (var i=0;i<Model.Bulk.Plan.Count;i++){<tr><td>@Model.Bulk.Plan[i].Name<input type="hidden" name="Bulk.Plan[@i].Id" value="@Model.Bulk.Plan[i].Id" /><input type="hidden" name="Bulk.Plan[@i].Name" value="@Model.Bulk.Plan[i].Name" /></td><td><input name="Bulk.Plan[@i].Min" type="number" min="0" value="@Model.Bulk.Plan[i].Min" class="form-control" /></td><td><input name="Bulk.Plan[@i].Max" type="number" min="0" value="@Model.Bulk.Plan[i].Max" class="form-control" /></td></tr>}</tbody></table></div></div>
+            }
             <div class="col-12"><label class="form-label">Learning outcomes</label><textarea name="@(isBulk ? "Bulk.LearningOutcomes" : "Ai.LearningOutcomes")" class="form-control" rows="3"></textarea></div>
             <div class="col-md-6 form-check"><input type="checkbox" class="form-check-input" name="@(isBulk ? "Bulk.UseMaterials" : "Ai.UseMaterials")" value="true" checked /><label class="form-check-label">Ground in catalog material</label></div>
             <div class="col-md-6"><label class="form-label">AI provider</label><select name="@(isBulk ? "Bulk.Provider" : "Ai.Provider")" class="form-select"><option value="">Automatic</option><option value="Gemini" disabled="@(!Model.GeminiAvailable)">Gemini</option><option value="Ollama" disabled="@(!Model.OllamaAvailable)">Ollama</option></select><small class="form-text">Available: @(Model.GeminiAvailable ? "Gemini " : "")@(Model.OllamaAvailable ? "Ollama" : "")</small></div></div>
@@ -90,15 +92,44 @@ else
         @if (Model.ImportProblems.Count > 0) { <ul class="text-danger">@foreach (var p in Model.ImportProblems) { <li>@p</li> }</ul> }
         <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="row g-3">
             <div class="col-md-6"><label class="form-label">Question file (max 5 MB)</label><input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls,.json" required /></div>
-            <div class="col-md-3"><label class="form-label">Subject</label><select name="subjectId" class="form-select"><option value="">No subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
-            <div class="col-md-3"><label class="form-label">Topic</label><select name="topicId" class="form-select"><option value="">No topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id">@t.Name</option> }</select></div><button class="btn btn-primary">Read and review</button>
+            <div class="col-md-3"><label class="form-label">Subject</label><select id="import-subject" name="subjectId" class="form-select"><option value="">No subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id">@s.Name</option> }</select></div>
+            <div class="col-md-3"><label class="form-label">Topic</label><select id="import-topic" name="topicId" class="form-select"><option value="">No topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id" data-subject-id="@t.SubjectId">@t.Name</option> }</select></div><button class="btn btn-primary">Read and review</button>
         </form>
+        @if (Model.Ai.HasResult)
+        {
+            <hr />
+            <form method="post" asp-page-handler="SaveReviewed" class="panel form-panel">
+                <input type="hidden" name="subjectId" value="@Model.Ai.SubjectId" /><input type="hidden" name="topicId" value="@Model.Ai.TopicId" /><input type="hidden" name="ReviewJson" value="@JsonSerializer.Serialize(Model.Ai.Results)" />
+                @for (var i=0;i<Model.Ai.Results.Count;i++)
+                {
+                    <article class="panel-body border-bottom"><label><input type="checkbox" name="Pick" value="@i" checked /> Include this question</label><div class="mt-2"><label class="form-label">Question</label><textarea name="EditedContent" class="form-control" rows="3">@Model.Ai.Results[i].Content</textarea></div><div class="mt-2"><label class="form-label">Expected answer</label><textarea name="EditedAnswers" class="form-control" rows="2">@Model.Ai.Results[i].ExpectedAnswer</textarea></div><div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label">Bloom level</label><select name="EditedBloom" class="form-select"><option>@Model.Ai.Results[i].BloomLevel</option>@foreach(var b in Model.BloomLevels){if(b.Text!=Model.Ai.Results[i].BloomLevel){<option>@b.Text</option>}}</select></div><div class="col-md-6"><label class="form-label">Difficulty</label><select name="EditedDifficulty" class="form-select"><option>@Model.Ai.Results[i].Difficulty</option>@foreach(var d in AIVES.DTO.QuestionDifficulties.Ordered){if(d!=Model.Ai.Results[i].Difficulty){<option>@d</option>}}</select></div></div></article>
+                }
+                <div class="panel-body row g-3 align-items-end"><div class="col-md-4"><label class="form-label">Scoring rubric</label><select name="rubricId" asp-items="Model.Rubrics" class="form-select"><option value="">No rubric</option></select></div><div class="col"><button class="btn btn-primary">Add selected to bank</button></div></div>
+            </form>
+        }
     </div></section>
 }
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
     (() => {
+        const bindTopics = (subjectId, topicId) => {
+            const subject = document.getElementById(subjectId), topic = document.getElementById(topicId);
+            if (!subject || !topic) return;
+            const apply = () => {
+                const value = subject.value;
+                for (const option of topic.options) {
+                    if (!option.dataset.subjectId) continue;
+                    option.hidden = value !== '' && option.dataset.subjectId !== value;
+                    option.disabled = option.hidden;
+                }
+                if (topic.selectedOptions.length && topic.selectedOptions[0].disabled) topic.value = '';
+            };
+            subject.addEventListener('change', apply); apply();
+        };
+        bindTopics('subject','topic'); bindTopics('create-subject','create-topic');
+        bindTopics('ai-subject','ai-topic'); bindTopics('bulk-subject','bulk-topic');
+        bindTopics('import-subject','import-topic');
         const region = document.querySelector('[data-live-region]');
         if (!region) return;
         const refresh = () => window.refreshRegion(region, 'Rows');

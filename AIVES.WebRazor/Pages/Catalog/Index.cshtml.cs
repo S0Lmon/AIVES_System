@@ -113,6 +113,6 @@ public sealed class CatalogForm { public int SubjectId { get; set; } public stri
 public sealed class MaterialForm
 {
     public int SubjectId { get; set; } public int TopicId { get; set; } public string Title { get; set; } = "";
-    public string Content { get; set; } = ""; public string? SourceFileName { get; set; } public bool IsActive { get; set; } = true;
-    public MaterialInput ToInput() => new(TopicId, Title.Trim(), Content, SourceFileName, SourceFileName is null ? MaterialSourceType.Manual : MaterialSourceType.ImportedFile, IsActive);
+    public string Content { get; set; } = ""; public string? SourceFileName { get; set; } public bool IsImportedFile { get; set; } public bool IsActive { get; set; } = true;
+    public MaterialInput ToInput() => new(TopicId, Title.Trim(), Content, SourceFileName, IsImportedFile ? MaterialSourceType.ImportedFile : MaterialSourceType.Manual, IsActive);
 }

@@ -36,8 +36,8 @@
                             <td class="small">@(entry.ActorEmail ?? "—")</td>
                             <td class="small">
                                 @L10n.T(entry.Action)
-                                @if (entry.CandidateId is { } candidateId) { <div>@L10n.Format("Candidate #{0}", candidateId)</div> }
-                                else if (entry.ExamId is { } examId) { <div>@L10n.Format("Exam #{0}", examId)</div> }
+                                @if (entry.CandidateId is { } candidateId) { <div><a asp-page="/Grading/Candidate" asp-route-id="@candidateId">@L10n.Format("Candidate #{0}", candidateId)</a></div> }
+                                else if (entry.ExamId is { } examId) { <div><a asp-page="/Grading/Audit" asp-route-id="@examId">@L10n.Format("Exam #{0}", examId)</a></div> }
                             </td>
                             <td class="small">@entry.Details</td>
                         </tr>

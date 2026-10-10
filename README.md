@@ -50,8 +50,7 @@ Giới hạn đã biết: nhận dạng giọng nói dùng dịch vụ của tr�
 
 ```text
 AIVES_System/
-├── AIVES.WebMVC/    # Presentation: Controllers, Views, ViewModels, wwwroot, HTTP
-├── AIVES.WebRazor/  # Presentation (Razor Pages + SignalR): PageModels, Hub real-time
+├── AIVES.WebRazor/  # Presentation: Razor Pages, PageModels, wwwroot, HTTP and SignalR
 ├── AIVES.BLL/       # Business: service, validation, quy tắc và điều phối nghiệp vụ
 ├── AIVES.DAL/       # Data Access: EF Core, repository, Identity store, migrations
 ├── AIVES.DTO/       # Đối tượng truyền dữ liệu dùng chung
@@ -63,27 +62,26 @@ AIVES_System/
 └── DEPLOY.md
 ```
 
-Luồng xử lý: **Người dùng → WebMVC → BLL → DAL → SQL Server**, kết quả đi ngược lại qua DTO. WebMVC tham chiếu BLL và DTO; BLL tham chiếu DAL và DTO; DAL là nơi duy nhất truy cập database. DTO không chứa truy vấn hay logic xử lý nghiệp vụ.
+Luồng xử lý: **Người dùng → WebRazor → BLL → DAL → SQL Server**, kết quả đi ngược lại qua DTO. WebRazor tham chiếu BLL và DTO; BLL tham chiếu DAL và DTO; DAL là nơi duy nhất truy cập database. DTO không chứa truy vấn hay logic xử lý nghiệp vụ.
 
-WebMVC xử lý form/HTTP và cấu hình MVC, cookie, Google OAuth. BLL kiểm tra dữ liệu, chính sách tài khoản, OTP và điều phối AI/email. DAL ánh xạ DTO với entity, thực hiện truy vấn/lưu trữ và chứa toàn bộ migrations. Ba layer là phân chia trách nhiệm trong mã nguồn, không yêu cầu ba máy chủ triển khai.
+WebRazor xử lý Razor Pages, form/HTTP, cookie và Google OAuth. BLL kiểm tra dữ liệu, chính sách tài khoản, OTP và điều phối AI/email. DAL ánh xạ DTO với entity, thực hiện truy vấn/lưu trữ và chứa toàn bộ migrations. Ba layer là phân chia trách nhiệm trong mã nguồn, không yêu cầu ba máy chủ triển khai.
 
 Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md).
 
-## Front end Razor Pages + SignalR (Assignment 2)
+## Giao diện Razor Pages
 
-`AIVES.WebRazor/` là tầng Presentation thứ hai, viết bằng **ASP.NET Core Razor Pages**. Nó dùng lại nguyên BLL, DAL và DTO, nên vẫn đúng mô hình 3 lớp: **Người dùng → WebRazor (PageModel) → BLL → DAL → SQL Server**. WebRazor chỉ tham chiếu BLL và DTO (có test `RazorPresentationLayerDoesNotReferenceDataAccess` kiểm tra điều này).
+`AIVES.WebRazor/` là tầng Presentation duy nhất, viết bằng **ASP.NET Core Razor Pages**. Toàn bộ giao diện, luồng tài khoản và chức năng từ tầng WebMVC đã được chuyển sang PageModels và Razor Pages; BLL, DAL và DTO được dùng lại nguyên trạng. WebRazor chỉ tham chiếu BLL và DTO (kiểm tra bằng test ranh giới assembly).
 
-| Trang | Nội dung |
+| Khu vực | Nội dung |
 |---|---|
-| `/` | Tổng quan: số liệu cập nhật trực tiếp, nhật ký hoạt động real-time, người đang online |
-| `/Questions` | CRUD ngân hàng câu hỏi: `Index`, `Create`, `Edit/{id}`, `Details/{id}`, `Delete/{id}` |
-| `/Subjects` | Môn học và chủ đề, mỗi form dùng một named handler (`OnPostCreateTopic`, `OnPostDeleteTopic`, `OnPostUpdate`) |
-| `/Rubrics` | Xem rubric dạng ma trận |
-| `/Interviews`, `/Interviews/Room/{id}` | Sinh viên: lịch vấn đáp và phòng thi với giám khảo AI bằng giọng nói |
-| `/Interviews/Monitor/{examId}` | Giảng viên: giám sát trực tiếp các buổi vấn đáp của một kỳ thi |
-| `/Account/Login`, `/Account/Logout` | Đăng nhập dùng chung tài khoản Identity với site MVC |
+| Tổng quan | Trang chính và số liệu theo quyền tài khoản |
+| Tài khoản | Đăng nhập, đăng ký, xác minh email, gửi lại mã, Google OAuth, hồ sơ và đăng xuất |
+| Ngân hàng | Câu hỏi, rubric ma trận, tạo/duyệt câu hỏi bằng AI, nhập liệu và danh mục tài liệu |
+| Kỳ thi | Tạo/sửa lịch, phân công, lịch biểu, trạng thái thí sinh và phòng vấn đáp |
+| Chấm điểm | Transcript/recording, đề xuất AI, xác nhận điểm, báo cáo và xuất bảng điểm |
+| Quản trị | Tài khoản, phân quyền, phân công giảng viên, cài đặt giọng nói và audit log |
 
-Phân quyền khai báo bằng convention trong `RazorPresentation.cs`: mọi trang cần đăng nhập, còn `/Questions`, `/Subjects`, `/Rubrics` và `/Interviews/Monitor` cần policy `Staff` (Admin, Lecturer).
+Phân quyền khai báo bằng Razor Pages conventions trong `RazorPresentation.cs`: người dùng phải đăng nhập; các trang staff và admin dùng policy theo vai trò. Các form giữ antiforgery validation và các luồng real-time tiếp tục dùng SignalR.
 
 ### Lõi phỏng vấn AI bằng giọng nói (nhóm chức năng 3)
 
@@ -162,9 +160,9 @@ dotnet restore AIVES_System.slnx
 dotnet build AIVES_System.slnx -c Release
 
 # Chỉ cần thay connection nếu không dùng LocalDB mặc định.
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<SQL_SERVER_CONNECTION_STRING>" --project AIVES.WebMVC
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<SQL_SERVER_CONNECTION_STRING>" --project AIVES.WebRazor
 
-dotnet run --project AIVES.WebMVC --launch-profile https
+dotnet run --project AIVES.WebRazor --launch-profile https
 ```
 
 Profile HTTPS mở ứng dụng tại `https://localhost:7195` (HTTP: `http://localhost:5201`). Có thể chạy `dotnet dev-certs https --trust` trên máy phát triển nếu cần tin cậy chứng chỉ HTTPS local.
@@ -177,22 +175,22 @@ Lưu các giá trị thật bằng User Secrets khi phát triển; dùng biến 
 
 ```powershell
 # Tạo câu hỏi AI
-dotnet user-secrets set "Gemini:ApiKey" "<GEMINI_API_KEY>" --project AIVES.WebMVC
-dotnet user-secrets set "Gemini:Model" "<MODEL_AVAILABLE_TO_YOUR_ACCOUNT>" --project AIVES.WebMVC
+dotnet user-secrets set "Gemini:ApiKey" "<GEMINI_API_KEY>" --project AIVES.WebRazor
+dotnet user-secrets set "Gemini:Model" "<MODEL_AVAILABLE_TO_YOUR_ACCOUNT>" --project AIVES.WebRazor
 
 # Fallback cục bộ bằng Ollama (tùy chọn)
-dotnet user-secrets set "Ollama:Enabled" "true" --project AIVES.WebMVC
-dotnet user-secrets set "Ollama:Model" "phi3:mini" --project AIVES.WebMVC
-dotnet user-secrets set "Ollama:BaseUrl" "http://localhost:11434" --project AIVES.WebMVC
-dotnet user-secrets set "Ollama:MaxContextCharacters" "6000" --project AIVES.WebMVC
+dotnet user-secrets set "Ollama:Enabled" "true" --project AIVES.WebRazor
+dotnet user-secrets set "Ollama:Model" "phi3:mini" --project AIVES.WebRazor
+dotnet user-secrets set "Ollama:BaseUrl" "http://localhost:11434" --project AIVES.WebRazor
+dotnet user-secrets set "Ollama:MaxContextCharacters" "6000" --project AIVES.WebRazor
 
 # Gửi mã xác minh email
-dotnet user-secrets set "GmailSmtp:Username" "<GMAIL_ADDRESS>" --project AIVES.WebMVC
-dotnet user-secrets set "GmailSmtp:AppPassword" "<GMAIL_APP_PASSWORD>" --project AIVES.WebMVC
+dotnet user-secrets set "GmailSmtp:Username" "<GMAIL_ADDRESS>" --project AIVES.WebRazor
+dotnet user-secrets set "GmailSmtp:AppPassword" "<GMAIL_APP_PASSWORD>" --project AIVES.WebRazor
 
 # Đăng nhập Google (tùy chọn)
-dotnet user-secrets set "Authentication:Google:ClientId" "<GOOGLE_CLIENT_ID>" --project AIVES.WebMVC
-dotnet user-secrets set "Authentication:Google:ClientSecret" "<GOOGLE_CLIENT_SECRET>" --project AIVES.WebMVC
+dotnet user-secrets set "Authentication:Google:ClientId" "<GOOGLE_CLIENT_ID>" --project AIVES.WebRazor
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<GOOGLE_CLIENT_SECRET>" --project AIVES.WebRazor
 ```
 
 SMTP mặc định là `smtp.gmail.com:587`. Google callback dùng đường dẫn `/signin-google`; đăng ký URI tương ứng với địa chỉ ứng dụng, ví dụ `https://localhost:7195/signin-google` khi dùng profile HTTPS.
@@ -207,16 +205,16 @@ Khi chưa cấu hình SMTP, có thể tạo sẵn hai tài khoản đã xác min
 
 ```powershell
 # Giảng viên — chỉ được tạo khi chạy Development
-dotnet user-secrets set "Development:TestAccount:Email" "lecturer.demo@gmail.com" --project AIVES.WebMVC
-dotnet user-secrets set "Development:TestAccount:Password" "<LECTURER_PASSWORD>" --project AIVES.WebMVC
-dotnet user-secrets set "Development:TestAccount:DisplayName" "Giảng viên Demo" --project AIVES.WebMVC
+dotnet user-secrets set "Development:TestAccount:Email" "lecturer.demo@gmail.com" --project AIVES.WebRazor
+dotnet user-secrets set "Development:TestAccount:Password" "<LECTURER_PASSWORD>" --project AIVES.WebRazor
+dotnet user-secrets set "Development:TestAccount:DisplayName" "Giảng viên Demo" --project AIVES.WebRazor
 
 # Admin — tài khoản demo được gán quyền qua AdminAccess:Emails
-dotnet user-secrets set "DemoAccount:Enabled" "true" --project AIVES.WebMVC
-dotnet user-secrets set "DemoAccount:Email" "admin.demo@gmail.com" --project AIVES.WebMVC
-dotnet user-secrets set "DemoAccount:Password" "<ADMIN_PASSWORD>" --project AIVES.WebMVC
-dotnet user-secrets set "DemoAccount:DisplayName" "Admin Demo" --project AIVES.WebMVC
-dotnet user-secrets set "AdminAccess:Emails:0" "admin.demo@gmail.com" --project AIVES.WebMVC
+dotnet user-secrets set "DemoAccount:Enabled" "true" --project AIVES.WebRazor
+dotnet user-secrets set "DemoAccount:Email" "admin.demo@gmail.com" --project AIVES.WebRazor
+dotnet user-secrets set "DemoAccount:Password" "<ADMIN_PASSWORD>" --project AIVES.WebRazor
+dotnet user-secrets set "DemoAccount:DisplayName" "Admin Demo" --project AIVES.WebRazor
+dotnet user-secrets set "AdminAccess:Emails:0" "admin.demo@gmail.com" --project AIVES.WebRazor
 ```
 
 Khởi động lại ứng dụng rồi đăng nhập tại `/Account/Login`. Tài khoản giảng viên truy cập ngân hàng câu hỏi, AI và Profile; chỉ tài khoản admin vào được `/Admin`. Nếu đặt thêm `DemoAccount:ResetPasswordOnStartup` là `true`, mật khẩu admin sẽ được đặt lại theo cấu hình mỗi lần khởi động. Không commit mật khẩu thật vào Git.
@@ -231,7 +229,7 @@ Ngoài ngân hàng câu hỏi, hệ thống có một danh mục phục vụ vi�
 
 ```powershell
 # Áp dụng migration (đã có trong lúc khởi động, dùng khi cần chạy thủ công)
-dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebMVC
+dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebRazor
 ```
 
 ## Rubric dạng ma trận
@@ -294,7 +292,7 @@ docker compose ps
 
 Ứng dụng mặc định ở `https://localhost` (chứng chỉ nội bộ của Caddy). Compose chạy Caddy làm reverse proxy HTTPS trước 2 instance web, cùng SQL Server lưu database trong volume `aives-sql-data`. Migrations chạy một lần trong container `migrate`; web dùng login SQL `aives_app` chỉ có quyền đọc/ghi dữ liệu. Không đưa `.env` vào Git. Kiến trúc, scale, tài khoản demo và tên miền được mô tả trong [DEPLOY.md](DEPLOY.md).
 
-Khi chạy nhiều instance ngoài Docker, đặt `Database:MigrateOnStartup=false` cho các instance web và chạy migrations một lần bằng `dotnet AIVES.WebMVC.dll --migrate-only`. Endpoint `GET /health` kiểm tra kết nối database. Nên đặt `DataProtection:CertificatePath`/`DataProtection:CertificatePassword` (file PFX) để khóa cookie lưu trong database được mã hóa, và `ReverseProxy:TerminatesHttps=true` khi reverse proxy đã lo HTTPS. Trước khi deploy bằng Docker, chạy `./scripts/preflight.sh` để kiểm tra `.env`.
+Khi chạy nhiều instance ngoài Docker, đặt `Database:MigrateOnStartup=false` cho các instance web và chạy migrations một lần bằng `dotnet AIVES.WebRazor.dll --migrate-only`. Endpoint `GET /health` kiểm tra kết nối database. Nên đặt `DataProtection:CertificatePath`/`DataProtection:CertificatePassword` (file PFX) để khóa cookie lưu trong database được mã hóa, và `ReverseProxy:TerminatesHttps=true` khi reverse proxy đã lo HTTPS. Trước khi deploy bằng Docker, chạy `./scripts/preflight.sh` để kiểm tra `.env`.
 
 ## Kiểm thử
 
@@ -313,11 +311,11 @@ Xem [báo cáo kiểm thử và review](docs/Functional-Test-Report.md).
 
 ## Migration
 
-Migrations nằm trong DAL; WebMVC là startup project:
+Migrations nằm trong DAL; WebRazor là startup project:
 
 ```powershell
-dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebMVC
-dotnet ef migrations add TenMigration --project AIVES.DAL --startup-project AIVES.WebMVC --output-dir Migrations
+dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebRazor
+dotnet ef migrations add TenMigration --project AIVES.DAL --startup-project AIVES.WebRazor --output-dir Migrations
 ```
 
 Các lệnh yêu cầu công cụ `dotnet-ef` tương thích EF Core 10. Database được migrate khi ứng dụng khởi động.

@@ -1,5 +1,6 @@
 @page "{id:int}"
 @model AIVES.WebRazor.Pages.Exams.DetailsModel
+@inject DisplayTimeZone TimeZone
 @{
     var exam = Model.Exam;
     var statuses = exam.Candidates.Select(candidate => candidate.StatusAt(Model.NowUtc)).ToList();
@@ -10,9 +11,9 @@
 <div class="page-heading"><div>
     <span class="page-kicker">Exams / Details</span><h1>@exam.Title</h1>
     <p>@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)@(string.IsNullOrWhiteSpace(exam.Term) ? "" : " · " + exam.Term)@(string.IsNullOrWhiteSpace(exam.ExamType) ? "" : " · " + exam.ExamType) ·
-        @Model.TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @Model.TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm") (@Model.TimeZone.OffsetLabel) ·
+        @TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm") (@TimeZone.OffsetLabel) ·
         @L10n.Format("{0} min per candidate", exam.SlotMinutes) · @L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)
-        @if (exam.ScheduleEndsAtUtc is { } scheduleEnd && scheduleEnd != exam.EndsAtUtc) { <span> · @L10n.Format("schedule runs until {0}", Model.TimeZone.ToLocal(scheduleEnd).ToString("HH:mm"))</span> }
+        @if (exam.ScheduleEndsAtUtc is { } scheduleEnd && scheduleEnd != exam.EndsAtUtc) { <span> · @L10n.Format("schedule runs until {0}", TimeZone.ToLocal(scheduleEnd).ToString("HH:mm"))</span> }
     </p>
     @if (exam.BufferMinutes > 0 || (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) || exam.Strategy != QuestionSelectionStrategy.Balanced) {
         <p class="small text-muted mb-0">@if (exam.BufferMinutes > 0) { <span>@L10n.Format("{0} min buffer between candidates", exam.BufferMinutes)</span> }@if (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) { <span> · @L10n.Format("{0} min break every {1} candidates", exam.BreakMinutes, exam.BreakEveryCount)</span> } · @(exam.Strategy == QuestionSelectionStrategy.Balanced ? L10n.T("Balanced question selection") : L10n.T("Random question selection"))</p>
@@ -46,15 +47,15 @@
     }
 </section>
 <section class="panel overflow-hidden mb-4"><div class="table-responsive"><table class="table data-table">
-<thead><tr><th>#</th><th>@L10n.T("Slot") (@Model.TimeZone.OffsetLabel)</th><th>@L10n.T("Candidate")</th><th>@L10n.T("Status")</th><th>@L10n.T("Main questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
+<thead><tr><th>#</th><th>@L10n.T("Slot") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Candidate")</th><th>@L10n.T("Status")</th><th>@L10n.T("Main questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
 @for (var i = 0; i < exam.Candidates.Count; i++) {
     var candidate = exam.Candidates[i]; var status = candidate.StatusAt(Model.NowUtc);
     var gap = i == 0 ? 0 : (int)(candidate.StartsAtUtc - exam.Candidates[i - 1].EndsAtUtc).TotalMinutes;
     var isBreak = exam.BreakMinutes > 0 && gap >= exam.BufferMinutes + exam.BreakMinutes;
     <tr><td>@candidate.Order</td><td class="small text-nowrap">
         @if (gap > 0) { <div class="badge text-bg-light mb-1">@(isBreak ? L10n.Format("Break {0} min", exam.BreakMinutes) : L10n.Format("Gap {0} min", gap))</div> }
-        <div>@Model.TimeZone.ToLocal(candidate.StartsAtUtc).ToString("HH:mm") – @Model.TimeZone.ToLocal(candidate.EndsAtUtc).ToString("HH:mm")</div>
-        @if (!Model.Started) { <form method="post" asp-page-handler="AdjustSlot" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><input type="datetime-local" name="slotStartLocal" value="@Model.TimeZone.ToLocal(candidate.StartsAtUtc).ToString("yyyy-MM-ddTHH:mm")" class="form-control form-control-sm" style="width:11.5rem" /><button type="submit" class="btn btn-sm btn-light">@L10n.T("Move")</button></form> }
+        <div>@TimeZone.ToLocal(candidate.StartsAtUtc).ToString("HH:mm") – @TimeZone.ToLocal(candidate.EndsAtUtc).ToString("HH:mm")</div>
+        @if (!Model.Started) { <form method="post" asp-page-handler="AdjustSlot" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><input type="datetime-local" name="slotStartLocal" value="@TimeZone.ToLocal(candidate.StartsAtUtc).ToString("yyyy-MM-ddTHH:mm")" class="form-control form-control-sm" style="width:11.5rem" /><button type="submit" class="btn btn-sm btn-light">@L10n.T("Move")</button></form> }
     </td><td><strong>@(candidate.DisplayName ?? candidate.Email)</strong><div class="small text-muted">@candidate.Email</div>@if (candidate.DisplayName is null) { <span class="badge text-bg-light">@L10n.T("No account yet")</span> }</td>
     <td><span class="status-label @ViewText.StatusClass(status)">@ViewText.Status(status)</span>@if (candidate.FinalScore is { } score) { <div class="small text-muted">@L10n.Format("Score {0}/10", score.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))</div> }
         <form method="post" asp-page-handler="CandidateStatus" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><select name="status" class="form-select form-select-sm" style="max-width:11rem" aria-label="@L10n.T("Status")"><option value="">@L10n.T("Set status…")</option><option value="Absent">@L10n.T("Absent")</option><option value="Cancelled">@L10n.T("Cancelled")</option><option value="RequiresReview">@L10n.T("Requires review")</option><option value="NotScheduled">@L10n.T("Not scheduled")</option></select><button type="submit" class="btn btn-sm btn-light">@L10n.T("Apply")</button></form>

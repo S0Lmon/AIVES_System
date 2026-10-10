@@ -32,16 +32,19 @@ else if (Model.ActiveTab == "ai")
         <div class="col-md-6"><label class="form-label">Provider</label><select name="Ai.Provider" class="form-select"><option value="">Automatic</option><option value="Gemini" disabled="@(!Model.GeminiAvailable)">Gemini</option><option value="Ollama" disabled="@(!Model.OllamaAvailable)">Ollama</option></select></div>
         </div><button class="btn btn-primary mt-3" disabled="@(!(Model.GeminiAvailable || Model.OllamaAvailable))">@(Model.GeminiAvailable || Model.OllamaAvailable ? "Draft a matrix" : "No AI provider available")</button><small class="text-muted ms-2">Active provider: @(Model.GeminiAvailable ? "Gemini" : Model.OllamaAvailable ? "Ollama" : "Unavailable")</small></div></form>
 }
+@if (Model.ActiveTab == "create" || (Model.ActiveTab == "ai" && Model.Ai.HasResult))
+{
 <form method="post" asp-page-handler="Save" class="panel form-panel" data-rubric-grid>
     <div class="panel-header"><h2>@(Model.ActiveTab == "ai" ? (Model.Ai.HasResult ? "Review generated matrix" : "Matrix editor") : "Rubric matrix editor")</h2></div><div class="panel-body">
         <input asp-for="Matrix.Id" type="hidden" />
         <div class="form-section"><label class="form-label">Name</label><input asp-for="Matrix.Name" class="form-control" maxlength="200" required /><label class="form-label mt-3">Description</label><textarea asp-for="Matrix.Description" class="form-control" rows="2" maxlength="1000"></textarea></div>
         <div class="sheet-toolbar"><button type="button" class="btn btn-light btn-sm" data-add-level>+ Level</button><button type="button" class="btn btn-light btn-sm" data-add-criterion>+ Criterion</button><span class="text-muted small">2 to 6 levels; up to 10 criteria</span></div>
-        <div class="matrix-scroll"><table class="sheet"><thead><tr><th>Criterion</th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { <th data-column="@c"><input name="Matrix.Columns[@c].Name" value="@Model.Matrix.Columns[c].Name" class="sheet-cell-input" placeholder="Level name" required /><input name="Matrix.Columns[@c].Points" value="@Model.Matrix.Columns[c].Points" type="number" min="0" max="100" class="sheet-points" title="Points" /></th> }</tr></thead>
-        <tbody data-criteria>@for (var r = 0; r < Model.Matrix.Rows.Count; r++) { <tr><th><input name="Matrix.Rows[@r].Criterion" value="@Model.Matrix.Rows[r].Criterion" class="sheet-cell-input" placeholder="Criterion" required /><input name="Matrix.Rows[@r].Description" value="@Model.Matrix.Rows[r].Description" class="sheet-note" placeholder="Note" /></th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { var cell = c < Model.Matrix.Rows[r].Cells.Count ? Model.Matrix.Rows[r].Cells[c] : new AIVES.WebRazor.Pages.Rubrics.RubricCellInput(); <td><textarea name="Matrix.Rows[@r].Cells[@c].Descriptor" class="sheet-cell-input" placeholder="What this level looks like">@cell.Descriptor</textarea><input name="Matrix.Rows[@r].Cells[@c].Points" value="@cell.Points" type="number" min="0" max="100" class="sheet-points" /></td> }</tr> }</tbody></table></div>
+        <div class="matrix-scroll"><table class="sheet"><thead><tr><th>Criterion</th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { <th data-column="@c"><input name="Matrix.Columns[@c].Name" value="@Model.Matrix.Columns[c].Name" class="sheet-cell-input" placeholder="Level name" required /><input name="Matrix.Columns[@c].Points" value="@Model.Matrix.Columns[c].Points" type="number" min="0" max="100" class="sheet-points" title="Points" /><button type="button" class="sheet-remove" data-remove-column="@c" aria-label="Remove level">&times;</button></th> }</tr></thead>
+        <tbody data-criteria>@for (var r = 0; r < Model.Matrix.Rows.Count; r++) { <tr><th><button type="button" class="sheet-remove" data-remove-row aria-label="Remove criterion">&times;</button><input name="Matrix.Rows[@r].Criterion" value="@Model.Matrix.Rows[r].Criterion" class="sheet-cell-input" placeholder="Criterion" required /><input name="Matrix.Rows[@r].Description" value="@Model.Matrix.Rows[r].Description" class="sheet-note" placeholder="Note" /></th>@for (var c = 0; c < Model.Matrix.Columns.Count; c++) { var cell = c < Model.Matrix.Rows[r].Cells.Count ? Model.Matrix.Rows[r].Cells[c] : new AIVES.WebRazor.Pages.Rubrics.RubricCellInput(); <td data-cell-column="@c"><textarea name="Matrix.Rows[@r].Cells[@c].Descriptor" class="sheet-cell-input" placeholder="What this level looks like">@cell.Descriptor</textarea><input name="Matrix.Rows[@r].Cells[@c].Points" value="@cell.Points" type="number" min="0" max="100" class="sheet-points" /></td> }</tr> }</tbody></table></div>
         <div class="d-flex gap-2 mt-3"><a class="btn btn-light" asp-page="./Index" asp-route-tab="bank">Cancel</a><button class="btn btn-primary">Save rubric</button></div>
     </div>
 </form>
+}
 @functions {
     public async Task<IReadOnlyList<AIVES.DTO.SubjectDto>> GetSubjects() {
         var service = HttpContext.RequestServices.GetRequiredService<AIVES.BLL.Services.Catalog.ICatalogService>();
@@ -63,6 +66,12 @@ else if (Model.ActiveTab == "ai")
   const head=form.querySelector('thead tr'), count=head.children.length-1; if(count>=6)return;
   const th=document.createElement('th'); th.innerHTML=`<input name="Matrix.Columns[${count}].Name" class="sheet-cell-input" placeholder="Level name" required><input name="Matrix.Columns[${count}].Points" type="number" min="0" max="100" value="0" class="sheet-points">`; head.appendChild(th);
   body.querySelectorAll('tr').forEach((tr,i)=>{const td=document.createElement('td');td.innerHTML=`<textarea name="Matrix.Rows[${i}].Cells[${count}].Descriptor" class="sheet-cell-input"></textarea><input name="Matrix.Rows[${i}].Cells[${count}].Points" type="number" min="0" max="100" value="0" class="sheet-points">`;tr.appendChild(td);});
+ });
+ form.addEventListener('click',e=>{
+  const row=e.target.closest('[data-remove-row]');
+  if(row){if(body.children.length>1){row.closest('tr').remove();body.querySelectorAll('tr').forEach((tr,i)=>tr.querySelectorAll('[name]').forEach(x=>x.name=x.name.replace(/Matrix\.Rows\[\d+\]/g,`Matrix.Rows[${i}]`)));}return;}
+  const removeColumn=e.target.closest('[data-remove-column]');
+  if(removeColumn){if(form.querySelectorAll('thead th[data-column]').length<=2)return;const index=Number(removeColumn.dataset.removeColumn);form.querySelector(`thead th[data-column="${index}"]`).remove();body.querySelectorAll('tr').forEach(tr=>tr.querySelector(`[data-cell-column="${index}"]`).remove());form.querySelectorAll('thead th[data-column]').forEach((th,i)=>{th.dataset.column=i;th.querySelectorAll('[name]').forEach(x=>x.name=x.name.replace(/Matrix\.Columns\[\d+\]/g,`Matrix.Columns[${i}]`));});body.querySelectorAll('tr').forEach(tr=>tr.querySelectorAll('[data-cell-column]').forEach((td,i)=>{td.dataset.cellColumn=i;td.querySelectorAll('[name]').forEach(x=>x.name=x.name.replace(/Cells\[\d+\]/g,`Cells[${i}]`));}));}
  });
 })();
 </script>

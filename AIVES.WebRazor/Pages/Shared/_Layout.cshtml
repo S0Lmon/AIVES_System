@@ -126,6 +126,10 @@
                 {
                     <div class="alert alert-danger" role="alert">@error</div>
                 }
+                @if (TempData["Notice"] is string notice)
+                {
+                    <div class="alert alert-info" role="status">@notice</div>
+                }
                 @RenderBody()
             </main>
         </div>
