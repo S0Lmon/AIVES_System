@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using AIVES.BLL.Services.Exams;
 using AIVES.DTO;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Interviews;
 
@@ -9,7 +9,10 @@ namespace AIVES.WebRazor.Pages.Interviews;
 public sealed class IndexModel(IExamService exams, TimeProvider clock) : PageModel
 {
     public IReadOnlyList<StudentExamDto> Exams { get; private set; } = [];
-    public DateTime NowUtc { get; private set; }
+    public DateTime NowUtc
+    {
+        get; private set;
+    }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {

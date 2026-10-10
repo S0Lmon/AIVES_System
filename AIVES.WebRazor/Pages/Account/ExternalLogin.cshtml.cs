@@ -11,7 +11,10 @@ public sealed class ExternalLoginModel(IAccountService accounts) : PageModel
         if (!accounts.IsGoogleConfigured)
             return RedirectToPage("/Account/Login");
 
-        var callbackUrl = Url.Page("/Account/ExternalLoginCallback", values: new { returnUrl });
+        var callbackUrl = Url.Page("/Account/ExternalLoginCallback", values: new
+        {
+            returnUrl
+        });
         return Challenge(accounts.ConfigureGoogleLogin(callbackUrl), "Google");
     }
 }

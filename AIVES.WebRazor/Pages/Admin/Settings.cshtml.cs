@@ -1,10 +1,10 @@
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using AIVES.BLL.Services.Operations;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Admin;
 
@@ -13,26 +13,53 @@ public sealed class SettingsModel(ISystemSettingsService settings, IAuditService
     [BindProperty]
     public SettingsInput Input { get; set; } = new();
 
-    public string? Message { get; private set; }
+    public string? Message
+    {
+        get; private set;
+    }
 
     private string? ActingEmail => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
 
     public sealed class SettingsInput
     {
-        public AppLanguage DefaultLanguage { get; set; }
-        public bool EnableVietnamese { get; set; }
-        public bool EnableEnglish { get; set; }
+        public AppLanguage DefaultLanguage
+        {
+            get; set;
+        }
+        public bool EnableVietnamese
+        {
+            get; set;
+        }
+        public bool EnableEnglish
+        {
+            get; set;
+        }
 
         [Range(0.6, 1.4)]
-        public double SpeechRate { get; set; }
+        public double SpeechRate
+        {
+            get; set;
+        }
 
-        public string? VietnameseVoice { get; set; }
-        public string? EnglishVoice { get; set; }
+        public string? VietnameseVoice
+        {
+            get; set;
+        }
+        public string? EnglishVoice
+        {
+            get; set;
+        }
 
         [Range(7, 3650)]
-        public int RecordingRetentionDays { get; set; }
+        public int RecordingRetentionDays
+        {
+            get; set;
+        }
 
-        public string? Error { get; set; }
+        public string? Error
+        {
+            get; set;
+        }
     }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
@@ -57,8 +84,10 @@ public sealed class SettingsModel(ISystemSettingsService settings, IAuditService
             return Page();
 
         var enabled = new List<AppLanguage>();
-        if (Input.EnableVietnamese) enabled.Add(AppLanguage.Vi);
-        if (Input.EnableEnglish) enabled.Add(AppLanguage.En);
+        if (Input.EnableVietnamese)
+            enabled.Add(AppLanguage.Vi);
+        if (Input.EnableEnglish)
+            enabled.Add(AppLanguage.En);
         var speech = new SpeechSettingsDto(Input.DefaultLanguage, enabled, Input.SpeechRate,
             Input.VietnameseVoice, Input.EnglishVoice, Input.RecordingRetentionDays);
         try

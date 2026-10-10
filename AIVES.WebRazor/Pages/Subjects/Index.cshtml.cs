@@ -1,10 +1,10 @@
-using System.ComponentModel.DataAnnotations;
 using AIVES.BLL.Services.Catalog;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Subjects;
 
@@ -18,7 +18,10 @@ public sealed class CatalogEntryInput
 
     [StringLength(2000)]
     [Display(Name = "Mô tả")]
-    public string? Description { get; set; }
+    public string? Description
+    {
+        get; set;
+    }
 }
 
 public sealed class IndexModel(ICatalogService catalog, ILiveUpdates live) : PageModel
@@ -51,7 +54,10 @@ public sealed class IndexModel(ICatalogService catalog, ILiveUpdates live) : Pag
             var created = await catalog.CreateSubjectAsync(new SubjectInput(NewSubject.Name.Trim(), NewSubject.Description?.Trim() ?? string.Empty), cancellationToken);
             await live.EntityChangedAsync(LiveEntities.Subject, LiveActions.Created, created.Id, created.Name);
             TempData["Success"] = $"Đã tạo môn học \"{created.Name}\". Hãy thêm chủ đề.";
-            return RedirectToPage("Details", new { id = created.Id });
+            return RedirectToPage("Details", new
+            {
+                id = created.Id
+            });
         }
         catch (ArgumentException ex)
         {

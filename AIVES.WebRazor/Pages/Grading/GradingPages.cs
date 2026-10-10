@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Security.Claims;
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Grading;
 using AIVES.BLL.Services.Operations;
@@ -10,6 +8,7 @@ using AIVES.WebRazor.Pages.Exams;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace AIVES.WebRazor.Pages.Grading;
 
@@ -22,12 +21,17 @@ public sealed class GradingIndexModel(IExamService exams) : PageModel
 
 public sealed class ExamModel(IGradingService grading) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id
+    {
+        get; set;
+    }
     public ExamGradingDto Exam { get; private set; } = null!;
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var exam = await grading.GetExamAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null) return NotFound();
+        if (exam is null)
+            return NotFound();
         Exam = exam;
         return Page();
     }
@@ -35,16 +39,31 @@ public sealed class ExamModel(IGradingService grading) : PageModel
 
 public sealed class GradeQuestionInput
 {
-    public int Id { get; set; }
-    public string? Score { get; set; }
-    public string? Comment { get; set; }
+    public int Id
+    {
+        get; set;
+    }
+    public string? Score
+    {
+        get; set;
+    }
+    public string? Comment
+    {
+        get; set;
+    }
 }
 
 public sealed class GradeFormInput
 {
     public List<GradeQuestionInput> Questions { get; set; } = [];
-    public string? Comment { get; set; }
-    public bool Finalize { get; set; }
+    public string? Comment
+    {
+        get; set;
+    }
+    public bool Finalize
+    {
+        get; set;
+    }
 }
 
 public sealed class CandidateModel(
@@ -52,7 +71,11 @@ public sealed class CandidateModel(
     IRecordingService recordings,
     DisplayTimeZone timeZone) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id
+    {
+        get; set;
+    }
     [BindProperty] public GradeFormInput Form { get; set; } = new();
     public CandidateGradingDto Candidate { get; private set; } = null!;
     public DisplayTimeZone TimeZone { get; } = timeZone;
@@ -73,28 +96,46 @@ public sealed class CandidateModel(
         {
             TempData["GradeError"] = ex is FormatException ? L10n.T("Scores must be numbers, for example 7.5.") : ex.Message;
         }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnPostReopenAsync(CancellationToken cancellationToken)
     {
-        try { await grading.ReopenAsync(Id, ExamPageActors.From(User), cancellationToken); TempData["GradeMessage"] = L10n.T("The grade was reopened. The student no longer sees it until you confirm again."); }
+        try
+        {
+            await grading.ReopenAsync(Id, ExamPageActors.From(User), cancellationToken);
+            TempData["GradeMessage"] = L10n.T("The grade was reopened. The student no longer sees it until you confirm again.");
+        }
         catch (KeyNotFoundException) { return NotFound(); }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnPostRequestAiAsync(CancellationToken cancellationToken)
     {
-        try { await grading.RequestAiGradingAsync(Id, ExamPageActors.From(User), cancellationToken); TempData["GradeMessage"] = L10n.T("The AI will grade this viva again within a minute. Your own scores are kept."); }
+        try
+        {
+            await grading.RequestAiGradingAsync(Id, ExamPageActors.From(User), cancellationToken);
+            TempData["GradeMessage"] = L10n.T("The AI will grade this viva again within a minute. Your own scores are kept.");
+        }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { TempData["GradeError"] = ex.Message; }
-        return RedirectToPage(new { id = Id });
+        return RedirectToPage(new
+        {
+            id = Id
+        });
     }
 
     public async Task<IActionResult> OnGetRecordingAsync(int recordingId, CancellationToken cancellationToken)
     {
         var recording = await recordings.OpenAsync(recordingId, ExamPageActors.From(User), cancellationToken);
-        if (recording is null) return NotFound();
+        if (recording is null)
+            return NotFound();
         Response.Headers.CacheControl = "no-store, private";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         return new FileContentResult(recording.Data, recording.ContentType) { EnableRangeProcessing = true };
@@ -103,7 +144,8 @@ public sealed class CandidateModel(
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)
     {
         var candidate = await grading.GetCandidateAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (candidate is null) return false;
+        if (candidate is null)
+            return false;
         Candidate = candidate;
         Form = new GradeFormInput
         {
@@ -127,7 +169,11 @@ public sealed class AuditModel(
     IAuditService audit,
     DisplayTimeZone timeZone) : PageModel
 {
-    [BindProperty(SupportsGet = true)] public int Id { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id
+    {
+        get; set;
+    }
     public string Title { get; private set; } = string.Empty;
     public IReadOnlyList<AuditEntryDto> Entries { get; private set; } = [];
     public DisplayTimeZone TimeZone { get; } = timeZone;
@@ -135,7 +181,8 @@ public sealed class AuditModel(
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null) return NotFound();
+        if (exam is null)
+            return NotFound();
         Title = exam.Title;
         Entries = await audit.QueryAsync(new AuditQuery(ExamId: Id, Take: 1000), cancellationToken);
         return Page();
@@ -147,7 +194,8 @@ public abstract class GradeExportPage(IGradingService grading, IAuditService aud
     protected async Task<IActionResult> ExportAsync(int id, CancellationToken cancellationToken)
     {
         var exam = await grading.GetExamAsync(id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null) return NotFound();
+        if (exam is null)
+            return NotFound();
         var content = GradeSheetBuilder.Build(exam, options.Value, timeZone.ToLocal);
         var actor = ExamPageActors.From(User);
         await audit.WriteAsync(new AuditEntryInput(AuditActions.GradeSheetExported, actor.UserId, actor.Email, id, null,
@@ -157,7 +205,8 @@ public abstract class GradeExportPage(IGradingService grading, IAuditService aud
             .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
             .Select(c => c == 'đ' || c == 'Đ' ? 'd' : char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray())
             .Split('-', StringSplitOptions.RemoveEmptyEntries));
-        if (slug.Length == 0) slug = "exam";
+        if (slug.Length == 0)
+            slug = "exam";
         slug = slug[..Math.Min(40, slug.Length)];
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"grades-{slug}-{timeZone.ToLocal(exam.StartsAtUtc):yyyyMMdd}-{id}.xlsx");

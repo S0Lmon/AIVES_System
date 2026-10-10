@@ -19,13 +19,34 @@ public sealed class IndexModel(
 {
     public sealed record Stats(int Questions, int ActiveQuestions, int Subjects, int Topics, int Rubrics);
 
-    public bool IsStaff { get; private set; }
-    public bool IsAdmin { get; private set; }
-    public bool IsLecturer { get; private set; }
-    public Stats? Numbers { get; private set; }
-    public AdminDashboardDto? AdminDashboard { get; private set; }
-    public LecturerDashboardDto? LecturerDashboard { get; private set; }
-    public StudentDashboardDto? StudentDashboard { get; private set; }
+    public bool IsStaff
+    {
+        get; private set;
+    }
+    public bool IsAdmin
+    {
+        get; private set;
+    }
+    public bool IsLecturer
+    {
+        get; private set;
+    }
+    public Stats? Numbers
+    {
+        get; private set;
+    }
+    public AdminDashboardDto? AdminDashboard
+    {
+        get; private set;
+    }
+    public LecturerDashboardDto? LecturerDashboard
+    {
+        get; private set;
+    }
+    public StudentDashboardDto? StudentDashboard
+    {
+        get; private set;
+    }
     public IReadOnlyList<ExamSummaryDto> UpcomingLecturerExams { get; private set; } = [];
 
     public async Task OnGetAsync(CancellationToken cancellationToken)

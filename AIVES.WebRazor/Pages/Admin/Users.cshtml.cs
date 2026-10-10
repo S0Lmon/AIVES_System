@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Admin;
 
@@ -12,8 +12,14 @@ public sealed class UsersModel(IUserAdminService users) : PageModel
         bool IsAdmin, string? Role, bool IsCurrentUser, bool IsDisabled);
 
     public IReadOnlyList<UserRow> Users { get; private set; } = [];
-    public string? Message { get; private set; }
-    public string? Error { get; private set; }
+    public string? Message
+    {
+        get; private set;
+    }
+    public string? Error
+    {
+        get; private set;
+    }
 
     public async Task OnGetAsync()
     {

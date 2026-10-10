@@ -7,8 +7,14 @@ namespace AIVES.WebRazor.Pages.Admin;
 
 public sealed class AuditModel(IAuditService audit) : PageModel
 {
-    public string? Action { get; private set; }
-    public string? Actor { get; private set; }
+    public string? Action
+    {
+        get; private set;
+    }
+    public string? Actor
+    {
+        get; private set;
+    }
     public IReadOnlyList<AuditEntryDto> Entries { get; private set; } = [];
 
     public async Task OnGetAsync(

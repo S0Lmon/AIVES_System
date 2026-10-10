@@ -1,10 +1,10 @@
-using System.Security.Claims;
 using AIVES.BLL.Services.Accounts;
 using AIVES.BLL.Services.Operations;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Admin;
 
@@ -12,7 +12,10 @@ public sealed class SubjectsModel(IUserAdminService users, ISubjectAccessService
 {
     public IReadOnlyList<SubjectAssignmentDto> Subjects { get; private set; } = [];
     public IReadOnlyList<UserRefDto> Lecturers { get; private set; } = [];
-    public string? Message { get; private set; }
+    public string? Message
+    {
+        get; private set;
+    }
 
     private string? ActingEmail => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
 

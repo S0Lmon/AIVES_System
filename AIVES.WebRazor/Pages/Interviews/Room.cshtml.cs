@@ -1,11 +1,11 @@
-using System.Security.Claims;
-using System.Text.Json;
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace AIVES.WebRazor.Pages.Interviews;
 
@@ -18,8 +18,14 @@ public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech
     ILogger<RoomModel> logger) : PageModel
 {
     public InterviewStateDto State { get; private set; } = null!;
-    public bool CanListen { get; private set; }
-    public bool CanSpeak { get; private set; }
+    public bool CanListen
+    {
+        get; private set;
+    }
+    public bool CanSpeak
+    {
+        get; private set;
+    }
 
     public string StateJson => JsonSerializer.Serialize(State, UtcDateTimeConverter.PageOptions);
 

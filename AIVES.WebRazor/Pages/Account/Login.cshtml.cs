@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Account;
 
@@ -12,7 +12,10 @@ public sealed class LoginModel(IAccountService accounts, ILogger<LoginModel> log
     public LoginInput Input { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
-    public string? ReturnUrl { get; set; }
+    public string? ReturnUrl
+    {
+        get; set;
+    }
 
     public bool IsGoogleConfigured => accounts.IsGoogleConfigured;
 
@@ -29,7 +32,10 @@ public sealed class LoginModel(IAccountService accounts, ILogger<LoginModel> log
         public string Password { get; set; } = string.Empty;
 
         [Display(Name = "Ghi nhớ đăng nhập")]
-        public bool RememberMe { get; set; }
+        public bool RememberMe
+        {
+            get; set;
+        }
     }
 
     public IActionResult OnGet() =>
