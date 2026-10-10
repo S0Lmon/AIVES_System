@@ -16,6 +16,8 @@ public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
     [BindProperty] public RubricMatrixInput Matrix { get; set; } = RubricMatrixInput.Default();
     [BindProperty] public RubricAiInput Ai { get; set; } = new();
     public IReadOnlyList<RubricDto> Rubrics { get; private set; } = [];
+    public IReadOnlyList<SubjectDto> Subjects { get; private set; } = [];
+    public IReadOnlyList<TopicDto> Topics { get; private set; } = [];
     public bool GeminiAvailable => generator.IsProviderAvailable(AiProvider.Gemini);
     public bool OllamaAvailable => generator.IsProviderAvailable(AiProvider.Ollama);
     public string ActiveTab => Tab?.ToLowerInvariant() is "create" or "ai" ? Tab.ToLowerInvariant() : "bank";
@@ -86,6 +88,8 @@ public sealed class IndexModel(IRubricService rubrics, ICatalogService catalog,
 
     private async Task LoadAsync()
     {
+        Subjects = await catalog.GetSubjectsAsync();
+        Topics = await catalog.GetTopicsAsync();
         var all = (await rubrics.GetAllRubricsAsync()).OrderBy(x => x.Name);
         Rubrics = string.IsNullOrWhiteSpace(Search) ? all.ToList() : all.Where(x =>
             x.Name.Contains(Search.Trim(), StringComparison.OrdinalIgnoreCase)

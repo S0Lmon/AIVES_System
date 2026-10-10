@@ -85,7 +85,7 @@ public static class RazorPresentation
         services.Configure<RequestLocalizationOptions>(options =>
         {
             var supported = AppLanguageExtensions.Supported.Select(language => new CultureInfo(language.ToCultureCode())).ToList();
-            options.DefaultRequestCulture = new RequestCulture(AppLanguageExtensions.Default.ToCultureCode());
+            options.DefaultRequestCulture = new RequestCulture(AppLanguageExtensions.Default);
             options.SupportedCultures = supported;
             options.SupportedUICultures = supported;
             options.RequestCultureProviders = [new AppLanguageCultureProvider(LanguageCookieName)];

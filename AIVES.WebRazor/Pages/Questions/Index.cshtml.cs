@@ -197,7 +197,8 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
         BloomLevels = new SelectList((await bloomLevels.GetAllAsync()).OrderBy(x => x.Order), "Id", "Name", BloomLevelId);
         Rubrics = new SelectList(await rubrics.GetAllRubricsAsync(), "Id", "Name", RubricId);
         Subjects = await catalog.GetSubjectsAsync(ct); Topics = await catalog.GetTopicsAsync(cancellationToken: ct);
-        if (Bulk.Plan.Count == 0) Bulk.Plan = (await bloomLevels.GetAllAsync()).Select(x => new BulkLevelInput { Id = x.Id, Name = x.Name, Max = 5 }).ToList();
+        if (Bulk.Plan.Count == 0) Bulk.Plan = (await bloomLevels.GetAllAsync()).Select(x =>
+            new BulkLevelInput { Id = x.Id, Name = x.Name, Min = 0, Max = x.Id >= 2 ? 5 : 0 }).ToList();
     }
 
     private async Task LoadAsync()

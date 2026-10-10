@@ -23,8 +23,8 @@ else if (Model.ActiveTab == "ai")
 {
     @if (Model.Ai.HasResult) { <div class="alert alert-info">Review the AI draft in the editor below, then save it to the bank. @if (Model.Ai.Sources.Count > 0) { <span>Grounded in @Model.Ai.Sources.Count material items.</span> }</div> }
     <form method="post" asp-page-handler="Generate" class="panel form-panel mb-3"><div class="panel-header"><h2>Describe the matrix</h2><p>AI drafts the rows and columns so you can review and correct them.</p></div><div class="panel-body"><div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Subject</label><select name="Ai.SubjectId" class="form-select" required><option value="">Choose subject</option>@foreach (var s in await GetSubjects()) { <option value="@s.Id">@s.Name</option> }</select></div>
-        <div class="col-md-6"><label class="form-label">Topic</label><input name="Ai.Topic" value="@Model.Ai.Topic" class="form-control" maxlength="200" required /></div>
+        <div class="col-md-6"><label class="form-label">Subject</label><select id="rubric-subject" name="Ai.SubjectId" class="form-select" required><option value="">Choose subject</option>@foreach (var s in Model.Subjects) { <option value="@s.Id" selected="@(s.Id == Model.Ai.SubjectId)">@s.Name</option> }</select></div>
+        <div class="col-md-6"><label class="form-label">Topic</label><select id="rubric-topic" name="Ai.TopicId" class="form-select" required><option value="">Choose topic</option>@foreach (var t in Model.Topics) { <option value="@t.Id" data-subject-id="@t.SubjectId" selected="@(t.Id == Model.Ai.TopicId)">@t.Name</option> }</select><input type="hidden" name="Ai.Topic" value="@Model.Ai.Topic" /></div>
         <div class="col-md-4"><label class="form-label">Criterion rows</label><input name="Ai.CriterionCount" type="number" min="1" max="10" value="@Model.Ai.CriterionCount" class="form-control" /></div>
         <div class="col-md-4"><label class="form-label">Level columns</label><input name="Ai.LevelCount" type="number" min="2" max="6" value="@Model.Ai.LevelCount" class="form-control" /></div>
         <div class="col-md-4 form-check align-self-end"><input name="Ai.UseMaterials" value="true" type="checkbox" class="form-check-input" checked="@Model.Ai.UseMaterials" /><label class="form-check-label">Ground in catalog material</label></div>
@@ -45,15 +45,12 @@ else if (Model.ActiveTab == "ai")
     </div>
 </form>
 }
-@functions {
-    public async Task<IReadOnlyList<AIVES.DTO.SubjectDto>> GetSubjects() {
-        var service = HttpContext.RequestServices.GetRequiredService<AIVES.BLL.Services.Catalog.ICatalogService>();
-        return await service.GetSubjectsAsync();
-    }
-}
 @section Scripts {
 <script>
 (() => {
+ const subject=document.getElementById('rubric-subject'),topic=document.getElementById('rubric-topic');
+ const filterTopics=()=>{if(!subject||!topic)return;for(const option of topic.options){if(!option.dataset.subjectId)continue;option.hidden=subject.value!==''&&option.dataset.subjectId!==subject.value;option.disabled=option.hidden;}if(topic.selectedOptions.length&&topic.selectedOptions[0].disabled)topic.value='';};
+ subject?.addEventListener('change',filterTopics);filterTopics();
  const form=document.querySelector('[data-rubric-grid]'); if(!form)return;
  const body=form.querySelector('[data-criteria]');
  form.querySelector('[data-add-criterion]').addEventListener('click',()=>{

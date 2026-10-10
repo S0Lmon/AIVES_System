@@ -1,4 +1,5 @@
 using System.Globalization;
+using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Localization;
 

@@ -35,7 +35,7 @@
                             }
                             else
                             {
-                                <form method="post" action="/Admin/SetRole" class="d-inline-flex gap-2 align-items-center">
+                                <form method="post" asp-page="/Admin/SetRole" class="d-inline-flex gap-2 align-items-center">
                                     <input type="hidden" name="userId" value="@user.Id" />
                                     <label class="visually-hidden" for="role-@user.Id">@L10n.T("Role")</label>
                                     <select id="role-@user.Id" name="role" class="form-select form-select-sm">
@@ -45,7 +45,7 @@
                                 </form>
                                 @if (!user.IsAdmin || user.IsDisabled)
                                 {
-                                    <form method="post" action="/Admin/SetDisabled" class="d-inline ms-2">
+                                    <form method="post" asp-page="/Admin/SetDisabled" class="d-inline ms-2">
                                         <input type="hidden" name="userId" value="@user.Id" />
                                         <input type="hidden" name="disabled" value="@(!user.IsDisabled)" />
                                         <button type="submit" class="btn btn-sm @(user.IsDisabled ? "btn-light" : "btn-outline-danger")">@(user.IsDisabled ? L10n.T("Enable") : L10n.T("Disable"))</button>

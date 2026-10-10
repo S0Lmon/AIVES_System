@@ -27,7 +27,7 @@
         <div class="panel-header"><div><span class="page-kicker">Session</span><h2 id="profile-session-title">@L10n.T("Sign out")</h2></div></div>
         <div class="panel-body">
             <p>@L10n.T("Sign out ends the current session on this device and returns you to the login page.")</p>
-            <form method="post" action="/Profile/Logout"><button type="submit" class="btn btn-danger">@L10n.T("Sign out")</button></form>
+            <form method="post" asp-page="/Profile/Logout"><button type="submit" class="btn btn-danger">@L10n.T("Sign out")</button></form>
         </div>
     </section>
 </div>
