@@ -61,7 +61,7 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
             return new SystemCheckItemDto("Gemini", L10n.T("Gemini"),
                 L10n.T("Gemini has no API key, so AI question generation via Gemini is blocked."),
                 SystemCheckStatus.Critical,
-                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebMVC");
+                "dotnet user-secrets set \"Gemini:ApiKey\" \"<GEMINI_API_KEY>\" --project AIVES.WebRazor");
         }
 
         var model = string.IsNullOrWhiteSpace(gemini.Model) ? L10n.T("(model not set)") : gemini.Model;
@@ -93,7 +93,7 @@ public sealed class SystemCheckService(IDiagnosticsRepository diagnostics, IAppE
             return new SystemCheckItemDto("SMTP", "Gmail SMTP",
                 L10n.T("GmailSmtp:Username or GmailSmtp:AppPassword is not set, so verification codes cannot be sent and new accounts cannot be registered."),
                 SystemCheckStatus.Critical,
-                "dotnet user-secrets set \"GmailSmtp:Username\" \"<GMAIL_ADDRESS>\" --project AIVES.WebMVC (and GmailSmtp:AppPassword)");
+                "dotnet user-secrets set \"GmailSmtp:Username\" \"<GMAIL_ADDRESS>\" --project AIVES.WebRazor (and GmailSmtp:AppPassword)");
         }
 
         return new SystemCheckItemDto("SMTP", "Gmail SMTP", L10n.Format("Mail is configured through {0}:{1} with the sender name {2}.", options.Host, options.Port, options.SenderName), SystemCheckStatus.Ok);

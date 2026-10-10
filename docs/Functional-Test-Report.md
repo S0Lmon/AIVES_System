@@ -112,4 +112,4 @@ TRX của lần chạy nằm ở `AIVES.Tests/TestResults/all-functions.trx` và
 
 ### Kiểm tra cấu trúc lần cuối theo yêu cầu 3 Layer
 
-Đã tách AddPresentation (MVC/cookie/Google HTTP authentication) sang WebMVC; chuyển chính sách Identity sang BLL và để DAL nhận cấu hình cho Identity store. Google package được chuyển từ BLL sang WebMVC. Thêm 3 ca validation rubric, kiểm tra BLL không tham chiếu MVC/Google adapter. Kết quả 83/83 pass (SQL Server thật, không skip), build Release 0 warning/error và EF không có pending model changes. Cấu trúc và vai trò chi tiết tại AIVES-3-Layer-Architecture.md.
+Tại thời điểm lập báo cáo, AddPresentation (cookie/Google HTTP authentication) đã được tách khỏi BLL sang tầng Presentation; chính sách Identity chuyển sang BLL và DAL nhận cấu hình cho Identity store. Google package được chuyển khỏi BLL. Thêm 3 ca validation rubric, kiểm tra BLL không tham chiếu MVC/Google adapter. Kết quả lịch sử: 83/83 pass (SQL Server thật, không skip), build Release 0 warning/error và EF không có pending model changes. Hiện tầng Presentation duy nhất là AIVES.WebRazor. Cấu trúc và vai trò chi tiết tại AIVES-3-Layer-Architecture.md.

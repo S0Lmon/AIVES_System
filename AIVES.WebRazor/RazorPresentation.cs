@@ -51,6 +51,7 @@ public static class RazorPresentation
         // Authorization lives in conventions, so a new page in a folder is protected by default.
         services.AddRazorPages(options =>
         {
+            options.Conventions.AddPageRoute("/Questions/Index", "/Questions");
             options.Conventions.AuthorizeFolder("/");
             options.Conventions.AllowAnonymousToFolder("/Account");
             options.Conventions.AllowAnonymousToPage("/Error");

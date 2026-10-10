@@ -9,6 +9,6 @@ public sealed class QuestionGeneratorModel : PageModel
     public IActionResult OnGet()
     {
         TempData["Notice"] = L10n.T("The AI exam room is disabled for now. Use the AI panel on the question pages.");
-        return Redirect("/Question?tab=ai");
+        return Redirect("/Question/Create?slide=aiPanel");
     }
 }

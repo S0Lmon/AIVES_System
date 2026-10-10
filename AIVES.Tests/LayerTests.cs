@@ -4,12 +4,8 @@ using AIVES.DAL.Data;
 using AIVES.DAL.Data.Repositories;
 using AIVES.DAL.Entities;
 using AIVES.DTO;
-using AIVES.WebMVC.Controllers;
-using AIVES.WebMVC.Models.ViewModels;
-using Microsoft.AspNetCore.Mvc;
+using AIVES.WebRazor.Pages.Questions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace AIVES.Tests;
 
@@ -23,12 +19,12 @@ public sealed class LayerTests
     [Fact]
     public void PresentationAndBusinessDoNotReferenceEfOrPersistenceEntities()
     {
-        var webReferences = typeof(QuestionController).Assembly.GetReferencedAssemblies().Select(a => a.Name).ToList();
+        var webReferences = typeof(AIVES.WebRazor.Pages.Questions.IndexModel).Assembly.GetReferencedAssemblies().Select(a => a.Name).ToList();
         Assert.DoesNotContain("AIVES.DAL", webReferences);
         Assert.DoesNotContain(typeof(QuestionService).Assembly.GetReferencedAssemblies(), a => a.Name == "Microsoft.AspNetCore.Mvc" || a.Name == "Microsoft.AspNetCore.Authentication.Google");
         Assert.DoesNotContain(webReferences, a => a!.StartsWith("Microsoft.EntityFrameworkCore"));
         Assert.DoesNotContain(typeof(QuestionService).Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("Microsoft.EntityFrameworkCore"));
-        Assert.DoesNotContain(typeof(ApplicationDbContext).Assembly.GetReferencedAssemblies(), a => a.Name is "AIVES.BLL" or "AIVES.WebMVC");
+        Assert.DoesNotContain(typeof(ApplicationDbContext).Assembly.GetReferencedAssemblies(), a => a.Name is "AIVES.BLL" or "AIVES.WebRazor");
         Assert.DoesNotContain(typeof(QuestionDto).Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("AIVES.") || a.Name.StartsWith("Microsoft.EntityFrameworkCore"));
     }
 
@@ -140,12 +136,10 @@ public sealed class LayerTests
     }
 
     [Fact]
-    public void DisplayNamesAreNotRequiredInQuestionPostModel()
+    public void QuestionPostModelDoesNotContainDisplayOnlyNames()
     {
-        using var services = new ServiceCollection().AddLogging().AddControllersWithViews().Services.BuildServiceProvider();
-        var metadata = services.GetRequiredService<IModelMetadataProvider>();
-        Assert.False(metadata.GetMetadataForProperty(typeof(QuestionViewModel), nameof(QuestionViewModel.BloomLevelName)).IsRequired);
-        Assert.False(metadata.GetMetadataForProperty(typeof(QuestionViewModel), nameof(QuestionViewModel.RubricName)).IsRequired);
+        Assert.Null(typeof(QuestionInput).GetProperty("BloomLevelName"));
+        Assert.Null(typeof(QuestionInput).GetProperty("RubricName"));
     }
 
     private sealed class VerificationTestRepository(ApplicationDbContext db) : IEmailVerificationRepository

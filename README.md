@@ -1,6 +1,6 @@
 # AIVES System
 
-AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Project sử dụng ASP.NET Core MVC, SQL Server, Gemini hoặc Ollama để tạo bản nháp câu hỏi bằng tiếng Việt. Định hướng phát triển là hỗ trợ quy trình thi vấn đáp có AI, trong đó giảng viên duyệt câu hỏi và quyết định điểm.
+AIVES là ứng dụng web hỗ trợ chuẩn bị và quản lý câu hỏi cho thi vấn đáp. Ứng dụng sử dụng ASP.NET Core Razor Pages, SQL Server, Gemini hoặc Ollama để tạo bản nháp câu hỏi bằng tiếng Việt. Giảng viên duyệt câu hỏi và quyết định điểm trong quy trình thi vấn đáp có AI.
 
 Phiên bản hiện tại bao phủ toàn bộ quy trình: **ngân hàng câu hỏi & rubric (tạo tay, nhập tệp, AI sinh có RAG trên giáo trình/slide), lập lịch kỳ thi, phỏng vấn AI bằng giọng nói có hỏi xoáy, AI đề xuất điểm để giảng viên quyết định, ghi âm/ghi hình làm bằng chứng, nhật ký kiểm tra, báo cáo lớp, xuất bảng điểm và quản trị hệ thống**.
 
@@ -37,7 +37,7 @@ Giới hạn đã biết: nhận dạng giọng nói dùng dịch vụ của tr�
 | Thành phần | Công nghệ |
 |---|---|
 | Runtime | .NET 10, C# |
-| Presentation | ASP.NET Core MVC, Razor, Bootstrap, JavaScript |
+| Presentation | ASP.NET Core Razor Pages, Bootstrap, JavaScript |
 | Dữ liệu | EF Core 10, SQL Server, EF migrations |
 | Xác thực | ASP.NET Core Identity, cookie, Google OAuth |
 | Tích hợp | Gemini API, Ollama (`phi3:mini`), Gmail SMTP |
@@ -70,7 +70,7 @@ Xem [tài liệu kiến trúc](docs/AIVES-3-Layer-Architecture.md).
 
 ## Giao diện Razor Pages
 
-`AIVES.WebRazor/` là tầng Presentation duy nhất, viết bằng **ASP.NET Core Razor Pages**. Toàn bộ giao diện, luồng tài khoản và chức năng từ tầng WebMVC đã được chuyển sang PageModels và Razor Pages; BLL, DAL và DTO được dùng lại nguyên trạng. WebRazor chỉ tham chiếu BLL và DTO (kiểm tra bằng test ranh giới assembly).
+`AIVES.WebRazor/` là tầng Presentation duy nhất, viết bằng **ASP.NET Core Razor Pages**. Giao diện, luồng tài khoản và chức năng ứng dụng được cung cấp bằng PageModels và Razor Pages; BLL, DAL và DTO dùng chung. WebRazor chỉ tham chiếu BLL và DTO (kiểm tra bằng test ranh giới assembly).
 
 | Khu vực | Nội dung |
 |---|---|
@@ -96,7 +96,7 @@ Giám khảo AI đọc câu hỏi, sinh viên trả lời bằng giọng nói, c
 | Giới hạn | `AnswerTimeLimitSeconds`, `MaxFollowUpsPerQuestion`, `MaxFollowUpQuestions` của kỳ thi | Đồng hồ đếm ngược trên trang, hết giờ thì tự nộp; máy chủ không nhận âm thanh quá giới hạn, và BLL đánh dấu `timedOut` |
 | Giám sát | `InterviewEvent` gửi tới nhóm `exam-{id}` | Giảng viên thấy câu hỏi, chữ sinh viên đang nói, câu trả lời, câu hỏi xoáy và lúc hoàn thành |
 
-Chữ nhận dạng giữ nguyên thì được ghi là `Speech`; phần sinh viên sửa lại thì được ghi là `Typed`, để giảng viên phân biệt. Kỳ thi có ghi âm (`Recording = Audio`) sẽ lưu file WAV của từng câu trả lời (được mã hoá) qua `IRecordingService`. Kỳ thi ghi hình (`AudioVideo`) vẫn làm trên site MVC.
+Chữ nhận dạng giữ nguyên thì được ghi là `Speech`; phần sinh viên sửa lại thì được ghi là `Typed`, để giảng viên phân biệt. Kỳ thi có ghi âm (`Recording = Audio`) sẽ lưu file WAV của từng câu trả lời (được mã hoá) qua `IRecordingService`.
 
 **Cài model** (khoảng 600 MB, nằm trong `AIVES.WebRazor/App_Data/speech-models`, không commit):
 
@@ -133,15 +133,15 @@ Cần lưu ý trước khi bật `Provider = Gemini` cho bài thi thật:
 - **Đồng bộ dữ liệu:** sau khi BLL lưu thành công, PageModel gọi `ILiveUpdates.EntityChangedAsync(...)` để gửi `EntityChanged` vào nhóm `staff`. Trang danh sách tự tải lại vùng bảng qua handler `?handler=Rows` / `?handler=Topics`, trang tổng quan cập nhật số liệu qua `?handler=Stats`, và đồng nghiệp nhận toast. Sinh viên không thuộc nhóm `staff` nên không bao giờ nhận được nội dung câu hỏi.
 - **Cùng chỉnh sửa:** trang `Questions/Edit` gọi `JoinQuestion(id)`, nên mọi người đang mở cùng câu hỏi thấy tên nhau (`EditorsChanged`). Khi người khác lưu hoặc xoá câu hỏi đó, trang hiện cảnh báo, và với trường hợp xoá thì khoá luôn nút Lưu.
 
-SignalR thuộc về tầng Presentation; BLL không biết gì về SignalR. `PresenceTracker` lưu trong bộ nhớ, nên đúng với **một** instance web. Nếu chạy nhiều bản sao (như `compose.yaml` của site MVC) thì cần thêm backplane, ví dụ Redis.
+SignalR thuộc về tầng Presentation; BLL không biết gì về SignalR. `PresenceTracker` lưu trong bộ nhớ, nên hiện triển khai **một** instance web. Mở rộng ngang cần thêm backplane, ví dụ Redis.
 
-Chạy (cùng database với site MVC, cổng 5301):
+Chạy ứng dụng WebRazor (HTTP cổng 5201):
 
 ```powershell
 dotnet run --project AIVES.WebRazor --launch-profile http
 ```
 
-Trong Docker Compose, site này là service `razor` (một instance, Whisper chạy trên CPU, model được mount từ máy chủ). Xem mục *Site Razor Pages và phỏng vấn bằng giọng nói* trong [DEPLOY.md](DEPLOY.md).
+Trong Docker Compose, WebRazor là service `web` (một instance, Whisper chạy trên CPU, model được mount từ máy chủ). Xem mục *Phỏng vấn bằng giọng nói* trong [DEPLOY.md](DEPLOY.md).
 
 Để thấy real-time: mở hai cửa sổ (hoặc một cửa sổ ẩn danh với tài khoản giảng viên khác) ở `/Questions` và `/`, rồi thêm, sửa hoặc xoá câu hỏi ở một cửa sổ.
 
@@ -153,7 +153,7 @@ Trong Docker Compose, site này là service `razor` (một instance, Whisper ch�
 - SQL Server có thể kết nối; cấu hình mặc định dùng SQL Server LocalDB trên Windows.
 - Visual Studio hỗ trợ .NET 10 và solution `.slnx`, hoặc dùng CLI.
 
-Mở `AIVES_System.slnx` tại thư mục gốc; chọn `AIVES.WebMVC` làm startup project nếu dùng Visual Studio.
+Mở `AIVES_System.slnx` tại thư mục gốc; chọn `AIVES.WebRazor` làm startup project nếu dùng Visual Studio.
 
 ```powershell
 dotnet restore AIVES_System.slnx

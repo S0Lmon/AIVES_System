@@ -1,4 +1,4 @@
-@page
+@page "/Question/Create"
 @model AIVES.WebRazor.Pages.Questions.CreateModel
 @{
     ViewData["Title"] = "Thêm câu hỏi";
@@ -9,6 +9,7 @@
         <h1>Thêm câu hỏi</h1>
         <p>Khi lưu, mọi giảng viên đang mở ngân hàng câu hỏi sẽ thấy câu hỏi mới ngay lập tức.</p>
     </div>
+    <button type="button" class="btn btn-light slide-trigger" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("Quick generate")</button>
 </div>
 <form method="post" class="panel form-panel">
     <partial name="_QuestionFields" model="Model" />
@@ -17,6 +18,8 @@
         <button type="submit" class="btn btn-primary">Lưu câu hỏi</button>
     </div>
 </form>
+<partial name="_AiGenerateSlide" model="Model" />
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/ai-slide.js" asp-append-version="true"></script>
 }

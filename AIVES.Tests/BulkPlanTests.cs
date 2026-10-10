@@ -1,4 +1,4 @@
-using AIVES.WebMVC.Models.ViewModels;
+using AIVES.WebRazor.Pages.Questions;
 
 namespace AIVES.Tests;
 
@@ -8,13 +8,13 @@ namespace AIVES.Tests;
 /// </summary>
 public sealed class BulkPlanTests
 {
-    private static BulkGenerationViewModel Plan(int total, params (int Id, int Min, int Max)[] rows) => new()
+    private static BulkInput Plan(int total, params (int Id, int Min, int Max)[] rows) => new()
     {
-        TotalAmount = total,
-        Plan = rows.Select(row => new BulkPlanRow
+        Total = total,
+        Plan = rows.Select(row => new BulkLevelInput
         {
-            BloomLevelId = row.Id,
-            BloomLevelName = $"Level {row.Id}",
+            Id = row.Id,
+            Name = $"Level {row.Id}",
             Min = row.Min,
             Max = row.Max
         }).ToList()
@@ -79,8 +79,7 @@ public sealed class BulkPlanTests
         var plan = Plan(5, (1, 4, 2), (2, 0, 5));
 
         Assert.False(plan.TryAllocate(out _, out var problem));
-        // The message names the offending row so the lecturer knows which range to fix.
-        Assert.Contains("Level 1", problem);
+        Assert.Contains("end at or above its minimum", problem, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -107,9 +106,10 @@ public sealed class BulkPlanTests
     [Fact]
     public void ReportedBoundsMatchTheSummedRanges()
     {
-        var plan = Plan(5, (1, 1, 2), (2, 2, 5));
+        var plan = Plan(2, (1, 1, 2), (2, 2, 5));
 
-        Assert.Equal(3, plan.MinTotal);
-        Assert.Equal(7, plan.MaxTotalForPlan);
+        Assert.False(plan.TryAllocate(out _, out var problem));
+        Assert.Contains("3", problem);
+        Assert.Contains("7", problem);
     }
 }

@@ -1,0 +1,96 @@
+@model AIVES.WebRazor.Pages.Questions.CreateModel
+<div class="slide-backdrop" data-slide-close hidden></div>
+<aside class="slide-panel slide-panel-compact" id="aiPanel" role="dialog" aria-modal="true" aria-labelledby="aiPanelTitle" hidden>
+    <header class="slide-header slide-header-compact">
+        <div><span class="page-kicker">@L10n.T("AI assist")</span><h2 id="aiPanelTitle">✦ @L10n.T("Generate a question")</h2></div>
+        <button type="button" class="slide-close" data-slide-close aria-label="@L10n.T("Close")">✕</button>
+    </header>
+    <form method="post" asp-page-handler="GenerateQuick" id="aiPanelForm" class="slide-form">
+        <div class="slide-body slide-body-compact">
+            <div class="ai-engine-row">
+                <select name="Ai.Provider" id="aiProvider" class="form-select form-select-sm" aria-label="@L10n.T("Engine")">
+                    <option value="">@L10n.T("Automatic")</option>
+                    <option value="Gemini" disabled="@(!Model.GeminiAvailable)">Gemini@(Model.GeminiAvailable ? "" : " — " + L10n.T("no key"))</option>
+                    <option value="Ollama" disabled="@(!Model.OllamaAvailable)">Ollama@(Model.OllamaAvailable ? "" : " — " + L10n.T("not running"))</option>
+                </select>
+                <span class="provider-state @(Model.ActiveProvider == AIVES.DTO.AiProvider.Ollama ? "on" : "off")">
+                    @(Model.ActiveProvider?.ToString() ?? "Gemini")
+                </span>
+            </div>
+            <div class="ai-brief-grid">
+                <label class="ai-field">
+                    <span>@L10n.T("Subject")</span>
+                    <select name="Ai.SubjectId" id="aiSlideSubject" class="form-select form-select-sm" required>
+                        <option value="">@L10n.T("Choose a subject")</option>
+                        @foreach (var subject in Model.Options.Subjects)
+                        {
+                            <option value="@subject.Value">@subject.Text</option>
+                        }
+                    </select>
+                </label>
+                <label class="ai-field">
+                    <span>@L10n.T("Topic")</span>
+                    <select name="Ai.TopicId" id="aiSlideTopic" class="form-select form-select-sm">
+                        <option value="">@L10n.T("Any topic")</option>
+                        @foreach (var topic in Model.Options.Topics)
+                        {
+                            <option value="@topic.Id" data-subject-id="@topic.SubjectId">@topic.Name</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="ai-brief-grid">
+                <label class="ai-field">
+                    <span>@L10n.T("Bloom level")</span>
+                    <select name="Ai.BloomLevelId" id="aiSlideBloom" class="form-select form-select-sm">
+                        <option value="">@L10n.T("Let the AI decide")</option>
+                        @foreach (var level in Model.Options.BloomLevels)
+                        {
+                            <option value="@level.Value">@level.Text</option>
+                        }
+                    </select>
+                </label>
+                <label class="ai-field">
+                    <span>@L10n.T("Difficulty")</span>
+                    <select name="Ai.Difficulty" id="aiSlideDifficulty" class="form-select form-select-sm">
+                        <option value="">@L10n.T("Let the AI decide")</option>
+                        @foreach (var difficulty in AIVES.DTO.QuestionDifficulties.Ordered)
+                        {
+                            <option value="@difficulty">@difficulty</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <details class="ai-details" open>
+                <summary>@L10n.T("Ground in material")</summary>
+                <div class="ai-details-body">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="Ai.UseMaterials" id="aiUseMaterials" value="true" checked />
+                        <input type="hidden" name="Ai.UseMaterials" value="false" />
+                        <label class="form-check-label small" for="aiUseMaterials">@L10n.T("Use catalog material as context")</label>
+                    </div>
+                </div>
+            </details>
+            <details class="ai-details">
+                <summary>@L10n.T("Advanced")</summary>
+                <div class="ai-details-body">
+                    <label class="ai-field">
+                        <span>@L10n.T("Learning outcomes")</span>
+                        <textarea name="Ai.LearningOutcomes" id="aiOutcomes" class="form-control form-control-sm" rows="2" maxlength="2000"></textarea>
+                    </label>
+                </div>
+            </details>
+        </div>
+        <footer class="slide-actions slide-actions-compact">
+            <button type="button" class="btn btn-light btn-sm" data-slide-close>@L10n.T("Close")</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="aiSubmit" disabled="@(!(Model.GeminiAvailable || Model.OllamaAvailable))" data-ai-busy="@L10n.T("Generating...")">
+                <span class="ai-submit-label">@(Model.GeminiAvailable || Model.OllamaAvailable ? L10n.T("Generate") : L10n.T("No AI provider available"))</span>
+            </button>
+        </footer>
+    </form>
+    <section class="slide-results" id="aiResults" aria-live="polite"
+             data-ai-error="@L10n.T("Could not generate questions right now. Please try again later.")"
+             data-done="@L10n.T("Filled in")">
+        <p class="slide-hint">@L10n.T("Pick a result to fill the question form.")</p>
+    </section>
+</aside>

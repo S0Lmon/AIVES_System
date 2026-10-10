@@ -255,4 +255,5 @@ public sealed class GeneratedQuestionInput
 {
     public string Content { get; set; } = ""; public string ExpectedAnswer { get; set; } = "";
     public string BloomLevel { get; set; } = ""; public string Difficulty { get; set; } = "";
+    public List<string> FollowUpQuestions { get; set; } = [];
 }
