@@ -1402,7 +1402,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             "question stats should render below the tabs");
     }
 
-    [SqlFact(Skip = "The Razor Pages rubric editor (Rubrics/Index) no longer numbers its rows; the MVC editor did.")]
+    [SqlFact]
     public async Task TheRubricMatrixNumbersItsRows()
     {
         using var browser = app.Browser();
