@@ -1,13 +1,13 @@
 @model AIVES.WebRazor.Pages.Questions.IndexModel
 <div class="panel-header">
-    <h2>Hiển thị @Model.Questions.Count / @Model.TotalCount câu hỏi</h2>
+    <h2>@L10n.Format("Showing {0} of {1} questions", Model.Questions.Count, Model.TotalCount)</h2>
 </div>
 @if (Model.Questions.Count == 0)
 {
     <div class="empty-state">
         <div class="empty-icon">?</div>
-        <h3>Không có câu hỏi phù hợp</h3>
-        <p>Thử bỏ bộ lọc hoặc thêm câu hỏi mới.</p>
+        <h3>@L10n.T("No matching questions")</h3>
+        <p>@L10n.T("Try clearing the filters or add a new question.")</p>
     </div>
 }
 else
@@ -15,7 +15,7 @@ else
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
-                <tr><th>Câu hỏi</th><th>Môn / chủ đề</th><th>Bloom</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr>
+                <tr><th>@L10n.T("Question")</th><th>@L10n.T("Subject / topic")</th><th>Bloom</th><th>@L10n.T("Status")</th><th class="text-end">@L10n.T("Actions")</th></tr>
             </thead>
             <tbody>
                 @foreach (var question in Model.Questions)
@@ -27,12 +27,12 @@ else
                         </td>
                         <td><div>@(question.SubjectName ?? "—")</div><small class="text-muted">@question.TopicName</small></td>
                         <td><span class="badge-soft">@question.BloomLevelName</span></td>
-                        <td><span class="status-badge @(question.IsActive ? "active" : "inactive")">@(question.IsActive ? "Hoạt động" : "Tạm ẩn")</span></td>
+                        <td><span class="status-badge @(question.IsActive ? "active" : "inactive")">@(question.IsActive ? L10n.T("Active") : L10n.T("Hidden"))</span></td>
                         <td>
                             <div class="action-group">
                                 <a asp-page="/Questions/Details" asp-route-id="@question.Id" class="btn btn-sm btn-light">Xem</a>
-                                <a asp-page="/Questions/Edit" asp-route-id="@question.Id" class="btn btn-sm btn-info">Sửa</a>
-                                <a asp-page="/Questions/Delete" asp-route-id="@question.Id" class="btn btn-sm btn-warning">Xoá</a>
+                                <a asp-page="/Questions/Edit" asp-route-id="@question.Id" class="btn btn-sm btn-info">@L10n.T("Edit")</a>
+                                <a asp-page="/Questions/Delete" asp-route-id="@question.Id" class="btn btn-sm btn-warning">@L10n.T("Delete")</a>
                             </div>
                         </td>
                     </tr>

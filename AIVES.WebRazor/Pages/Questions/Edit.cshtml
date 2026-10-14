@@ -1,15 +1,15 @@
 @page "/Question/Edit/{id:int}"
 @model AIVES.WebRazor.Pages.Questions.EditModel
 @{
-    ViewData["Title"] = $"Sửa câu hỏi #{Model.Id}";
+    ViewData["Title"] = L10n.Format("Edit question #{0}", Model.Id);
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Ngân hàng câu hỏi</span>
-        <h1>Sửa câu hỏi #@Model.Id</h1>
-        <p>Nếu đồng nghiệp cũng đang mở câu hỏi này, bạn sẽ thấy tên họ ở đây.</p>
+        <span class="page-kicker">@L10n.T("Question bank")</span>
+        <h1>@L10n.Format("Edit question #{0}", Model.Id)</h1>
+        <p>@L10n.T("If a colleague has this question open too, you will see their name here.")</p>
     </div>
-    <a asp-page="Details" asp-route-id="@Model.Id" class="btn btn-light">Xem chi tiết</a>
+    <a asp-page="Details" asp-route-id="@Model.Id" class="btn btn-light">@L10n.T("View details")</a>
 </div>
 
 <div class="editors-banner" data-editors-banner hidden role="status">
@@ -21,8 +21,8 @@
 <form method="post" class="panel form-panel" data-question-form data-question-id="@Model.Id" data-my-name="@AivesHub.DisplayName(User)">
     <partial name="_QuestionFields" model="Model" />
     <div class="form-actions">
-        <a asp-page="Index" class="btn btn-light">Huỷ</a>
-        <button type="submit" class="btn btn-primary" data-save>Lưu thay đổi</button>
+        <a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a>
+        <button type="submit" class="btn btn-primary" data-save>@L10n.T("Save changes")</button>
     </div>
 </form>
 
@@ -37,6 +37,9 @@
             const editorsText = document.querySelector('[data-editors-text]');
             const staleBanner = document.querySelector('[data-stale-banner]');
             const live = window.aivesLive;
+            const othersEditing = @Json.Serialize(L10n.T("{0} also have this question open. Whoever saves last overwrites the earlier save."));
+            const deletedHere = @Json.Serialize(L10n.T("{0} just deleted this question. It can no longer be saved."));
+            const savedElsewhere = @Json.Serialize(L10n.T("{0} just saved a new version of this question. Reload the page to see it before saving, or you will overwrite their changes."));
             if (!live) return;
 
             const join = () => live.connection.invoke('JoinQuestion', questionId).catch((error) => console.warn(error));
@@ -49,7 +52,7 @@
                 const others = event.detail.editors.filter((name) => name !== myName);
                 editorsBanner.hidden = others.length === 0;
                 editorsText.textContent = others.length === 0 ? '' :
-                    `${others.join(', ')} cũng đang mở câu hỏi này. Ai lưu sau sẽ ghi đè thay đổi của người lưu trước.`;
+                    othersEditing.replace('{0}', others.join(', '));
             });
 
             document.addEventListener('aives:entity-changed', (event) => {
@@ -58,11 +61,11 @@
                 if (change.actorId === document.body.dataset.userId) return;
                 staleBanner.hidden = false;
                 if (change.action === 'deleted') {
-                    staleBanner.textContent = `${change.actorName} vừa xoá câu hỏi này. Không thể lưu nữa.`;
+                    staleBanner.textContent = deletedHere.replace('{0}', change.actorName);
                     form.querySelector('[data-save]').disabled = true;
                     live.connection.invoke('LeaveQuestion', questionId).catch(() => {});
                 } else {
-                    staleBanner.textContent = `${change.actorName} vừa lưu một phiên bản mới của câu hỏi này. Tải lại trang để xem trước khi lưu, nếu không bạn sẽ ghi đè thay đổi của họ.`;
+                    staleBanner.textContent = savedElsewhere.replace('{0}', change.actorName);
                 }
             });
         })();

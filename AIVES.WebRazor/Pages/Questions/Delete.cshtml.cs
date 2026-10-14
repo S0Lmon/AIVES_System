@@ -25,7 +25,7 @@ public sealed class DeleteModel(IQuestionService questions, ILiveUpdates live, I
         var question = await questions.GetQuestionByIdAsync(id);
         if (question is null)
         {
-            TempData["Error"] = $"Câu hỏi #{id} không còn tồn tại.";
+            TempData["Error"] = L10n.Format("Question #{0} no longer exists.", id);
             return RedirectToPage("Index");
         }
 
@@ -39,12 +39,12 @@ public sealed class DeleteModel(IQuestionService questions, ILiveUpdates live, I
             logger.LogWarning(ex, "Question {QuestionId} could not be deleted", id);
             TempData["Error"] = ex is ArgumentException or InvalidOperationException
                 ? L10n.T(ex.Message)
-                : $"Không thể xoá câu hỏi #{id} vì nó đang được dùng (ví dụ trong một kỳ thi).";
+                : L10n.Format("Question #{0} cannot be deleted because it is in use (for example in an exam).", id);
             return RedirectToPage("Index");
         }
 
         await live.EntityChangedAsync(LiveEntities.Question, LiveActions.Deleted, id, question.Content);
-        TempData["Success"] = $"Đã xoá câu hỏi #{id}.";
+        TempData["Success"] = L10n.Format("Question #{0} was deleted.", id);
         return RedirectToPage("Index");
     }
 }

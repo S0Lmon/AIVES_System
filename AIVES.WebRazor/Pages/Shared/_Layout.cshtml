@@ -105,13 +105,13 @@
                     </div>
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <span class="live-status" data-live-status="connecting" title="Trạng thái kết nối real-time"><span class="live-dot"></span><span data-live-label>Đang kết nối…</span></span>
+                        <span class="live-status" data-live-status="connecting" title="@L10n.T("Real-time connection status")"><span class="live-dot"></span><span data-live-label>@L10n.T("Connecting…")</span></span>
                         <div class="dropdown">
                             <button class="online-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="online-dot"></span> <span data-online-count>0</span> online
+                                <span class="online-dot"></span> <span data-online-count>0</span> @L10n.T("online")
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end online-menu" data-online-list>
-                                <li class="dropdown-item-text text-muted small">Chưa có dữ liệu</li>
+                                <li class="dropdown-item-text text-muted small">@L10n.T("No data yet")</li>
                             </ul>
                         </div>
                     }
@@ -142,6 +142,24 @@
     @if (signedIn)
     {
         <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+        <script>
+            window.aivesLiveText = @Json.Serialize(new Dictionary<string, string>
+            {
+                ["question.created"] = L10n.T("{0} created question #{1}"),
+                ["question.updated"] = L10n.T("{0} updated question #{1}"),
+                ["question.deleted"] = L10n.T("{0} deleted question #{1}"),
+                ["subject.created"] = L10n.T("{0} created subject #{1}"),
+                ["subject.updated"] = L10n.T("{0} updated subject #{1}"),
+                ["subject.deleted"] = L10n.T("{0} deleted subject #{1}"),
+                ["topic.created"] = L10n.T("{0} created topic #{1}"),
+                ["topic.updated"] = L10n.T("{0} updated topic #{1}"),
+                ["topic.deleted"] = L10n.T("{0} deleted topic #{1}"),
+                ["reconnecting"] = L10n.T("Reconnecting…"),
+                ["offline"] = L10n.T("Connection lost"),
+                ["you"] = L10n.T("(you)"),
+                ["tabs"] = L10n.T("{0} tabs")
+            });
+        </script>
         <script src="~/js/realtime.js" asp-append-version="true"></script>
     }
     @await RenderSectionAsync("Scripts", required: false)

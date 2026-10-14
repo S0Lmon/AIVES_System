@@ -12,34 +12,60 @@
      data-can-speak="@Model.CanSpeak.ToString().ToLowerInvariant()"
      data-worklet-url="@Url.Content("~/js/pcm-worklet.js")">
     <script type="application/json" data-viva-state>@Html.Raw(Model.StateJson)</script>
+    <script type="application/json" data-viva-text>@Json.Serialize(new Dictionary<string, string>
+    {
+        ["connectionError"] = L10n.T("A connection error occurred. Please try again."),
+        ["followUpKind"] = L10n.T("Follow-up question {0}"),
+        ["mainKind"] = L10n.T("Main question {0}/{1}"),
+        ["followUpLimits"] = L10n.T("Up to {0} follow-ups per question · {1} min per answer"),
+        ["clarify"] = L10n.T("The AI examiner wants you to clarify your last answer."),
+        ["progress"] = L10n.T("Question {0} of {1}"),
+        ["pressToContinue"] = L10n.T("Press \"Replay the question\" or \"Start answering\" to continue."),
+        ["timeUp"] = L10n.T("Time is up, submitting your answer…"),
+        ["reading"] = L10n.T("The AI examiner is reading the question…"),
+        ["readThenAnswer"] = L10n.T("Read the question, then start answering."),
+        ["micError"] = L10n.T("The microphone could not be used. Allow microphone access, or type your answer."),
+        ["listening"] = L10n.T("Listening to your answer. The words appear as you speak."),
+        ["finishing"] = L10n.T("Recognising the end of your answer…"),
+        ["review"] = L10n.T("Check your answer, then press Submit. Anything you change is recorded as typed."),
+        ["notHeard"] = L10n.T("Your answer was not heard clearly. You can answer again or type it."),
+        ["typing"] = L10n.T("Type your answer, then press Submit."),
+        ["submitting"] = L10n.T("Sending your answer; the AI examiner is reviewing it…"),
+        ["retrySubmit"] = L10n.T("Not sent yet. Press Submit to try again."),
+        ["consentNeeded"] = L10n.T("This exam is recorded. Agree to the recording to start."),
+        ["reconnecting"] = L10n.T("Connection lost, reconnecting…"),
+        ["interrupted"] = L10n.T("The connection dropped while you were speaking. Please answer again."),
+        ["speakAgain"] = L10n.T("Press \"Start answering\" to speak again, or type your answer."),
+        ["closed"] = L10n.T("Lost the connection to the server. Reload the page to continue.")
+    })</script>
 
     <div class="page-heading">
         <div>
-            <span class="page-kicker">Giám khảo AI · @(state.Language == AppLanguage.Vi ? "Tiếng Việt" : "English")</span>
+            <span class="page-kicker">@L10n.T("AI examiner") · @(state.Language == AppLanguage.Vi ? "Tiếng Việt" : "English")</span>
             <h1>@state.ExamTitle</h1>
             <p data-viva-progress></p>
         </div>
-        <div class="viva-timer" data-viva-timer hidden><span>Thời gian còn lại</span><strong data-viva-clock>--:--</strong></div>
+        <div class="viva-timer" data-viva-timer hidden><span>@L10n.T("Time left")</span><strong data-viva-clock>--:--</strong></div>
     </div>
 
     <div class="alert alert-danger" data-viva-error hidden role="alert"></div>
 
     @* Before the start *@
     <section class="panel panel-body" data-viva-panel="start" hidden>
-        <h2 class="h5">Trước khi bắt đầu</h2>
+        <h2 class="h5">@L10n.T("Before you start")</h2>
         <ul class="viva-rules">
-            <li>Giám khảo AI sẽ đọc từng câu hỏi. Khi nghe xong, micro tự bật để bạn trả lời bằng giọng nói.</li>
-            <li>Chữ bạn nói hiện lên ngay khi bạn đang nói. Bạn có thể sửa trước khi nộp; phần đã sửa sẽ được ghi nhận là <em>gõ tay</em>.</li>
-            <li>Nếu câu trả lời còn mơ hồ, thiếu ý hoặc mâu thuẫn, giám khảo AI sẽ <strong>hỏi xoáy</strong> thêm. Số lượt hỏi xoáy mỗi câu có giới hạn.</li>
-            <li>Mỗi câu có giới hạn thời gian. Hết giờ, câu trả lời được nộp tự động.</li>
+            <li>@L10n.T("The AI examiner reads each question aloud. When it finishes, the microphone turns on so you can answer by voice.")</li>
+            <li>@Html.Raw(L10n.T("Your words appear while you speak. You can correct them before submitting; corrections are recorded as <em>typed</em>."))</li>
+            <li>@Html.Raw(L10n.T("If an answer is vague, incomplete or contradictory, the AI examiner asks a <strong>follow-up</strong>. Each question allows a limited number of follow-ups."))</li>
+            <li>@L10n.T("Each question has a time limit. When time runs out, your answer is submitted automatically.")</li>
             @if (!Model.CanListen)
             {
-                <li class="text-danger">Máy chủ chưa cài nhận dạng giọng nói, nên bạn sẽ gõ câu trả lời.</li>
+                <li class="text-danger">@L10n.T("Speech recognition is not installed on the server, so you will type your answers.")</li>
             }
         </ul>
         @if (state.Recording == RecordingMode.AudioVideo)
         {
-            <div class="stale-banner">Bài thi này yêu cầu ghi hình. Vui lòng làm bài trên trang AIVES chính.</div>
+            <div class="stale-banner">@L10n.T("This exam requires video recording. Please take it on the main AIVES page.")</div>
         }
         else
         {
@@ -47,10 +73,10 @@
             {
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="vivaConsent" data-viva-consent />
-                    <label class="form-check-label" for="vivaConsent">Tôi đồng ý cho ghi âm câu trả lời làm minh chứng chấm thi.</label>
+                    <label class="form-check-label" for="vivaConsent">@L10n.T("I agree to my answers being recorded as evidence for grading.")</label>
                 </div>
             }
-            <button type="button" class="btn btn-primary" data-viva-start>Bắt đầu vấn đáp</button>
+            <button type="button" class="btn btn-primary" data-viva-start>@L10n.T("Start the viva")</button>
         }
     </section>
 
@@ -61,7 +87,7 @@
                 <span class="badge-soft" data-viva-kind></span>
                 <small class="text-muted" data-viva-followups></small>
             </div>
-            <button type="button" class="btn btn-sm btn-light" data-viva-replay>🔊 Nghe lại câu hỏi</button>
+            <button type="button" class="btn btn-sm btn-light" data-viva-replay>🔊 @L10n.T("Replay the question")</button>
         </div>
         <div class="panel-body">
             <div class="content-quote mb-4" data-viva-question></div>
@@ -70,23 +96,23 @@
             <div class="viva-meter" aria-hidden="true"><span data-viva-level></span></div>
 
             <div class="viva-transcript" data-viva-live aria-live="polite"></div>
-            <textarea class="form-control mt-3" rows="5" data-viva-text hidden placeholder="Câu trả lời của bạn…"></textarea>
+            <textarea class="form-control mt-3" rows="5" data-viva-text hidden placeholder="@L10n.T("Your answer…")"></textarea>
 
             <div class="d-flex flex-wrap gap-2 mt-3">
-                <button type="button" class="btn btn-primary" data-viva-record hidden>🎙 Bắt đầu trả lời</button>
-                <button type="button" class="btn btn-warning" data-viva-stop hidden>⏹ Tôi đã trả lời xong</button>
-                <button type="button" class="btn btn-light" data-viva-retry hidden>↺ Trả lời lại</button>
-                <button type="button" class="btn btn-light" data-viva-type hidden>⌨ Gõ câu trả lời</button>
-                <button type="button" class="btn btn-primary ms-auto" data-viva-submit hidden>Nộp câu trả lời</button>
+                <button type="button" class="btn btn-primary" data-viva-record hidden>🎙 @L10n.T("Start answering")</button>
+                <button type="button" class="btn btn-warning" data-viva-stop hidden>⏹ @L10n.T("I have finished answering")</button>
+                <button type="button" class="btn btn-light" data-viva-retry hidden>↺ @L10n.T("Answer again")</button>
+                <button type="button" class="btn btn-light" data-viva-type hidden>⌨ @L10n.T("Type the answer")</button>
+                <button type="button" class="btn btn-primary ms-auto" data-viva-submit hidden>@L10n.T("Submit the answer")</button>
             </div>
         </div>
     </section>
 
     <section class="panel panel-body text-center" data-viva-panel="done" hidden>
         <div class="empty-icon">✓</div>
-        <h2 class="h4">Bạn đã hoàn thành phần vấn đáp</h2>
-        <p class="text-muted">Câu trả lời đã được lưu. Giảng viên sẽ xem lại và công bố điểm.</p>
-        <a asp-page="Index" class="btn btn-light">Về phòng thi của tôi</a>
+        <h2 class="h4">@L10n.T("You have finished the viva")</h2>
+        <p class="text-muted">@L10n.T("Your answers are saved. Your lecturer will review them and publish the grade.")</p>
+        <a asp-page="Index" class="btn btn-light">@L10n.T("Back to my exam room")</a>
     </section>
 </div>
 

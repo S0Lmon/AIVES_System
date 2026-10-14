@@ -1,13 +1,13 @@
 @page
 @model AIVES.WebRazor.Pages.Subjects.IndexModel
 @{
-    ViewData["Title"] = "Môn học & chủ đề";
+    ViewData["Title"] = L10n.T("Subjects & topics");
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Danh mục · cập nhật real-time</span>
-        <h1>Môn học &amp; chủ đề</h1>
-        <p>Câu hỏi được gắn theo môn học và chủ đề ở đây.</p>
+        <span class="page-kicker">@L10n.T("Catalog · live updates")</span>
+        <h1>@L10n.T("Subjects & topics")</h1>
+        <p>@L10n.T("Questions are filed under the subjects and topics here.")</p>
     </div>
 </div>
 <div class="dashboard-grid">
@@ -15,7 +15,7 @@
         <partial name="_SubjectRows" model="Model" />
     </section>
     <form method="post" class="panel align-self-start">
-        <div class="panel-header"><h2>Thêm môn học</h2></div>
+        <div class="panel-header"><h2>@L10n.T("Add subject")</h2></div>
         <div class="panel-body">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
             <div class="mb-3">
@@ -27,7 +27,7 @@
                 <label asp-for="NewSubject.Description" class="form-label"></label>
                 <textarea asp-for="NewSubject.Description" class="form-control" rows="3"></textarea>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Tạo môn học</button>
+            <button type="submit" class="btn btn-primary w-100">@L10n.T("Create subject")</button>
         </div>
     </form>
 </div>

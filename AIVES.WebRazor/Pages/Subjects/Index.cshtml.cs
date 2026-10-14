@@ -11,13 +11,13 @@ namespace AIVES.WebRazor.Pages.Subjects;
 /// <summary>Name and description, shared by the subject and topic forms.</summary>
 public sealed class CatalogEntryInput
 {
-    [Required(ErrorMessage = "Vui lòng nhập tên.")]
-    [StringLength(200, ErrorMessage = "Tên tối đa 200 ký tự.")]
-    [Display(Name = "Tên")]
+    [Required(ErrorMessage = "Enter a name.")]
+    [StringLength(200, ErrorMessage = "The name can be at most 200 characters.")]
+    [Display(Name = "Name")]
     public string Name { get; set; } = string.Empty;
 
     [StringLength(2000)]
-    [Display(Name = "Mô tả")]
+    [Display(Name = "Description")]
     public string? Description
     {
         get; set;
@@ -53,7 +53,7 @@ public sealed class IndexModel(ICatalogService catalog, ILiveUpdates live) : Pag
         {
             var created = await catalog.CreateSubjectAsync(new SubjectInput(NewSubject.Name.Trim(), NewSubject.Description?.Trim() ?? string.Empty), cancellationToken);
             await live.EntityChangedAsync(LiveEntities.Subject, LiveActions.Created, created.Id, created.Name);
-            TempData["Success"] = $"Đã tạo môn học \"{created.Name}\". Hãy thêm chủ đề.";
+            TempData["Success"] = L10n.Format("Subject \"{0}\" was created. Now add its topics.", created.Name);
             return RedirectToPage("Details", new
             {
                 id = created.Id
@@ -84,7 +84,7 @@ public sealed class IndexModel(ICatalogService catalog, ILiveUpdates live) : Pag
         }
 
         await live.EntityChangedAsync(LiveEntities.Subject, LiveActions.Deleted, id, subject.Name);
-        TempData["Success"] = $"Đã xoá môn học \"{subject.Name}\" cùng các chủ đề của nó.";
+        TempData["Success"] = L10n.Format("Subject \"{0}\" and its topics were deleted.", subject.Name);
         return RedirectToPage();
     }
 }

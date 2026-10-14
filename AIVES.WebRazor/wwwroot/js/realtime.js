@@ -6,8 +6,9 @@
     if (!hubUrl || !window.signalR) return;
 
     const myUserId = document.body.dataset.userId;
-    const entityNames = { question: 'Câu hỏi', subject: 'Môn học', topic: 'Chủ đề' };
-    const actionNames = { created: 'đã tạo', updated: 'đã cập nhật', deleted: 'đã xoá' };
+    // Translated by the layout; each sentence is whole so its word order fits the language.
+    const text = window.aivesLiveText || {};
+    const fill = (template, ...values) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), template);
 
     const connection = new signalR.HubConnectionBuilder()
         .withUrl(hubUrl)
@@ -22,13 +23,13 @@
         if (statusEl) statusEl.dataset.liveStatus = state;
         if (statusLabel) statusLabel.textContent = label;
     };
-    connection.onreconnecting(() => setStatus('reconnecting', 'Đang kết nối lại…'));
+    connection.onreconnecting(() => setStatus('reconnecting', text.reconnecting));
     connection.onreconnected(() => {
         setStatus('live', 'Real-time');
         // Anything missed while offline is unknown, so ask pages to refresh themselves.
         document.dispatchEvent(new CustomEvent('aives:reconnected'));
     });
-    connection.onclose(() => setStatus('offline', 'Mất kết nối'));
+    connection.onclose(() => setStatus('offline', text.offline));
 
     // ---- Presence ---------------------------------------------------------
     const countEl = document.querySelector('[data-online-count]');
@@ -42,12 +43,12 @@
                 const dot = document.createElement('span');
                 dot.className = 'online-dot';
                 const name = document.createElement('span');
-                name.textContent = user.name + (user.userId === myUserId ? ' (bạn)' : '');
+                name.textContent = user.name + (user.userId === myUserId ? ' ' + text.you : '');
                 item.append(dot, name);
                 if (user.connections > 1) {
                     const tabs = document.createElement('small');
                     tabs.className = 'text-muted ms-auto';
-                    tabs.textContent = `${user.connections} tab`;
+                    tabs.textContent = fill(text.tabs, user.connections);
                     item.append(tabs);
                 }
                 return item;
@@ -73,8 +74,10 @@
         setTimeout(() => card.remove(), 5400);
     };
 
-    const describe = (change) =>
-        `${change.actorName} ${actionNames[change.action] ?? change.action} ${(entityNames[change.entity] ?? change.entity).toLowerCase()} #${change.id}`;
+    const describe = (change) => {
+        const template = text[`${change.entity}.${change.action}`];
+        return template ? fill(template, change.actorName, change.id) : `${change.actorName} ${change.action} ${change.entity} #${change.id}`;
+    };
 
     connection.on('EntityChanged', (change) => {
         // Your own change is already confirmed by the page you landed on.
@@ -90,7 +93,7 @@
         .then(() => setStatus('live', 'Real-time'))
         .catch((error) => {
             console.warn('[AIVES] SignalR could not connect', error);
-            setStatus('offline', 'Mất kết nối');
+            setStatus('offline', text.offline);
             throw error;
         });
 

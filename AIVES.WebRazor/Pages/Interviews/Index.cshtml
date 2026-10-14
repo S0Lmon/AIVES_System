@@ -1,49 +1,49 @@
 @page
 @model AIVES.WebRazor.Pages.Interviews.IndexModel
 @{
-    ViewData["Title"] = "Phòng thi của tôi";
+    ViewData["Title"] = L10n.T("My exam room");
     string Local(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM/yyyy HH:mm");
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Vấn đáp với giám khảo AI</span>
-        <h1>Phòng thi của tôi</h1>
-        <p>Giám khảo AI đọc câu hỏi, bạn trả lời bằng giọng nói. Phòng thi mở trong khung giờ của bạn.</p>
+        <span class="page-kicker">@L10n.T("Viva with the AI examiner")</span>
+        <h1>@L10n.T("My exam room")</h1>
+        <p>@L10n.T("The AI examiner reads each question and you answer by voice. The room opens during your time slot.")</p>
     </div>
 </div>
 <section class="panel">
     @if (Model.Exams.Count == 0)
     {
-        <div class="empty-state"><div class="empty-icon">V</div><h3>Bạn chưa có lịch vấn đáp</h3><p>Giảng viên sẽ thêm email của bạn vào kỳ thi.</p></div>
+        <div class="empty-state"><div class="empty-icon">V</div><h3>@L10n.T("You have no viva scheduled")</h3><p>@L10n.T("Your lecturer adds your email to an exam.")</p></div>
     }
     else
     {
         <div class="table-responsive">
             <table class="table data-table">
-                <thead><tr><th>Kỳ thi</th><th>Khung giờ của bạn</th><th>Câu hỏi</th><th>Trạng thái</th><th class="text-end"></th></tr></thead>
+                <thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Your slot")</th><th>@L10n.T("Questions")</th><th>@L10n.T("Status")</th><th class="text-end"></th></tr></thead>
                 <tbody>
                     @foreach (var exam in Model.Exams)
                     {
                         <tr>
                             <td><div class="question-title">@exam.Title</div><small class="text-muted">@exam.SubjectName @(exam.TopicName is null ? "" : "· " + exam.TopicName)</small></td>
                             <td>@Local(exam.StartsAtUtc) – @DateTime.SpecifyKind(exam.EndsAtUtc, DateTimeKind.Utc).ToLocalTime().ToString("HH:mm")</td>
-                            <td>@exam.MainQuestionCount câu chính</td>
+                            <td>@L10n.Format("{0} main questions", exam.MainQuestionCount)</td>
                             <td>
                                 @switch (exam.InterviewStatus)
                                 {
-                                    case InterviewStatus.Completed: <span class="status-badge active">Đã hoàn thành</span>; break;
-                                    case InterviewStatus.InProgress: <span class="status-badge active">Đang thi</span>; break;
+                                    case InterviewStatus.Completed: <span class="status-badge active">@L10n.T("Completed")</span>; break;
+                                    case InterviewStatus.InProgress: <span class="status-badge active">@L10n.T("In progress")</span>; break;
                                     default:
-                                        if (Model.NowUtc < exam.StartsAtUtc) { <span class="status-badge inactive">Chưa đến giờ</span> }
-                                        else if (Model.NowUtc >= exam.EndsAtUtc) { <span class="status-badge inactive">Đã hết giờ</span> }
-                                        else { <span class="badge-soft">Đang mở</span> }
+                                        if (Model.NowUtc < exam.StartsAtUtc) { <span class="status-badge inactive">@L10n.T("Not open yet")</span> }
+                                        else if (Model.NowUtc >= exam.EndsAtUtc) { <span class="status-badge inactive">@L10n.T("Closed")</span> }
+                                        else { <span class="badge-soft">@L10n.T("Open now")</span> }
                                         break;
                                 }
                             </td>
                             <td class="text-end">
                                 @if (Model.CanEnter(exam))
                                 {
-                                    <a asp-page="Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@(exam.InterviewStatus == InterviewStatus.InProgress ? "Tiếp tục" : "Vào phòng thi")</a>
+                                    <a asp-page="Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Continue") : L10n.T("Enter the exam room"))</a>
                                 }
                             </td>
                         </tr>

@@ -11,6 +11,9 @@
     const canListen = root.dataset.canListen === 'true';
     const canSpeak = root.dataset.canSpeak === 'true';
     const audioUrl = root.dataset.audioUrl;
+    // UI text, translated by the page.
+    const t = JSON.parse(root.querySelector('[data-viva-text]').textContent);
+    const fill = (template, ...values) => values.reduce((result, value, index) => result.replace(`{${index}}`, value), template);
     const TARGET_RATE = 16000;
     const CHUNK_SAMPLES = TARGET_RATE / 4; // 250 ms per message
     const SPEECH_LEVEL = 0.02;
@@ -73,7 +76,7 @@
     const messageOf = (error) => {
         const text = String(error && error.message || error || '');
         const hub = text.indexOf('HubException: ');
-        return hub >= 0 ? text.slice(hub + 14) : 'Đã xảy ra lỗi kết nối. Vui lòng thử lại.';
+        return hub >= 0 ? text.slice(hub + 14) : t.connectionError;
     };
 
     const showPanel = (name) => root.querySelectorAll('[data-viva-panel]').forEach((panel) => {
@@ -124,20 +127,20 @@
         showError('');
 
         const followUp = next.kind === 'FollowUp';
-        ui.kind.textContent = followUp ? `Câu hỏi xoáy ${next.followUpIndex}` : `Câu chính ${next.mainIndex}/${next.mainCount}`;
+        ui.kind.textContent = followUp ? fill(t.followUpKind, next.followUpIndex) : fill(t.mainKind, next.mainIndex, next.mainCount);
         ui.kind.classList.toggle('is-follow-up', followUp);
         ui.followUps.textContent = next.maxFollowUpsPerQuestion > 0
-            ? `Tối đa ${next.maxFollowUpsPerQuestion} lượt hỏi xoáy cho mỗi câu · ${Math.round(next.timeLimitSeconds / 60 * 10) / 10} phút mỗi lượt`
+            ? fill(t.followUpLimits, next.maxFollowUpsPerQuestion, Math.round(next.timeLimitSeconds / 60 * 10) / 10)
             : '';
         ui.progress.textContent = followUp
-            ? 'Giám khảo AI muốn bạn làm rõ thêm câu trả lời vừa rồi.'
-            : `Câu hỏi ${next.mainIndex} trên ${next.mainCount}`;
+            ? t.clarify
+            : fill(t.progress, next.mainIndex, next.mainCount);
         ui.question.textContent = next.questionText;
         ui.timer.hidden = false;
 
         if (!autoplay) {
             autoplay = true;
-            setPhase('asking', 'Bấm "Nghe lại câu hỏi" hoặc "Bắt đầu trả lời" để tiếp tục.');
+            setPhase('asking', t.pressToContinue);
             return;
         }
         askQuestion(next).then(() => {
@@ -164,7 +167,7 @@
     }, 250);
 
     const timeUp = async () => {
-        ui.status.textContent = 'Hết giờ, đang nộp câu trả lời…';
+        ui.status.textContent = t.timeUp;
         if (phase === 'recording') await stopRecording();
         if (phase === 'finishing' && streamDone) await streamDone.catch(() => {});
         await submit();
@@ -173,7 +176,7 @@
     // ---- Question audio --------------------------------------------------
 
     const askQuestion = (current) => {
-        setPhase('asking', canSpeak ? 'Giám khảo AI đang đọc câu hỏi…' : 'Đọc câu hỏi, rồi bắt đầu trả lời.');
+        setPhase('asking', canSpeak ? t.reading : t.readThenAnswer);
         if (!canSpeak) return Promise.resolve();
         return new Promise((resolve) => {
             player.onended = resolve;
@@ -259,7 +262,7 @@
             if (mic.context.state === 'suspended') await mic.context.resume();
         } catch (error) {
             console.warn('[AIVES] microphone unavailable', error);
-            showError('Không dùng được micro. Hãy cho phép trình duyệt truy cập micro, hoặc gõ câu trả lời.');
+            showError(t.micError);
             startTyping();
             return;
         }
@@ -272,7 +275,7 @@
         firstSpeechAt = null;
         subject = new signalR.Subject();
         const streamTurn = turnId;
-        setPhase('recording', 'Đang nghe bạn trả lời. Chữ sẽ hiện ngay khi bạn nói.');
+        setPhase('recording', t.listening);
         streamDone = connection.invoke('StreamAnswer', candidateId, streamTurn, subject).catch((error) => {
             if (turnId !== streamTurn) return;
             showError(messageOf(error));
@@ -288,7 +291,7 @@
         subject.complete();
         subject = null;
         ui.level.style.width = '0';
-        setPhase('finishing', 'Đang nhận dạng phần cuối câu trả lời…');
+        setPhase('finishing', t.finishing);
         try {
             await streamDone;
         } catch {
@@ -297,8 +300,8 @@
         if (phase !== 'finishing') return;
         ui.text.value = recognized;
         setPhase('review', recognized
-            ? 'Kiểm tra lại câu trả lời rồi bấm Nộp. Phần bạn sửa sẽ được ghi nhận là gõ tay.'
-            : 'Không nghe rõ câu trả lời. Bạn có thể trả lời lại hoặc gõ.');
+            ? t.review
+            : t.notHeard);
     };
 
     const startTyping = () => {
@@ -307,7 +310,7 @@
             subject = null;
         }
         if (!ui.text.value && recognized) ui.text.value = recognized;
-        setPhase('typing', 'Gõ câu trả lời của bạn rồi bấm Nộp.');
+        setPhase('typing', t.typing);
         ui.text.focus();
     };
 
@@ -316,13 +319,13 @@
         const answeringTurn = turnId;
         const text = ['review', 'typing'].includes(phase) ? ui.text.value : recognized;
         const delay = firstSpeechAt === null ? null : Math.round(firstSpeechAt - recordStartedAt);
-        setPhase('submitting', 'Đang gửi câu trả lời, giám khảo AI đang xem xét…');
+        setPhase('submitting', t.submitting);
         try {
             const next = await connection.invoke('SubmitAnswer', candidateId, answeringTurn, text, delay);
             render(next);
         } catch (error) {
             showError(messageOf(error));
-            setPhase('typing', 'Gửi chưa được. Bấm Nộp để thử lại.');
+            setPhase('typing', t.retrySubmit);
             ui.text.value = text;
         }
     };
@@ -337,7 +340,7 @@
 
     ui.buttons.start?.addEventListener('click', async () => {
         if (ui.consent && !ui.consent.checked) {
-            showError('Bài thi này có ghi âm. Hãy đồng ý ghi âm để bắt đầu.');
+            showError(t.consentNeeded);
             return;
         }
         ui.buttons.start.disabled = true;
@@ -361,7 +364,7 @@
 
     // ---- Connection ------------------------------------------------------
 
-    connection.onreconnecting(() => showError('Mất kết nối, đang kết nối lại…'));
+    connection.onreconnecting(() => showError(t.reconnecting));
     connection.onreconnected(async () => {
         showError('');
         const lostAnswer = phase === 'recording' || phase === 'finishing';
@@ -372,11 +375,11 @@
             showError(messageOf(error));
         }
         if (lostAnswer && state.status === 'InProgress') {
-            showError('Kết nối bị gián đoạn trong lúc bạn nói. Vui lòng trả lời lại.');
-            setPhase('typing', 'Bấm "Bắt đầu trả lời" để nói lại, hoặc gõ câu trả lời.');
+            showError(t.interrupted);
+            setPhase('typing', t.speakAgain);
         }
     });
-    connection.onclose(() => showError('Mất kết nối tới máy chủ. Hãy tải lại trang để tiếp tục.'));
+    connection.onclose(() => showError(t.closed));
 
     render(state);
     connection.start()

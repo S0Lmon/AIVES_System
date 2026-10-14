@@ -1,10 +1,10 @@
 @page
 @model AIVES.WebRazor.Pages.Account.LoginModel
 @{
-    ViewData["Title"] = "Đăng nhập";
+    ViewData["Title"] = L10n.T("Sign in");
 }
 <div class="panel form-panel" style="max-width:460px">
-    <div class="panel-header"><h2>Đăng nhập vào AIVES</h2></div>
+    <div class="panel-header"><h2>@L10n.T("Sign in to AIVES")</h2></div>
     <form method="post" class="panel-body">
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
         <input type="hidden" asp-for="ReturnUrl" />
@@ -22,7 +22,7 @@
             <input asp-for="Input.RememberMe" class="form-check-input" />
             <label asp-for="Input.RememberMe" class="form-check-label"></label>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+        <button type="submit" class="btn btn-primary w-100">@L10n.T("Sign in")</button>
         <div class="auth-divider"><span>@L10n.T("or")</span></div>
         @if (Model.IsGoogleConfigured)
         {

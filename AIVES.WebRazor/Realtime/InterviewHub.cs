@@ -85,12 +85,12 @@ public sealed class InterviewHub(
     {
         var before = await Guard(() => interviews.GetStateAsync(candidateId, Email, Context.ConnectionAborted));
         if (before.Recording == RecordingMode.AudioVideo)
-            throw new HubException("Bài thi này yêu cầu ghi hình. Vui lòng làm bài trên trang AIVES chính.");
+            throw new HubException(L10n.T("This exam requires video recording. Please take it on the main AIVES page."));
 
         var state = await Guard(() => interviews.StartAsync(candidateId, Email, recordingConsent, Context.ConnectionAborted));
         if (before.Status == InterviewStatus.NotStarted && state.Status != InterviewStatus.NotStarted)
         {
-            await NotifyAsync(candidateId, InterviewEventKinds.Started, "Bắt đầu vấn đáp", null);
+            await NotifyAsync(candidateId, InterviewEventKinds.Started, L10n.T("Started the viva"), null);
             await NotifyQuestionAsync(candidateId, state);
         }
         return state;
@@ -103,12 +103,12 @@ public sealed class InterviewHub(
     public async Task StreamAnswer(int candidateId, int turnId, IAsyncEnumerable<string> chunks)
     {
         if (!CanListen(speech, answers))
-            throw new HubException("Nhận dạng giọng nói chưa được cài đặt trên máy chủ. Vui lòng gõ câu trả lời.");
+            throw new HubException(L10n.T("Speech recognition is not installed on the server. Please type your answer."));
 
         var state = await Guard(() => interviews.GetStateAsync(candidateId, Email, Context.ConnectionAborted));
         var turn = state.CurrentTurn;
         if (state.Status != InterviewStatus.InProgress || turn is null || turn.TurnId != turnId)
-            throw new HubException("Câu hỏi này không còn mở.");
+            throw new HubException(L10n.T("This question is no longer open."));
 
         var maxSeconds = turn.TimeLimitSeconds + Math.Max(0, interviewOptions.Value.AnswerGraceSeconds);
         // Without a Whisper model there is no live preview, but Gemini can still write the transcript.
@@ -126,7 +126,7 @@ public sealed class InterviewHub(
             }
             catch (FormatException)
             {
-                throw new HubException("Dữ liệu âm thanh không hợp lệ.");
+                throw new HubException(L10n.T("The audio data is not valid."));
             }
             if (transcriber.IsFull)
                 continue;
@@ -179,9 +179,9 @@ public sealed class InterviewHub(
         if (session is { Audio.Length: > 0 } && state.Recording == RecordingMode.Audio && state.RecordingConsentGiven)
             await SaveRecordingAsync(candidateId, turnId, session.Audio);
 
-        await NotifyAsync(candidateId, InterviewEventKinds.Answer, text.Length == 0 ? "(không trả lời)" : text, turnId);
+        await NotifyAsync(candidateId, InterviewEventKinds.Answer, text.Length == 0 ? L10n.T("(no answer)") : text, turnId);
         if (state.Status == InterviewStatus.Completed)
-            await NotifyAsync(candidateId, InterviewEventKinds.Completed, "Hoàn thành vấn đáp", null);
+            await NotifyAsync(candidateId, InterviewEventKinds.Completed, L10n.T("Finished the viva"), null);
         else
             await NotifyQuestionAsync(candidateId, state);
         return state;
@@ -285,7 +285,7 @@ public sealed class InterviewHub(
         }
         catch (KeyNotFoundException)
         {
-            throw new HubException("Không tìm thấy lượt thi này.");
+            throw new HubException(L10n.T("This exam slot was not found."));
         }
         catch (InvalidOperationException ex)
         {

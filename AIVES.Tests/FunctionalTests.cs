@@ -735,6 +735,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains($"href=\"/Interview/{candidateId}\"", await Html(await student.GetAsync("/MyExams")));
         var page = await student.GetAsync($"/Interview/{candidateId}");
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        // The voice room hands its translated text to interview-room.js as JSON.
+        var room = await Html(await student.GetAsync($"/Interviews/Room/{candidateId}?culture=en"));
+        Assert.Contains("Before you start", room);
+        Assert.Matches("<script type=\"application/json\" data-viva-text>\\{\"connectionError\":\"A connection error occurred\\. Please try again\\.\"", room);
+        Assert.Contains("Bắt đầu vấn đáp", await Html(await student.GetAsync($"/Interviews/Room/{candidateId}?culture=vi")));
         var token = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
 
         // JSON endpoints need the antiforgery token in a header.
@@ -1147,16 +1152,72 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
     {
         using var browser = app.Browser();
-        // These strings go through L10n on the login page; its heading is written in Vietnamese only.
         var english = await Html(await browser.GetAsync("/Account/Login?culture=en"));
+        Assert.Contains("Sign in to AIVES", english);
         Assert.Contains("No account yet?", english);
-        Assert.Contains("Register with your email", english);
+        Assert.DoesNotContain("Đăng nhập vào AIVES", english);
         Assert.DoesNotContain("Chưa có tài khoản?", english);
 
         var vietnamese = await Html(await browser.GetAsync("/Account/Login?culture=vi"));
+        Assert.Contains("Đăng nhập vào AIVES", vietnamese);
         Assert.Contains("Chưa có tài khoản?", vietnamese);
-        Assert.Contains("Đăng ký bằng email", vietnamese);
+        Assert.DoesNotContain("Sign in to AIVES", vietnamese);
         Assert.DoesNotContain("No account yet?", vietnamese);
+    }
+
+    [SqlFact]
+    public async Task FormLabelsAndValidationMessagesFollowTheLanguage()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+
+        // [Display] names and ErrorMessage are English keys translated through L10n.
+        Assert.Contains(">Question text</label>", await Html(await browser.GetAsync("/Question/Create?culture=en")));
+        Assert.Contains(">Nội dung câu hỏi</label>", await Html(await browser.GetAsync("/Question/Create?culture=vi")));
+
+        var empty = Question(string.Empty);
+        var english = await Html(await Post(browser, "/Question/Create?culture=en", "/Question/Create?culture=en", new(empty)));
+        Assert.Contains("Enter the question text.", english);
+        var vietnamese = await Html(await Post(browser, "/Question/Create?culture=vi", "/Question/Create?culture=vi", new(empty)));
+        Assert.Contains("Vui lòng nhập nội dung câu hỏi.", vietnamese);
+        Assert.DoesNotContain("Enter the question text.", vietnamese);
+    }
+
+    [SqlFact]
+    public async Task EnglishPagesCarryNoVietnameseText()
+    {
+        using var anonymous = app.Browser();
+        var pages = new List<string> { await Html(await anonymous.GetAsync("/Account/Login?culture=en")) };
+        using var student = app.Browser();
+        await SignIn(student, AppRoles.Student);
+        pages.Add(await Html(await student.GetAsync("/Interviews?culture=en")));
+
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, _) = await CreateCatalogTopic("Language check");
+        string questionId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var question = new AIVES.DAL.Entities.Question { Content = "A question used to check page language", ExpectedAnswer = "Answer", BloomLevelId = 1 };
+            db.Questions.Add(question);
+            await db.SaveChangesAsync();
+            questionId = question.Id.ToString();
+        }
+        foreach (var page in new[]
+        {
+            "/", "/Question/Create", "/Question/Details/" + questionId, "/Question/Edit/" + questionId, "/Question/Delete/" + questionId,
+            "/Subjects", "/Subjects/Details/" + subjectId, "/Interviews/Monitor", "/Rubric/Details/1", "/Error"
+        })
+            pages.Add(await Html(await browser.GetAsync(page + "?culture=en")));
+
+        foreach (var html in pages)
+        {
+            // The language switcher names Vietnamese in Vietnamese on purpose.
+            var text = html.Replace("Tiếng Việt", string.Empty);
+            var match = Regex.Match(text, "[^\\x00-\\x7F]*[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ][^<\"]{0,40}");
+            Assert.False(match.Success, $"Vietnamese text on an English page: \"{match.Value}\" in {Regex.Match(html, "<title>([^<]*)").Groups[1].Value}");
+        }
     }
 
     [SqlFact]
