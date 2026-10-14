@@ -1,11 +1,11 @@
 @page
 @{
-    ViewData["Title"] = "Lỗi";
+    ViewData["Title"] = L10n.T("Error");
 }
 <div class="panel danger-panel">
     <div class="danger-header">
-        <h1>Đã xảy ra lỗi</h1>
-        <p>Yêu cầu không thể hoàn tất. Vui lòng thử lại sau.</p>
+        <h1>@L10n.T("Something went wrong")</h1>
+        <p>@L10n.T("The request could not be completed. Please try again later.")</p>
     </div>
-    <div class="panel-body"><a asp-page="/Index" class="btn btn-light">Về trang tổng quan</a></div>
+    <div class="panel-body"><a asp-page="/Index" class="btn btn-light">@L10n.T("Back to the dashboard")</a></div>
 </div>

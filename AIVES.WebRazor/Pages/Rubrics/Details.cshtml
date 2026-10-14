@@ -7,18 +7,18 @@
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Rubric · @rubric.TotalPoints điểm</span>
+        <span class="page-kicker">@L10n.Format("Rubric · {0} points", rubric.TotalPoints)</span>
         <h1>@rubric.Name</h1>
         <p>@rubric.Description</p>
     </div>
-    <a asp-page="Index" class="btn btn-light">Tất cả rubric</a>
+    <a asp-page="Index" class="btn btn-light">@L10n.T("All rubrics")</a>
 </div>
 <section class="panel">
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
-                    <th>Tiêu chí</th>
+                    <th>@L10n.T("Criterion")</th>
                     @foreach (var level in levels)
                     {
                         <th>@level.Name</th>
@@ -29,12 +29,12 @@
                 @foreach (var criterion in rubric.Criteria.OrderBy(criterion => criterion.Order))
                 {
                     <tr>
-                        <td><strong>@criterion.Criterion</strong><br /><small class="text-muted">tối đa @criterion.MaxPoints điểm</small></td>
+                        <td><strong>@criterion.Criterion</strong><br /><small class="text-muted">@L10n.Format("up to {0} points", criterion.MaxPoints)</small></td>
                         @foreach (var level in levels)
                         {
                             var cell = DetailsModel.Cell(criterion, level);
                             <td>
-                                <span class="badge-soft mb-1">@(cell?.Points ?? 0) đ</span>
+                                <span class="badge-soft mb-1">@L10n.Format("{0} pts", cell?.Points ?? 0)</span>
                                 <div class="small">@cell?.Descriptor</div>
                             </td>
                         }

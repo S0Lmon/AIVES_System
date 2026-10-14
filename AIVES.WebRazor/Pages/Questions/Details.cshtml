@@ -2,32 +2,32 @@
 @model AIVES.WebRazor.Pages.Questions.DetailsModel
 @{
     var question = Model.Question;
-    ViewData["Title"] = $"Câu hỏi #{question.Id}";
+    ViewData["Title"] = L10n.Format("Question #{0}", question.Id);
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Ngân hàng câu hỏi</span>
-        <h1>Câu hỏi #@question.Id</h1>
-        <p>Cập nhật lần cuối @question.ModifiedDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+        <span class="page-kicker">@L10n.T("Question bank")</span>
+        <h1>@L10n.Format("Question #{0}", question.Id)</h1>
+        <p>@L10n.Format("Last updated {0}", question.ModifiedDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-page="Edit" asp-route-id="@question.Id" class="btn btn-primary">Sửa</a>
-        <a asp-page="Delete" asp-route-id="@question.Id" class="btn btn-warning">Xoá</a>
-        <a asp-page="Index" class="btn btn-light">Danh sách</a>
+        <a asp-page="Edit" asp-route-id="@question.Id" class="btn btn-primary">@L10n.T("Edit")</a>
+        <a asp-page="Delete" asp-route-id="@question.Id" class="btn btn-warning">@L10n.T("Delete")</a>
+        <a asp-page="Index" class="btn btn-light">@L10n.T("Back to list")</a>
     </div>
 </div>
 <div class="stale-banner" data-stale-banner hidden role="alert"></div>
 <div class="panel panel-body" data-question-id="@question.Id">
     <div class="content-quote mb-4">@question.Content</div>
     <div class="detail-grid">
-        <div class="detail-item"><small>Môn học</small>@(question.SubjectName ?? "—")</div>
-        <div class="detail-item"><small>Chủ đề</small>@(question.TopicName ?? "—")</div>
-        <div class="detail-item"><small>Mức Bloom</small>@question.BloomLevelName</div>
-        <div class="detail-item"><small>Độ khó</small>@(question.Difficulty ?? "—")</div>
-        <div class="detail-item"><small>Rubric</small>@(question.RubricName ?? "—")</div>
-        <div class="detail-item"><small>Trạng thái</small>@(question.IsActive ? "Hoạt động" : "Tạm ẩn")</div>
+        <div class="detail-item"><small>@L10n.T("Subject")</small>@(question.SubjectName ?? "—")</div>
+        <div class="detail-item"><small>@L10n.T("Topic")</small>@(question.TopicName ?? "—")</div>
+        <div class="detail-item"><small>@L10n.T("Bloom level")</small>@question.BloomLevelName</div>
+        <div class="detail-item"><small>@L10n.T("Difficulty")</small>@(question.Difficulty ?? "—")</div>
+        <div class="detail-item"><small>@L10n.T("Rubric")</small>@(question.RubricName ?? "—")</div>
+        <div class="detail-item"><small>@L10n.T("Status")</small>@(question.IsActive ? L10n.T("Active") : L10n.T("Hidden"))</div>
     </div>
-    <h2 class="h6 mt-4">Đáp án mong đợi</h2>
+    <h2 class="h6 mt-4">@L10n.T("Expected answer")</h2>
     <p class="mb-0" style="white-space:pre-line">@(string.IsNullOrWhiteSpace(question.ExpectedAnswer) ? "—" : question.ExpectedAnswer)</p>
 </div>
 @section Scripts {
@@ -35,11 +35,12 @@
         (() => {
             const questionId = Number(document.querySelector('[data-question-id]').dataset.questionId);
             const banner = document.querySelector('[data-stale-banner]');
+            const deleted = @Json.Serialize(L10n.T("{0} just deleted this question."));
             document.addEventListener('aives:entity-changed', (event) => {
                 const change = event.detail;
                 if (change.entity !== 'question' || change.id !== questionId) return;
                 if (change.action === 'deleted') {
-                    banner.textContent = `${change.actorName} vừa xoá câu hỏi này.`;
+                    banner.textContent = deleted.replace('{0}', change.actorName);
                     banner.hidden = false;
                 } else {
                     window.location.reload();

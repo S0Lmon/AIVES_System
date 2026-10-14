@@ -1,14 +1,14 @@
 @model AIVES.WebRazor.Pages.Subjects.DetailsModel
-<div class="panel-header"><h2>@Model.Topics.Count chủ đề</h2></div>
+<div class="panel-header"><h2>@L10n.Format("{0} topics", Model.Topics.Count)</h2></div>
 @if (Model.Topics.Count == 0)
 {
-    <p class="activity-empty">Môn học này chưa có chủ đề.</p>
+    <p class="activity-empty">@L10n.T("This subject has no topics yet.")</p>
 }
 else
 {
     <div class="table-responsive">
         <table class="table data-table">
-            <thead><tr><th>Chủ đề</th><th>Tài liệu</th><th class="text-end">Thao tác</th></tr></thead>
+            <thead><tr><th>@L10n.T("Topic")</th><th>@L10n.T("Materials")</th><th class="text-end">@L10n.T("Actions")</th></tr></thead>
             <tbody>
                 @foreach (var topic in Model.Topics)
                 {
@@ -17,9 +17,9 @@ else
                         <td>@topic.MaterialCount</td>
                         <td>
                             <form method="post" asp-page="/Subjects/Details" asp-page-handler="DeleteTopic" asp-route-id="@Model.Id" asp-route-topicId="@topic.Id"
-                                  class="action-group" onsubmit="return confirm('Xoá chủ đề này cùng tài liệu của nó?');">
-                                <a asp-page="/Questions/Create" asp-route-subjectId="@Model.Id" asp-route-topicId="@topic.Id" class="btn btn-sm btn-light">+ Câu hỏi</a>
-                                <button type="submit" class="btn btn-sm btn-warning">Xoá</button>
+                                  class="action-group" onsubmit="return confirm('@L10n.T("Delete this topic and its materials?")');">
+                                <a asp-page="/Questions/Create" asp-route-subjectId="@Model.Id" asp-route-topicId="@topic.Id" class="btn btn-sm btn-light">+ @L10n.T("Question")</a>
+                                <button type="submit" class="btn btn-sm btn-warning">@L10n.T("Delete")</button>
                             </form>
                         </td>
                     </tr>

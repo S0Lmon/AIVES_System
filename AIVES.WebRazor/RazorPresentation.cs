@@ -65,7 +65,11 @@ public static class RazorPresentation
             options.Conventions.AuthorizeFolder("/Reports", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Admin", AuthorizationPolicies.Admin);
             options.Conventions.AuthorizePage("/Interviews/Monitor", AuthorizationPolicies.Staff);
-        });
+        })
+        .AddDataAnnotationsLocalization(options =>
+            options.DataAnnotationLocalizerProvider = (_, _) => L10nStringLocalizer.Instance);
+        // Data annotations only consult the provider when a localizer factory is registered.
+        services.AddLocalization();
 
         services.AddHttpContextAccessor();
         services.AddSingleton<DisplayTimeZone>();

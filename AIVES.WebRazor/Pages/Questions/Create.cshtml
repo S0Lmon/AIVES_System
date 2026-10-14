@@ -1,21 +1,21 @@
 @page "/Question/Create"
 @model AIVES.WebRazor.Pages.Questions.CreateModel
 @{
-    ViewData["Title"] = "Thêm câu hỏi";
+    ViewData["Title"] = L10n.T("Add question");
 }
 <div class="page-heading">
     <div>
-        <span class="page-kicker">Ngân hàng câu hỏi</span>
-        <h1>Thêm câu hỏi</h1>
-        <p>Khi lưu, mọi giảng viên đang mở ngân hàng câu hỏi sẽ thấy câu hỏi mới ngay lập tức.</p>
+        <span class="page-kicker">@L10n.T("Question bank")</span>
+        <h1>@L10n.T("Add question")</h1>
+        <p>@L10n.T("When you save, every lecturer with the question bank open sees the new question straight away.")</p>
     </div>
     <button type="button" class="btn btn-light slide-trigger" data-slide="aiPanel" aria-controls="aiPanel">✦ @L10n.T("Quick generate")</button>
 </div>
 <form method="post" class="panel form-panel">
     <partial name="_QuestionFields" model="Model" />
     <div class="form-actions">
-        <a asp-page="Index" class="btn btn-light">Huỷ</a>
-        <button type="submit" class="btn btn-primary">Lưu câu hỏi</button>
+        <a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a>
+        <button type="submit" class="btn btn-primary">@L10n.T("Save question")</button>
     </div>
 </form>
 <partial name="_AiGenerateSlide" model="Model" />

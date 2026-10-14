@@ -10,20 +10,20 @@ namespace AIVES.WebRazor.Pages.Questions;
 /// <summary>The fields a lecturer edits on Create and Edit; bound with [BindProperty].</summary>
 public sealed class QuestionInput
 {
-    [Required(ErrorMessage = "Vui lòng nhập nội dung câu hỏi.")]
-    [StringLength(5000, MinimumLength = 10, ErrorMessage = "Nội dung câu hỏi phải từ 10 đến 5000 ký tự.")]
-    [Display(Name = "Nội dung câu hỏi")]
+    [Required(ErrorMessage = "Enter the question text.")]
+    [StringLength(5000, MinimumLength = 10, ErrorMessage = "The question must be between 10 and 5000 characters.")]
+    [Display(Name = "Question text")]
     public string Content { get; set; } = string.Empty;
 
     [StringLength(300)]
-    [Display(Name = "Nhãn ngữ cảnh")]
+    [Display(Name = "Context label")]
     public string? Context
     {
         get; set;
     }
 
-    [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn mức Bloom.")]
-    [Display(Name = "Mức Bloom")]
+    [Range(1, int.MaxValue, ErrorMessage = "Choose a Bloom level.")]
+    [Display(Name = "Bloom level")]
     public int BloomLevelId
     {
         get; set;
@@ -35,39 +35,39 @@ public sealed class QuestionInput
         get; set;
     }
 
-    [Display(Name = "Môn học")]
+    [Display(Name = "Subject")]
     public int? SubjectId
     {
         get; set;
     }
 
-    [Display(Name = "Chủ đề")]
+    [Display(Name = "Topic")]
     public int? TopicId
     {
         get; set;
     }
 
-    [Display(Name = "Độ khó")]
+    [Display(Name = "Difficulty")]
     public string? Difficulty
     {
         get; set;
     }
 
     [StringLength(5000)]
-    [Display(Name = "Đáp án mong đợi")]
+    [Display(Name = "Expected answer")]
     public string? ExpectedAnswer
     {
         get; set;
     }
 
     [Range(0, 10000)]
-    [Display(Name = "Thứ tự hiển thị")]
+    [Display(Name = "Display order")]
     public int DisplayOrder
     {
         get; set;
     }
 
-    [Display(Name = "Đang hoạt động")]
+    [Display(Name = "Active")]
     public bool IsActive { get; set; } = true;
 
     public static QuestionInput From(QuestionDto question) => new()

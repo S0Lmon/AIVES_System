@@ -53,7 +53,7 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
         }
 
         await live.EntityChangedAsync(LiveEntities.Subject, LiveActions.Updated, Id, input.Name);
-        TempData["Success"] = "Đã lưu môn học.";
+        TempData["Success"] = L10n.T("The subject was saved.");
         return RedirectToPage(new
         {
             Id
@@ -76,7 +76,7 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
             return await RedisplayAsync(cancellationToken, topicForm: input);
         }
 
-        TempData["Success"] = "Đã thêm chủ đề.";
+        TempData["Success"] = L10n.T("The topic was added.");
         return RedirectToPage(new
         {
             Id
@@ -106,7 +106,7 @@ public sealed class DetailsModel(ICatalogService catalog, ILiveUpdates live) : P
         }
 
         await live.EntityChangedAsync(LiveEntities.Topic, LiveActions.Deleted, topicId, topic.Name);
-        TempData["Success"] = $"Đã xoá chủ đề \"{topic.Name}\".";
+        TempData["Success"] = L10n.Format("Topic \"{0}\" was deleted.", topic.Name);
         return RedirectToPage(new
         {
             Id

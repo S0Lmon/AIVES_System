@@ -21,17 +21,17 @@ public sealed class LoginModel(IAccountService accounts, ILogger<LoginModel> log
 
     public sealed class LoginInput
     {
-        [Required(ErrorMessage = "Vui lòng nhập email.")]
-        [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+        [Required(ErrorMessage = "Enter your email.")]
+        [EmailAddress(ErrorMessage = "The email address is not valid.")]
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        [Required(ErrorMessage = "Enter your password.")]
         [DataType(DataType.Password)]
-        [Display(Name = "Mật khẩu")]
+        [Display(Name = "Password")]
         public string Password { get; set; } = string.Empty;
 
-        [Display(Name = "Ghi nhớ đăng nhập")]
+        [Display(Name = "Remember me")]
         public bool RememberMe
         {
             get; set;
@@ -57,7 +57,7 @@ public sealed class LoginModel(IAccountService accounts, ILogger<LoginModel> log
         catch (Exception ex)
         {
             logger.LogError(ex, "Sign-in failed");
-            ModelState.AddModelError(string.Empty, "Không thể đăng nhập lúc này. Vui lòng thử lại.");
+            ModelState.AddModelError(string.Empty, L10n.T("Signing in is not possible right now. Please try again."));
         }
         return Page();
     }

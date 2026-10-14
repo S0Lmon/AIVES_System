@@ -40,7 +40,7 @@ public sealed class EditModel(IQuestionService questions, IBloomLevelService blo
             {
                 var updated = await questions.UpdateQuestionAsync(Input.ToDto(Id));
                 await live.EntityChangedAsync(LiveEntities.Question, LiveActions.Updated, updated.Id, updated.Content);
-                TempData["Success"] = $"Đã cập nhật câu hỏi #{updated.Id}.";
+                TempData["Success"] = L10n.Format("Question #{0} was updated.", updated.Id);
                 return RedirectToPage("Index");
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -48,7 +48,7 @@ public sealed class EditModel(IQuestionService questions, IBloomLevelService blo
                 if (await questions.GetQuestionByIdAsync(Id) is null)
                 {
                     // Someone deleted it while this form was open.
-                    TempData["Error"] = $"Câu hỏi #{Id} đã bị xoá nên không thể lưu.";
+                    TempData["Error"] = L10n.Format("Question #{0} was deleted, so it could not be saved.", Id);
                     return RedirectToPage("Index");
                 }
                 logger.LogWarning(ex, "Question update was rejected");

@@ -1,7 +1,7 @@
 @page "{examId:int?}"
 @model AIVES.WebRazor.Pages.Interviews.MonitorModel
 @{
-    ViewData["Title"] = Model.Exam is null ? "Giám sát vấn đáp" : $"Giám sát · {Model.Exam.Title}";
+    ViewData["Title"] = Model.Exam is null ? L10n.T("Viva monitor") : L10n.Format("Monitor · {0}", Model.Exam.Title);
     string Local(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime().ToString("dd/MM HH:mm");
 }
 @if (Model.Exam is not { } exam)
@@ -9,20 +9,20 @@
     <div class="page-heading">
         <div>
             <span class="page-kicker">Real-time</span>
-            <h1>Giám sát vấn đáp</h1>
-            <p>Chọn một kỳ thi để xem trực tiếp câu hỏi, câu trả lời và các lượt hỏi xoáy của giám khảo AI.</p>
+            <h1>@L10n.T("Viva monitor")</h1>
+            <p>@L10n.T("Choose an exam to watch the questions, answers and the AI examiner's follow-ups live.")</p>
         </div>
     </div>
     <section class="panel">
         @if (Model.Exams.Count == 0)
         {
-            <div class="empty-state"><div class="empty-icon">E</div><h3>Chưa có kỳ thi</h3><p>Tạo kỳ thi ở trang AIVES chính.</p></div>
+            <div class="empty-state"><div class="empty-icon">E</div><h3>@L10n.T("No exams yet")</h3><p>@L10n.T("Create an exam on the main AIVES site.")</p></div>
         }
         else
         {
             <div class="table-responsive">
                 <table class="table data-table">
-                    <thead><tr><th>Kỳ thi</th><th>Thời gian</th><th>Thí sinh</th><th class="text-end"></th></tr></thead>
+                    <thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Time")</th><th>@L10n.T("Candidates")</th><th class="text-end"></th></tr></thead>
                     <tbody>
                         @foreach (var item in Model.Exams)
                         {
@@ -30,7 +30,7 @@
                                 <td><div class="question-title">@item.Title</div><small class="text-muted">@item.SubjectName</small></td>
                                 <td>@Local(item.StartsAtUtc) – @Local(item.EndsAtUtc)</td>
                                 <td>@item.CandidateCount</td>
-                                <td class="text-end"><a asp-page="Monitor" asp-route-examId="@item.Id" class="btn btn-sm btn-primary">Theo dõi</a></td>
+                                <td class="text-end"><a asp-page="Monitor" asp-route-examId="@item.Id" class="btn btn-sm btn-primary">@L10n.T("Watch")</a></td>
                             </tr>
                         }
                     </tbody>
@@ -43,11 +43,11 @@ else
 {
     <div class="page-heading">
         <div>
-            <span class="page-kicker">Giám sát trực tiếp · @exam.SubjectName</span>
+            <span class="page-kicker">@L10n.Format("Live monitor · {0}", exam.SubjectName)</span>
             <h1>@exam.Title</h1>
-            <p>@exam.MainQuestionCount câu chính · tối đa @exam.MaxFollowUpsPerQuestion lượt hỏi xoáy mỗi câu · @(exam.AnswerTimeLimitSeconds) giây mỗi lượt trả lời</p>
+            <p>@L10n.Format("{0} main questions · up to {1} follow-ups per question · {2} seconds per answer", exam.MainQuestionCount, exam.MaxFollowUpsPerQuestion, exam.AnswerTimeLimitSeconds)</p>
         </div>
-        <a asp-page="Monitor" asp-route-examId="" class="btn btn-light">Tất cả kỳ thi</a>
+        <a asp-page="Monitor" asp-route-examId="" class="btn btn-light">@L10n.T("All exams")</a>
     </div>
     <div class="alert alert-danger" data-monitor-error hidden></div>
     <div class="monitor-grid" data-monitor data-exam-id="@exam.Id" data-hub-url="@InterviewHub.Path">
@@ -61,9 +61,9 @@ else
                     </div>
                     <span class="status-badge inactive" data-state>@(candidate.Interview?.Status switch
                     {
-                        InterviewStatus.Completed => "Đã xong",
-                        InterviewStatus.InProgress => "Đang thi",
-                        _ => "Chưa bắt đầu"
+                        InterviewStatus.Completed => L10n.T("Finished"),
+                        InterviewStatus.InProgress => L10n.T("In progress"),
+                        _ => L10n.T("Not started")
                     })</span>
                 </div>
                 <div class="panel-body">
@@ -84,9 +84,13 @@ else
                 const root = document.querySelector('[data-monitor]');
                 const error = document.querySelector('[data-monitor-error]');
                 const examId = Number(root.dataset.examId);
-                const labels = {
-                    started: 'Bắt đầu', question: 'Câu hỏi', followup: 'Hỏi xoáy', answer: 'Trả lời', completed: 'Hoàn thành'
-                };
+                const labels = @Json.Serialize(new Dictionary<string, string>
+                {
+                    ["started"] = L10n.T("Started"), ["question"] = L10n.T("Question"), ["followup"] = L10n.T("Follow-up"),
+                    ["answer"] = L10n.T("Answer"), ["completed"] = L10n.T("Finished"),
+                    ["inProgress"] = L10n.T("In progress"), ["cannotWatch"] = L10n.T("This exam cannot be watched."),
+                    ["noServer"] = L10n.T("Could not connect to the server.")
+                });
                 const connection = new signalR.HubConnectionBuilder().withUrl(root.dataset.hubUrl).withAutomaticReconnect().build();
 
                 connection.on('InterviewEvent', (change) => {
@@ -103,8 +107,8 @@ else
                         question.classList.toggle('is-follow-up', change.kind === 'followup');
                         card.querySelector('[data-live]').textContent = '';
                     }
-                    if (change.kind === 'started' || change.kind === 'question') { state.textContent = 'Đang thi'; state.className = 'status-badge active'; }
-                    if (change.kind === 'completed') { state.textContent = 'Đã xong'; state.className = 'status-badge active'; }
+                    if (change.kind === 'started' || change.kind === 'question') { state.textContent = labels.inProgress; state.className = 'status-badge active'; }
+                    if (change.kind === 'completed') { state.textContent = labels.completed; state.className = 'status-badge active'; }
 
                     const item = document.createElement('li');
                     const dot = document.createElement('span');
@@ -116,17 +120,17 @@ else
                     text.textContent = change.text;
                     body.append(title, text);
                     const time = document.createElement('time');
-                    time.textContent = new Date(change.atUtc).toLocaleTimeString('vi-VN');
+                    time.textContent = new Date(change.atUtc).toLocaleTimeString(document.documentElement.lang || undefined);
                     item.append(dot, body, time);
                     card.querySelector('[data-log]').prepend(item);
                 });
 
                 const watch = () => connection.invoke('WatchExam', examId).catch((e) => {
-                    error.textContent = 'Không theo dõi được kỳ thi này.';
+                    error.textContent = labels.cannotWatch;
                     error.hidden = false;
                 });
                 connection.onreconnected(watch);
-                connection.start().then(watch).catch(() => { error.textContent = 'Không kết nối được máy chủ.'; error.hidden = false; });
+                connection.start().then(watch).catch(() => { error.textContent = labels.noServer; error.hidden = false; });
             })();
         </script>
     }
