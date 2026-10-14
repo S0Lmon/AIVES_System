@@ -1,6 +1,7 @@
 using AIVES.BLL.Services;
 using AIVES.BLL.Services.Catalog;
 using AIVES.DTO;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
@@ -117,6 +118,23 @@ public sealed class QuestionFormOptions
             Topics = await catalog.GetTopicsAsync(cancellationToken: cancellationToken),
             Difficulties = new SelectList(QuestionDifficulties.Ordered)
         };
+}
+
+public static class QuestionFormValidation
+{
+    /// <summary>
+    /// Keeps only the model state of the form this handler serves. Every [BindProperty] is bound and
+    /// validated on every handler, and a question form that was not posted falls back to the empty
+    /// prefix, so an AI form would otherwise fail on "Content" and "BloomLevelId" it never sent.
+    /// </summary>
+    public static void OnlyValidate(this ModelStateDictionary modelState, string prefix)
+    {
+        foreach (var key in modelState.Keys.Where(key => !IsUnder(key, prefix)).ToList())
+            modelState.Remove(key);
+    }
+
+    private static bool IsUnder(string key, string prefix) =>
+        key == prefix || key.StartsWith(prefix + ".", StringComparison.Ordinal) || key.StartsWith(prefix + "[", StringComparison.Ordinal);
 }
 
 /// <summary>Implemented by Create and Edit so both render the same _QuestionFields partial.</summary>
