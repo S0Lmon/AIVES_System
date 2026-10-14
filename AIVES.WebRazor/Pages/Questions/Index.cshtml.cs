@@ -130,6 +130,7 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
     public async Task<IActionResult> OnPostGenerateAsync(CancellationToken ct)
     {
         Tab = "ai";
+        ModelState.OnlyValidate(nameof(Ai));
         var subject = (await catalog.GetSubjectsAsync(ct)).FirstOrDefault(x => x.Id == Ai.SubjectId);
         var topic = Ai.TopicId is null ? null : (await catalog.GetTopicsAsync(Ai.SubjectId, ct)).FirstOrDefault(x => x.Id == Ai.TopicId);
         if (subject is null)
@@ -172,6 +173,7 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
     public async Task<IActionResult> OnPostGenerateBulkAsync(CancellationToken ct)
     {
         Tab = "bulk";
+        ModelState.OnlyValidate(nameof(Bulk));
         var subject = (await catalog.GetSubjectsAsync(ct)).FirstOrDefault(x => x.Id == Bulk.SubjectId);
         var topic = Bulk.TopicId is null ? null : (await catalog.GetTopicsAsync(Bulk.SubjectId, ct)).FirstOrDefault(x => x.Id == Bulk.TopicId);
         if (subject is null)

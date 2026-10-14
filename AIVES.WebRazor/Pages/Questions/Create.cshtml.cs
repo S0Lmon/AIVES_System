@@ -32,6 +32,7 @@ public sealed class CreateModel(IQuestionService questions, IBloomLevelService b
 
     public async Task<PartialViewResult> OnPostGenerateQuickAsync(CancellationToken cancellationToken)
     {
+        ModelState.OnlyValidate(nameof(Ai));
         Ai.Results = [];
         Ai.Sources = [];
         Ai.HasResult = false;
