@@ -180,10 +180,39 @@ WebRazor cung cấp giao diện duy nhất (Razor Pages + SignalR; giám khảo 
 .\scripts\download-speech-models.ps1 -WithPreviewModel   # Whisper small + base, giọng Việt và Anh, khoảng 750 MB
 ```
 
-- Docker không có GPU nên Whisper chạy trên CPU (`Speech:UseGpu=false`). Chữ tạm khi đang nói dùng `ggml-base`, bản giữ lại dùng `ggml-small`. Máy nhiều nhân thì tăng `SPEECH_THREADS`.
+- Mặc định Whisper chạy trên CPU (`Speech:UseGpu=false`). Chữ tạm khi đang nói dùng `ggml-base`, bản giữ lại dùng `ggml-small`. Máy nhiều nhân thì tăng `SPEECH_THREADS`. CPU không theo kịp thời gian thực: đo trên máy chủ (8 luồng), câu trả lời 7 giây có bản chốt sau khi ngừng nói **khoảng 18 giây**. Có card NVIDIA thì bật GPU như dưới đây.
 - Image cài `libgomp1`. Thiếu thư viện OpenMP này thì thư viện native của Whisper.net không nạp được và tiến trình bị dừng.
 - Chỉ chạy **một** instance, vì danh sách người online và phiên trả lời đang nói nằm trong bộ nhớ. Muốn nhiều instance thì cần SignalR backplane (ví dụ Redis) và sticky session.
 - Thiếu model thì phòng thi tự chuyển sang gõ câu trả lời.
+
+### Chạy Whisper trên GPU NVIDIA (tùy chọn)
+
+`compose.gpu.yaml` build image `aives-web:cuda` (target `runtime-cuda` trong Dockerfile, thêm CUDA 12 runtime và cuBLAS, khoảng 1,2 GB) và chuyển GPU vào container `web`. Image mặc định vẫn chỉ dùng CPU, nên máy không có NVIDIA không bị ảnh hưởng.
+
+Đo trên máy chủ (GTX 1070, Docker Desktop + WSL 2), cùng một câu trả lời tiếng Việt 7 giây gửi qua SignalR:
+
+| | Bản chốt sau khi ngừng nói | Chữ tạm khi đang nói |
+|---|---|---|
+| CPU, xem trước bằng `ggml-base` | khoảng 18 giây | đến sau khi đã nói xong |
+| GPU (CUDA), xem trước bằng `ggml-small` | khoảng 1,6 giây | mỗi 1,5–2 giây |
+
+Yêu cầu:
+
+- Card NVIDIA compute capability 5.0–8.x (GTX 900 trở lên, tới RTX 40) và driver hỗ trợ CUDA 12. Dự án ghim Whisper.net 1.8.1 vì từ 1.9 gói CUDA được build bằng CUDA 13, chỉ chạy trên RTX 30 trở lên.
+- Docker chuyển được GPU vào container: Docker Desktop với WSL 2 trên Windows (có sẵn), hoặc NVIDIA Container Toolkit trên Linux. Kiểm tra:
+
+```powershell
+docker run --rm --gpus all mcr.microsoft.com/dotnet/aspnet:10.0 nvidia-smi
+```
+
+Bật bằng cách thêm file vào `COMPOSE_FILE` trong `.env` (Windows ngăn cách bằng `;`, Linux bằng `:`). Nếu đang dùng `compose.override.yaml` thì phải liệt kê cả file đó, vì khi có `COMPOSE_FILE` Docker không tự nạp override nữa:
+
+```text
+COMPOSE_FILE=compose.yaml;compose.gpu.yaml
+# hoặc: COMPOSE_FILE=compose.yaml;compose.override.yaml;compose.gpu.yaml
+```
+
+Rồi `docker compose up -d --build`. Log của `web` có dòng `Loaded Whisper model ggml-small.bin (... CUDA : ARCHS = 500,610,700,750,800 ...)`, và `docker exec aives-web-1 nvidia-smi` thấy bộ nhớ GPU tăng (khoảng 0,7 GB) sau câu trả lời đầu tiên. Ở chế độ này chữ tạm cũng dùng `ggml-small`: trên GPU nó nhanh hơn `ggml-base`, vì `ggml-base` nghe sai tiếng Việt nên liên tục giải mã lại. Bỏ file khỏi `COMPOSE_FILE` rồi `up -d` để quay về CPU.
 
 `PresenceTracker` và các phiên trả lời trực tiếp hiện lưu trong bộ nhớ, vì vậy triển khai một instance. Mở rộng ngang cần bổ sung SignalR backplane và lưu trữ chia sẻ cho trạng thái phiên trước khi thêm replicas. SQL Server Express giới hạn khoảng 1,4 GB bộ nhớ đệm và database 10 GB; khi tải hoặc dữ liệu tăng cần chuyển `MSSQL_PID` sang bản phù hợp (có bản quyền) hoặc tách database sang máy riêng.
 

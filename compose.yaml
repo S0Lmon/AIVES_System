@@ -105,7 +105,7 @@ services:
       GmailSmtp__AppPassword: "${GMAIL_APP_PASSWORD:-}"
       GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
       Registration__AllowedEmailDomains: "${REGISTRATION_EMAIL_DOMAINS:-gmail.com,fpt.edu.vn}"
-      # Docker has no Vulkan GPU here, so Whisper runs on the CPU.
+      # Whisper runs on the CPU here; compose.gpu.yaml switches web to an NVIDIA GPU (CUDA).
       Speech__ModelsPath: /app/App_Data/speech-models
       Speech__UseGpu: "false"
       Speech__Threads: "${SPEECH_THREADS:-8}"
