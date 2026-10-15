@@ -152,7 +152,8 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
                     Content = x.Content,
                     ExpectedAnswer = x.ExpectedAnswer,
                     BloomLevel = bloom ?? x.BloomLevel,
-                    Difficulty = QuestionDifficulties.Normalize(Ai.Difficulty) ?? x.Difficulty
+                    Difficulty = QuestionDifficulties.Normalize(Ai.Difficulty) ?? x.Difficulty,
+                    FollowUpQuestions = x.FollowUpQuestions
                 }).ToList();
                 Ai.SubjectName = subject.Name;
                 Ai.TopicName = topic?.Name ?? "";
@@ -205,7 +206,8 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
                             Content = x.Content,
                             ExpectedAnswer = x.ExpectedAnswer,
                             BloomLevel = levelName,
-                            Difficulty = QuestionDifficulties.Normalize(x.Difficulty) ?? ""
+                            Difficulty = QuestionDifficulties.Normalize(x.Difficulty) ?? "",
+                            FollowUpQuestions = x.FollowUpQuestions
                         }));
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogWarning(ex, "Bulk generation skipped {BloomLevel}", levelName); skipped.Add(levelName); }
@@ -260,7 +262,8 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
                         Content = x.Content,
                         ExpectedAnswer = x.ExpectedAnswer,
                         BloomLevel = x.BloomLevel,
-                        Difficulty = x.Difficulty
+                        Difficulty = x.Difficulty,
+                        FollowUpQuestions = x.FollowUpQuestions
                     }).ToList()
                 };
             }
