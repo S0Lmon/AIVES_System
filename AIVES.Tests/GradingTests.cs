@@ -193,6 +193,20 @@ public sealed class GradingTests
     }
 
     [Fact]
+    public async Task KeepingTheAiScoreIsLoggedAsAcceptedNotAsAChange()
+    {
+        var h = Build();
+        await h.Service.ProcessNextAsync();
+        var ids = (await h.Service.GetCandidateAsync(h.CandidateId, Lecturer))!.Questions.Select(question => question.Id).ToList();
+
+        // The AI proposed 7/10 and 8/10: the lecturer keeps the first and lowers the second.
+        await h.Service.SaveAsync(h.CandidateId, new CandidateGradeInput([new(ids[0], 7, null), new(ids[1], 1, null)], null, Finalize: false), Lecturer);
+
+        var details = h.Db.AuditEntries.Single(entry => entry.Action == AuditActions.GradeSaved).Details;
+        Assert.Equal("Q1: AI score 7/10 accepted; Q2: 8 → 1/10 (AI 8)", details);
+    }
+
+    [Fact]
     public async Task ScoresAreValidatedAndEveryQuestionNeedsOneToConfirm()
     {
         var h = Build();

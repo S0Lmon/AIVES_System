@@ -55,4 +55,19 @@
         subject.addEventListener('change', filterTopics);
         filterTopics();
     })();
+    (() => {
+        // Moving the start moves the end by the same amount, so the exam window keeps its length.
+        const start = document.getElementById('Input_StartsAtLocal');
+        const end = document.getElementById('Input_EndsAtLocal');
+        if (!start || !end) return;
+        const parse = (value) => value ? new Date(value + 'Z') : null;   // read as UTC: no DST shifts
+        let previous = parse(start.value);
+        start.addEventListener('change', () => {
+            const next = parse(start.value);
+            const currentEnd = parse(end.value);
+            if (previous && next && currentEnd)
+                end.value = new Date(currentEnd.getTime() + (next - previous)).toISOString().slice(0, 16);
+            previous = next;
+        });
+    })();
 </script> }

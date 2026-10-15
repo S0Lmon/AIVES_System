@@ -297,6 +297,55 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     [SqlFact]
+    public async Task AdminDisablesAndEnablesAnAccountWithTheUsersPageButton()
+    {
+        using var admin = app.Browser();
+        await SignInAsAdmin(admin);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        string studentId;
+        using (var scope = app.Services.CreateScope())
+            studentId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(studentEmail))!.Id;
+
+        // Post exactly what the button's form carries, as a browser would.
+        async Task<HttpResponseMessage> PressButton()
+        {
+            var page = await admin.GetAsync("/Admin/Users");
+            var value = Regex.Match(await page.Content.ReadAsStringAsync(),
+                $"name=\"userId\" value=\"{studentId}\" />\\s*<input type=\"hidden\" name=\"disabled\" value=\"([^\"]*)\"");
+            Assert.True(value.Success, "The disable/enable form must carry an explicit value.");
+            return await Post(admin, "/Admin/Users", "/Admin/SetDisabled", new()
+            {
+                ["userId"] = studentId,
+                ["disabled"] = value.Groups[1].Value
+            });
+        }
+        async Task<HttpResponseMessage> LogIn(string password)
+        {
+            using var browser = app.Browser();
+            return await Post(browser, "/Account/Login", "/Account/Login", new()
+            {
+                ["Email"] = studentEmail,
+                ["Password"] = password
+            });
+        }
+
+        await PressButton();
+        Assert.Contains($"{studentEmail} can no longer sign in.", await Html(await admin.GetAsync("/Admin/Users")));
+        var refused = await LogIn(Password);
+        Assert.Equal(HttpStatusCode.OK, refused.StatusCode);
+        Assert.Contains("This account has been disabled by an administrator.", await Html(refused));
+        // Without the password nobody learns that the account was disabled.
+        var guessed = await Html(await LogIn("Wrong-password-1"));
+        Assert.Contains("The email or password is incorrect.", guessed);
+        Assert.DoesNotContain("disabled by an administrator", guessed);
+
+        await PressButton();
+        Assert.Contains($"{studentEmail} can sign in again.", await Html(await admin.GetAsync("/Admin/Users")));
+        Assert.Equal(HttpStatusCode.Redirect, (await LogIn(Password)).StatusCode);
+    }
+
+    [SqlFact]
     public async Task AccountsWithoutARoleBecomeStudentsAtStartup()
     {
         string id;
@@ -989,6 +1038,27 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("<li>Second follow up</li>", html);
         using var scope = app.Services.CreateScope();
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == "Generated question 1 for Review topic"));
+    }
+
+    [SqlFact]
+    public async Task AiTabNamesTheMaterialTheDraftIsGroundedIn()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, topicId) = await CreateCatalogTopic("Grounded topic");
+        using (var scope = app.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Catalog.ICatalogService>().CreateMaterialAsync(new MaterialInput(topicId, "Chapter 3 notes",
+                "Grounded topic: the Liskov substitution principle says a subclass must be usable wherever its base class is expected.", null, MaterialSourceType.Manual));
+
+        var response = await Post(browser, "/Question?tab=ai", "/Questions?handler=Generate", new()
+        {
+            ["Ai.SubjectId"] = subjectId.ToString(),
+            ["Ai.TopicId"] = topicId.ToString(),
+            ["Ai.LearningOutcomes"] = "Liskov substitution principle",
+            ["Ai.UseMaterials"] = "true"
+        });
+
+        Assert.Contains("Grounded in 1 material items: <span>Chapter 3 notes</span>", await Html(response));
     }
 
     [SqlFact]

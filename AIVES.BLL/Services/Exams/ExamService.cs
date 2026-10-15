@@ -73,13 +73,13 @@ public sealed class ExamService(
         var candidate = existing.Candidates.FirstOrDefault(item => item.Order == order)
             ?? throw new KeyNotFoundException(L10n.T("That candidate is not on this exam."));
         if (newStartsAtUtc < existing.StartsAtUtc)
-            throw new ArgumentException(L10n.T("A slot cannot start before the exam's start time."), nameof(newStartsAtUtc));
+            throw new ArgumentException(L10n.T("A slot cannot start before the exam's start time."));
         var slotEndsAt = newStartsAtUtc.AddMinutes(existing.SlotMinutes);
         var overlap = existing.Candidates.FirstOrDefault(other => other.Order != order
             && newStartsAtUtc < other.EndsAtUtc && slotEndsAt > other.StartsAtUtc);
         if (overlap is not null)
             throw new ArgumentException(L10n.Format("That time overlaps candidate #{0} ({1} – {2}). Move them to a free gap instead.",
-                overlap.Order, overlap.StartsAtUtc.ToString("HH:mm"), overlap.EndsAtUtc.ToString("HH:mm")), nameof(newStartsAtUtc));
+                overlap.Order, overlap.StartsAtUtc.ToString("HH:mm"), overlap.EndsAtUtc.ToString("HH:mm")));
 
         await exams.UpdateSlotAsync(id, order, newStartsAtUtc, cancellationToken);
         logger.LogInformation("User {UserId} moved exam {ExamId} candidate #{Order} to {SlotStartsAtUtc:u}", actor.UserId, id, order, newStartsAtUtc);
@@ -107,7 +107,7 @@ public sealed class ExamService(
             ?? throw new KeyNotFoundException(L10n.T("That candidate is not on this exam."));
         if (status is { } overridden && overridden is not (CandidateStatus.Absent or CandidateStatus.Cancelled
             or CandidateStatus.RequiresReview or CandidateStatus.NotScheduled))
-            throw new ArgumentException(L10n.T("Only absent, cancelled, requires review or not scheduled can be set by hand."), nameof(status));
+            throw new ArgumentException(L10n.T("Only absent, cancelled, requires review or not scheduled can be set by hand."));
 
         await exams.UpdateCandidateStatusAsync(id, order, status, cancellationToken);
         logger.LogInformation("User {UserId} set exam {ExamId} candidate #{Order} status to {Status}", actor.UserId, id, order, status?.ToString() ?? "derived");
@@ -172,70 +172,70 @@ public sealed class ExamService(
     {
         var title = (input.Title ?? string.Empty).Trim();
         if (title.Length is < 2 or > ExamLimits.TitleMaxLength)
-            throw new ArgumentException(L10n.Format("The exam title must be between 2 and {0} characters.", ExamLimits.TitleMaxLength), nameof(input));
+            throw new ArgumentException(L10n.Format("The exam title must be between 2 and {0} characters.", ExamLimits.TitleMaxLength));
         if (input.SlotMinutes is < ExamLimits.MinSlotMinutes or > ExamLimits.MaxSlotMinutes)
-            throw new ArgumentException(L10n.Format("Each candidate's slot must be between {0} and {1} minutes.", ExamLimits.MinSlotMinutes, ExamLimits.MaxSlotMinutes), nameof(input));
+            throw new ArgumentException(L10n.Format("Each candidate's slot must be between {0} and {1} minutes.", ExamLimits.MinSlotMinutes, ExamLimits.MaxSlotMinutes));
         if (input.MainQuestionCount is < 1 or > ExamLimits.MaxMainQuestions)
-            throw new ArgumentException(L10n.Format("The number of main questions must be between 1 and {0}.", ExamLimits.MaxMainQuestions), nameof(input));
+            throw new ArgumentException(L10n.Format("The number of main questions must be between 1 and {0}.", ExamLimits.MaxMainQuestions));
         if (input.MaxFollowUpQuestions is < 0 or > ExamLimits.MaxFollowUpQuestions)
-            throw new ArgumentException(L10n.Format("The number of follow-up questions must be between 0 and {0}.", ExamLimits.MaxFollowUpQuestions), nameof(input));
+            throw new ArgumentException(L10n.Format("The number of follow-up questions must be between 0 and {0}.", ExamLimits.MaxFollowUpQuestions));
         if (input.AnswerTimeLimitSeconds is < ExamLimits.MinAnswerSeconds or > ExamLimits.MaxAnswerSeconds)
-            throw new ArgumentException(L10n.Format("The answer time limit must be between {0} and {1} seconds.", ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds), nameof(input));
+            throw new ArgumentException(L10n.Format("The answer time limit must be between {0} and {1} seconds.", ExamLimits.MinAnswerSeconds, ExamLimits.MaxAnswerSeconds));
         if (input.AnswerTimeLimitSeconds > input.SlotMinutes * 60)
-            throw new ArgumentException(L10n.T("The answer time limit cannot be longer than a candidate's slot."), nameof(input));
+            throw new ArgumentException(L10n.T("The answer time limit cannot be longer than a candidate's slot."));
         if (input.MaxFollowUpsPerQuestion is < 0 or > ExamLimits.MaxFollowUpsPerQuestionLimit)
-            throw new ArgumentException(L10n.Format("Follow-ups per question must be between 0 and {0}.", ExamLimits.MaxFollowUpsPerQuestionLimit), nameof(input));
+            throw new ArgumentException(L10n.Format("Follow-ups per question must be between 0 and {0}.", ExamLimits.MaxFollowUpsPerQuestionLimit));
         if (!Enum.IsDefined(input.Language))
-            throw new ArgumentException(L10n.T("Choose the interview language."), nameof(input));
+            throw new ArgumentException(L10n.T("Choose the interview language."));
         if (!Enum.IsDefined(input.Recording))
-            throw new ArgumentException(L10n.T("Choose what is recorded."), nameof(input));
+            throw new ArgumentException(L10n.T("Choose what is recorded."));
         if (input.StartsAtUtc <= clock.GetUtcNow().UtcDateTime)
-            throw new ArgumentException(L10n.T("The exam must start in the future."), nameof(input));
+            throw new ArgumentException(L10n.T("The exam must start in the future."));
         if (!Enum.IsDefined(input.Strategy))
-            throw new ArgumentException(L10n.T("Choose how questions are selected."), nameof(input));
+            throw new ArgumentException(L10n.T("Choose how questions are selected."));
         if (input.BufferMinutes is < 0 or > ExamLimits.MaxBufferMinutes)
-            throw new ArgumentException(L10n.Format("The buffer between candidates must be between 0 and {0} minutes.", ExamLimits.MaxBufferMinutes), nameof(input));
+            throw new ArgumentException(L10n.Format("The buffer between candidates must be between 0 and {0} minutes.", ExamLimits.MaxBufferMinutes));
         if (input.BreakMinutes is < 0 or > ExamLimits.MaxBreakMinutes)
-            throw new ArgumentException(L10n.Format("The break length must be between 0 and {0} minutes.", ExamLimits.MaxBreakMinutes), nameof(input));
+            throw new ArgumentException(L10n.Format("The break length must be between 0 and {0} minutes.", ExamLimits.MaxBreakMinutes));
         if (input.BreakEveryCount is < 0 or > ExamLimits.MaxBreakEveryCount)
-            throw new ArgumentException(L10n.Format("A break can be scheduled after every 1 to {0} candidates.", ExamLimits.MaxBreakEveryCount), nameof(input));
+            throw new ArgumentException(L10n.Format("A break can be scheduled after every 1 to {0} candidates.", ExamLimits.MaxBreakEveryCount));
         if (input.BreakMinutes > 0 && input.BreakEveryCount == 0)
-            throw new ArgumentException(L10n.T("Enter after how many candidates a break happens, or set the break length to 0."), nameof(input));
+            throw new ArgumentException(L10n.T("Enter after how many candidates a break happens, or set the break length to 0."));
         if (input.BreakEveryCount > 0 && input.BreakMinutes == 0)
-            throw new ArgumentException(L10n.T("Enter the break length in minutes, or set 'break after every' to 0."), nameof(input));
+            throw new ArgumentException(L10n.T("Enter the break length in minutes, or set 'break after every' to 0."));
         if ((input.Term ?? string.Empty).Trim().Length > ExamLimits.TermMaxLength)
-            throw new ArgumentException(L10n.Format("The term must be at most {0} characters.", ExamLimits.TermMaxLength), nameof(input));
+            throw new ArgumentException(L10n.Format("The term must be at most {0} characters.", ExamLimits.TermMaxLength));
         if ((input.ExamType ?? string.Empty).Trim().Length > ExamLimits.ExamTypeMaxLength)
-            throw new ArgumentException(L10n.Format("The exam type must be at most {0} characters.", ExamLimits.ExamTypeMaxLength), nameof(input));
+            throw new ArgumentException(L10n.Format("The exam type must be at most {0} characters.", ExamLimits.ExamTypeMaxLength));
         if ((input.Instructions ?? string.Empty).Trim().Length > ExamLimits.InstructionsMaxLength)
-            throw new ArgumentException(L10n.Format("The instructions must be at most {0} characters.", ExamLimits.InstructionsMaxLength), nameof(input));
+            throw new ArgumentException(L10n.Format("The instructions must be at most {0} characters.", ExamLimits.InstructionsMaxLength));
         if (input.EndsAtUtc is { } explicitEndsAt && explicitEndsAt <= input.StartsAtUtc)
-            throw new ArgumentException(L10n.T("The exam must end after it starts."), nameof(input));
+            throw new ArgumentException(L10n.T("The exam must end after it starts."));
 
         var emails = input.CandidateEmails.Select(email => email.Trim().ToLowerInvariant()).Where(email => email.Length > 0).Distinct().ToList();
         if (emails.Count == 0)
-            throw new ArgumentException(L10n.T("Add at least one candidate email."), nameof(input));
+            throw new ArgumentException(L10n.T("Add at least one candidate email."));
         if (emails.Count > ExamLimits.MaxCandidates)
-            throw new ArgumentException(L10n.Format("An exam can have at most {0} candidates.", ExamLimits.MaxCandidates), nameof(input));
+            throw new ArgumentException(L10n.Format("An exam can have at most {0} candidates.", ExamLimits.MaxCandidates));
         var invalid = emails.Where(email => !IsEmail(email)).ToList();
         if (invalid.Count > 0)
-            throw new ArgumentException(L10n.Format("These candidate emails are not valid: {0}", string.Join(", ", invalid.Take(10))), nameof(input));
+            throw new ArgumentException(L10n.Format("These candidate emails are not valid: {0}", string.Join(", ", invalid.Take(10))));
 
         var subject = await subjects.GetByIdAsync(input.SubjectId, cancellationToken)
-            ?? throw new ArgumentException(L10n.T("Pick a subject from the catalogue."), nameof(input));
+            ?? throw new ArgumentException(L10n.T("Pick a subject from the catalogue."));
         if (!await access.CanUseAsync(subject.Id, actor, cancellationToken))
-            throw new ArgumentException(L10n.T("You are not assigned to this subject. Ask an administrator to assign you."), nameof(input));
+            throw new ArgumentException(L10n.T("You are not assigned to this subject. Ask an administrator to assign you."));
         TopicDto? topic = null;
         if (input.TopicId is int topicId)
         {
             topic = await topics.GetByIdAsync(topicId, cancellationToken);
             if (topic is null || topic.SubjectId != subject.Id)
-                throw new ArgumentException(L10n.T("That topic does not belong to the chosen subject."), nameof(input));
+                throw new ArgumentException(L10n.T("That topic does not belong to the chosen subject."));
         }
 
         var pool = await exams.GetPoolAsync(subject.Id, topic?.Id, cancellationToken);
         if (pool.Count < input.MainQuestionCount)
-            throw new ArgumentException(L10n.Format("Only {0} active questions match this subject and topic, but each candidate needs {1}. Add questions or lower the number.", pool.Count, input.MainQuestionCount), nameof(input));
+            throw new ArgumentException(L10n.Format("Only {0} active questions match this subject and topic, but each candidate needs {1}. Add questions or lower the number.", pool.Count, input.MainQuestionCount));
 
         // Build the schedule (plan §6). It must fit the chosen window unless the lecturer allows the
         // schedule to run past the end time (plan §14); without an end time the schedule defines the window.
@@ -246,7 +246,7 @@ public sealed class ExamService(
         if (scheduleEndsAt > windowEndsAt && !input.ScheduleOverflowAllowed)
             throw new ArgumentException(L10n.Format(
                 "The schedule does not fit the exam window: {0} candidate(s) need {1} minutes from the start (including buffer and breaks), but the window is {2} minutes. Extend the end time, reduce the buffer or breaks, or allow the schedule to run past the end time.",
-                emails.Count, (int)(scheduleEndsAt - input.StartsAtUtc).TotalMinutes, (int)(windowEndsAt - input.StartsAtUtc).TotalMinutes), nameof(input));
+                emails.Count, (int)(scheduleEndsAt - input.StartsAtUtc).TotalMinutes, (int)(windowEndsAt - input.StartsAtUtc).TotalMinutes));
 
         var allocation = ExamQuestionAllocator.Allocate(pool, emails.Count, input.MainQuestionCount, Random.Shared, input.Strategy);
         var candidates = emails.Select((email, index) => new ExamCandidateDraft(index + 1, email,

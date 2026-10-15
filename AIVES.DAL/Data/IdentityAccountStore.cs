@@ -52,7 +52,16 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
         if (user is null || !user.EmailConfirmed)
             return AccountResult.Failure(L10n.T("The email or password is incorrect, or the account has not been verified."));
         var result = await signIn.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: true);
-        return result.Succeeded ? AccountResult.Success(ToDto(user)) : AccountResult.Failure(result.IsLockedOut ? L10n.T("The account is temporarily locked after too many failed sign in attempts.") : L10n.T("The email or password is incorrect."));
+        if (result.Succeeded)
+            return AccountResult.Success(ToDto(user));
+        if (!result.IsLockedOut)
+            return AccountResult.Failure(L10n.T("The email or password is incorrect."));
+        // Only someone who knows the password learns that an administrator disabled the account.
+        if (IsDisabled(user) && await users.CheckPasswordAsync(user, password))
+            return AccountResult.Failure(L10n.T("This account has been disabled by an administrator."));
+        return AccountResult.Failure(IsDisabled(user)
+            ? L10n.T("The email or password is incorrect.")
+            : L10n.T("The account is temporarily locked after too many failed sign in attempts."));
     }
     public async Task SignInAsync(string userId)
     {
@@ -85,7 +94,7 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
         var summaries = new List<UserSummaryDto>(all.Count);
         foreach (var user in all)
             summaries.Add(new(user.Id, user.Email ?? string.Empty, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc, [.. await users.GetRolesAsync(user)],
-                user.LockoutEnd is { } end && end > DateTimeOffset.UtcNow.AddYears(50)));
+                IsDisabled(user)));
         return summaries;
     }
     public async Task<AccountResult> SetAssignableRoleAsync(string userId, string role)
@@ -117,6 +126,9 @@ public sealed class IdentityAccountStore(UserManager<ApplicationUser> users, Sig
         EnsureSuccess(await users.UpdateSecurityStampAsync(user));
         return AccountResult.Success(ToDto(user));
     }
+    // SetDisabledAsync locks the account until DateTimeOffset.MaxValue; failed sign-ins only lock it for minutes.
+    private static bool IsDisabled(ApplicationUser user) =>
+        user.LockoutEnd is { } end && end > DateTimeOffset.UtcNow.AddYears(50);
     private async Task EnsureRoleExistsAsync(string role)
     {
         if (!await roles.RoleExistsAsync(role))

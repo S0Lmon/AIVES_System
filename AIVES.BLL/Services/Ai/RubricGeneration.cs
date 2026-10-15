@@ -144,15 +144,15 @@ internal static class RubricGenerationPrompt
     public static void Validate(RubricGenerationRequest request)
     {
         if (request.CriterionCount is < 1 or > 10)
-            throw new ArgumentException(L10n.T("The number of rows must be between 1 and 10."), nameof(request));
+            throw new ArgumentException(L10n.T("The number of rows must be between 1 and 10."));
         if (request.LevelCount is < 2 or > 6)
-            throw new ArgumentException(L10n.T("A rubric matrix needs between 2 and 6 level columns."), nameof(request));
+            throw new ArgumentException(L10n.T("A rubric matrix needs between 2 and 6 level columns."));
         if (string.IsNullOrWhiteSpace(request.Subject) || request.Subject.Length > 120)
-            throw new ArgumentException(L10n.T("The subject must be between 1 and 120 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("The subject must be between 1 and 120 characters."));
         if (string.IsNullOrWhiteSpace(request.Topic) || request.Topic.Length > 200)
-            throw new ArgumentException(L10n.T("The topic must be between 1 and 200 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("The topic must be between 1 and 200 characters."));
         if (request.LearningOutcomes?.Length > 2000)
-            throw new ArgumentException(L10n.T("Learning outcomes cannot exceed 2000 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("Learning outcomes cannot exceed 2000 characters."));
     }
 
     private static string Context(RubricGenerationRequest request, bool vietnamese)
