@@ -984,6 +984,9 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         // The draft comes back inside a review form; nothing reaches the bank until it is saved.
         Assert.Contains("action=\"/Questions?handler=SaveReviewed\"", html);
         Assert.Contains("Generated question 1 for Review topic", html);
+        // The follow-ups are shown for review, as the MVC review list did.
+        Assert.Contains("<li>First follow up</li>", html);
+        Assert.Contains("<li>Second follow up</li>", html);
         using var scope = app.Services.CreateScope();
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == "Generated question 1 for Review topic"));
     }
@@ -1018,6 +1021,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         // Remember takes its two-question cap and the third question goes to Understand.
         Assert.Equal(3, Regex.Matches(html, "data-review-row").Count);
         Assert.Contains("Generated question 2 for Bulk topic", html);
+        Assert.Equal(3, Regex.Matches(html, "<li>Second follow up</li>").Count);
     }
 
     [SqlFact]
