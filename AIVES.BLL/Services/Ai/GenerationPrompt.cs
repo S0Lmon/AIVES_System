@@ -105,26 +105,26 @@ internal static class GenerationPrompt
     public static void Validate(QuestionGenerationRequest request)
     {
         if (request.Count is < 1 or > 10)
-            throw new ArgumentException(L10n.T("The number of questions must be between 1 and 10."), nameof(request));
+            throw new ArgumentException(L10n.T("The number of questions must be between 1 and 10."));
         if (string.IsNullOrWhiteSpace(request.Subject) || request.Subject.Length > 120)
-            throw new ArgumentException(L10n.T("The subject must be between 1 and 120 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("The subject must be between 1 and 120 characters."));
         // The topic is optional: leaving it blank means "cover the subject as a whole", which is why
         // only an over-long value is rejected here.
         if (request.Topic?.Length > 200)
-            throw new ArgumentException(L10n.T("The topic must be between 1 and 200 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("The topic must be between 1 and 200 characters."));
         if (request.LearningOutcomes?.Length > 2000)
-            throw new ArgumentException(L10n.T("Learning outcomes cannot exceed 2000 characters."), nameof(request));
+            throw new ArgumentException(L10n.T("Learning outcomes cannot exceed 2000 characters."));
         if (request.BloomLevel is not null && !BloomLevels.IsAllowed(request.BloomLevel))
-            throw new ArgumentException(L10n.T("The requested Bloom level is not one of the configured levels."), nameof(request));
+            throw new ArgumentException(L10n.T("The requested Bloom level is not one of the configured levels."));
 
         var from = QuestionDifficulties.IndexOf(request.DifficultyFrom);
         var to = QuestionDifficulties.IndexOf(request.DifficultyTo);
         if (request.DifficultyFrom is not null && from < 0)
-            throw new ArgumentException(L10n.T("The starting difficulty is not recognised."), nameof(request));
+            throw new ArgumentException(L10n.T("The starting difficulty is not recognised."));
         if (request.DifficultyTo is not null && to < 0)
-            throw new ArgumentException(L10n.T("The ending difficulty is not recognised."), nameof(request));
+            throw new ArgumentException(L10n.T("The ending difficulty is not recognised."));
         if (from >= 0 && to >= 0 && from > to)
-            throw new ArgumentException(L10n.T("The difficulty range starts higher than it ends."), nameof(request));
+            throw new ArgumentException(L10n.T("The difficulty range starts higher than it ends."));
     }
 
     /// <summary>

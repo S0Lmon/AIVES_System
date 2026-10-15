@@ -47,7 +47,7 @@
                                 {
                                     <form method="post" asp-page="/Admin/SetDisabled" class="d-inline ms-2">
                                         <input type="hidden" name="userId" value="@user.Id" />
-                                        <input type="hidden" name="disabled" value="@(!user.IsDisabled)" />
+                                        <input type="hidden" name="disabled" value="@(user.IsDisabled ? "false" : "true")" />
                                         <button type="submit" class="btn btn-sm @(user.IsDisabled ? "btn-light" : "btn-outline-danger")">@(user.IsDisabled ? L10n.T("Enable") : L10n.T("Disable"))</button>
                                     </form>
                                 }

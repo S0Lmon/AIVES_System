@@ -54,11 +54,13 @@ else if (Model.ActiveTab == "ai" || Model.ActiveTab == "bulk")
     var hasResults = isBulk ? Model.Bulk.HasResult : Model.Ai.HasResult;
     var subjectId = isBulk ? Model.Bulk.SubjectId : Model.Ai.SubjectId;
     var topicId = isBulk ? Model.Bulk.TopicId : Model.Ai.TopicId;
+    var sources = isBulk ? Model.Bulk.Sources : Model.Ai.Sources;
     @if (hasResults)
     {
         <form method="post" asp-page-handler="SaveReviewed" class="panel form-panel mb-3">
             <input type="hidden" name="returnTab" value="@Model.ActiveTab" /><input type="hidden" name="subjectId" value="@subjectId" /><input type="hidden" name="topicId" value="@topicId" />
             <input type="hidden" name="ReviewJson" value="@JsonSerializer.Serialize(rows)" />
+            @if (sources.Count > 0) { <p class="ai-sources panel-body mb-0">@L10n.Format("Grounded in {0} material items", sources.Count): <span>@string.Join(", ", sources)</span></p> }
             @for (var i = 0; i < rows.Count; i++)
             {
                 <article class="panel-body border-bottom" data-review-row>

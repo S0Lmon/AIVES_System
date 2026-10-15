@@ -172,7 +172,9 @@ public sealed class GradingService(
             if (questionComment?.Length > MaxCommentLength)
                 throw new ArgumentException(L10n.Format("A comment cannot exceed {0} characters.", MaxCommentLength));
             grades.Add((question.Id, question.MaxScore, score, questionComment));
-            if (question.LecturerScore != score)
+            if (question.LecturerScore is null && question.AiScore == score)
+                changes.Add($"Q{question.Order}: AI score {Format(score)}/{Format(question.MaxScore)} accepted");
+            else if (question.LecturerScore != score)
                 changes.Add($"Q{question.Order}: {Format(question.LecturerScore ?? question.AiScore)} → {Format(score)}/{Format(question.MaxScore)}" +
                     (question.AiScore is { } ai && ai != score ? $" (AI {Format(ai)})" : string.Empty));
         }

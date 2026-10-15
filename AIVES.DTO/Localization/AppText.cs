@@ -231,6 +231,7 @@ internal static class AppText
         ["The email or password is incorrect, or the account has not been verified."] = "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa được xác minh.",
         ["The email or password is incorrect."] = "Email hoặc mật khẩu không đúng.",
         ["The account is temporarily locked after too many failed sign in attempts."] = "Tài khoản tạm khóa do đăng nhập sai nhiều lần.",
+        ["This account has been disabled by an administrator."] = "Tài khoản này đã bị quản trị viên vô hiệu hóa.",
         ["This account is not allowed to sign in or requires additional verification."] = "Tài khoản này không được phép đăng nhập hoặc cần xác thực bổ sung.",
         ["The account was not found."] = "Không tìm thấy tài khoản.",
         ["That role cannot be assigned here."] = "Không thể gán vai trò này tại đây.",

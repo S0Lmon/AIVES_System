@@ -94,7 +94,10 @@ public sealed class ExamServiceTests
     {
         var (service, _, _, subjectId, _, otherTopicId) = Build(questions: 5);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Input(subjectId) with { Title = " " }, Lecturer));
+        var title = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Input(subjectId) with { Title = " " }, Lecturer));
+        // The message is shown to the lecturer as is, so it must not carry " (Parameter 'input')".
+        Assert.Null(title.ParamName);
+        Assert.Equal("The exam title must be between 2 and 200 characters.", title.Message);
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Input(subjectId) with { StartsAtUtc = Now.AddMinutes(-1) }, Lecturer));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Input(subjectId) with { SlotMinutes = 2 }, Lecturer));
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Input(subjectId) with { CandidateEmails = [] }, Lecturer));

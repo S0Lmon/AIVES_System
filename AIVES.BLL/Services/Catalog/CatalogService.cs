@@ -55,7 +55,7 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
     {
         var name = input.Name.Trim();
         if (name.Length is < 2 or > 200)
-            throw new ArgumentException(L10n.T("The subject name must be between 2 and 200 characters."), nameof(input));
+            throw new ArgumentException(L10n.T("The subject name must be between 2 and 200 characters."));
         return input with
         {
             Name = name,
@@ -67,7 +67,7 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
     {
         var name = input.Name.Trim();
         if (name.Length is < 2 or > 200)
-            throw new ArgumentException(L10n.T("The topic name must be between 2 and 200 characters."), nameof(input));
+            throw new ArgumentException(L10n.T("The topic name must be between 2 and 200 characters."));
         return input with
         {
             Name = name,
@@ -80,9 +80,9 @@ public sealed class CatalogService(ISubjectRepository subjects, ITopicRepository
         var title = input.Title.Trim();
         var content = input.Content.Trim();
         if (title.Length is < 2 or > 300)
-            throw new ArgumentException(L10n.T("The material title must be between 2 and 300 characters."), nameof(input));
+            throw new ArgumentException(L10n.T("The material title must be between 2 and 300 characters."));
         if (content.Length is < 10)
-            throw new ArgumentException(L10n.T("The material content must be at least 10 characters."), nameof(input));
+            throw new ArgumentException(L10n.T("The material content must be at least 10 characters."));
         return input with
         {
             Title = title,
