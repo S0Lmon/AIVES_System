@@ -7,6 +7,7 @@ public static class LiveEntities
     public const string Question = "question";
     public const string Subject = "subject";
     public const string Topic = "topic";
+    public const string Exam = "exam";
 }
 
 public static class LiveActions
@@ -14,6 +15,7 @@ public static class LiveActions
     public const string Created = "created";
     public const string Updated = "updated";
     public const string Deleted = "deleted";
+    public const string Ended = "ended";
 }
 
 /// <summary>
@@ -37,7 +39,10 @@ public sealed class LiveUpdates(IHubContext<AivesHub, IAivesClient> hub, IHttpCo
             AivesHub.UserId(user), AivesHub.DisplayName(user), clock.GetUtcNow().UtcDateTime);
         try
         {
-            await hub.Clients.Group(AivesHub.StaffGroup).EntityChanged(change);
+            if (entity == LiveEntities.Exam)
+                await hub.Clients.All.EntityChanged(change);
+            else
+                await hub.Clients.Group(AivesHub.StaffGroup).EntityChanged(change);
         }
         catch (Exception ex)
         {

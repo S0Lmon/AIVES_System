@@ -5,6 +5,7 @@ using AIVES.BLL.Services.Recordings;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebRazor.Pages.Exams;
+using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;
@@ -69,7 +70,8 @@ public sealed class GradeFormInput
 public sealed class CandidateModel(
     IGradingService grading,
     IRecordingService recordings,
-    DisplayTimeZone timeZone) : PageModel
+    DisplayTimeZone timeZone,
+    ILiveUpdates liveUpdates) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     public int Id
@@ -89,6 +91,11 @@ public sealed class CandidateModel(
             var questions = Form.Questions.Where(question => !string.IsNullOrWhiteSpace(question.Score))
                 .Select(question => new QuestionGradeInput(question.Id, ParseScore(question.Score!), question.Comment)).ToList();
             await grading.SaveAsync(Id, new CandidateGradeInput(questions, Form.Comment, Form.Finalize), ExamPageActors.From(User), cancellationToken);
+            if (Form.Finalize)
+            {
+                var candidate = await grading.GetCandidateAsync(Id, ExamPageActors.From(User), cancellationToken);
+                await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, candidate?.ExamId ?? Id, candidate?.ExamTitle ?? string.Empty);
+            }
             TempData["GradeMessage"] = Form.Finalize ? L10n.T("The grade was confirmed. The student can now see the result.") : L10n.T("The draft grade was saved.");
         }
         catch (KeyNotFoundException) { return NotFound(); }

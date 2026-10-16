@@ -67,13 +67,14 @@ public static class DependencyInjection
             {
                 await DevelopmentDataSeeder.SeedAsync(dbContext);
 
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
                 var testEmail = configuration["Development:TestAccount:Email"];
                 var testPassword = configuration["Development:TestAccount:Password"];
                 var testDisplayName = configuration["Development:TestAccount:DisplayName"] ?? "AIVES Tester";
 
                 if (!string.IsNullOrWhiteSpace(testEmail) && !string.IsNullOrWhiteSpace(testPassword))
                 {
-                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                     var testUser = await userManager.FindByEmailAsync(testEmail);
                     if (testUser is null)
                     {
@@ -93,6 +94,49 @@ public static class DependencyInjection
                         }
                     }
                     await AdminRoleSeeder.EnsureLecturerAsync(userManager, testUser);
+                }
+
+                foreach (var (email, displayName) in new[] { (email: "user1@gmail.com", displayName: "User1"), (email: "user2@gmail.com", displayName: "User2") })
+                {
+                    var devUser = await userManager.FindByEmailAsync(email);
+                    if (devUser is null)
+                    {
+                        devUser = new ApplicationUser
+                        {
+                            UserName = email,
+                            Email = email,
+                            DisplayName = displayName,
+                            EmailConfirmed = true
+                        };
+                        var createResult = await userManager.CreateAsync(devUser, "@User123");
+                        if (!createResult.Succeeded)
+                        {
+                            var errors = string.Join("; ", createResult.Errors.Select(error => error.Description));
+                            throw new InvalidOperationException($"Could not create development user {email}: {errors}");
+                        }
+                    }
+                    await AdminRoleSeeder.EnsureLecturerAsync(userManager, devUser);
+                }
+
+                foreach (var (email, displayName) in new[] { (email: "student1@gmail.com", displayName: "Student1"), (email: "student2@gmail.com", displayName: "Student2") })
+                {
+                    var devStudent = await userManager.FindByEmailAsync(email);
+                    if (devStudent is null)
+                    {
+                        devStudent = new ApplicationUser
+                        {
+                            UserName = email,
+                            Email = email,
+                            DisplayName = displayName,
+                            EmailConfirmed = true
+                        };
+                        var createResult = await userManager.CreateAsync(devStudent, "@User123");
+                        if (!createResult.Succeeded)
+                        {
+                            var errors = string.Join("; ", createResult.Errors.Select(error => error.Description));
+                            throw new InvalidOperationException($"Could not create development student {email}: {errors}");
+                        }
+                    }
                 }
             }
 

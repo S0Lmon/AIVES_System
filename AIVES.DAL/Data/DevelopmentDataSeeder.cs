@@ -68,6 +68,182 @@ public static class DevelopmentDataSeeder
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        // ---- Seed 2 subjects, each with 3 topics, each topic with 12 questions ----
+        var subjectDefinitions = new[]
+        {
+            (Name: "C# & .NET", Description: "C# language, .NET runtime, ASP.NET Core, and related technologies."),
+            (Name: "Data Engineering", Description: "Databases, SQL, data modeling, ETL, and data platform fundamentals.")
+        };
+
+        var subjectEntities = new List<Subject>();
+        foreach (var subjectDef in subjectDefinitions)
+        {
+            var subject = await dbContext.Subjects.SingleOrDefaultAsync(item => item.Name == subjectDef.Name, cancellationToken)
+                ?? new Subject { Name = subjectDef.Name, Description = subjectDef.Description };
+            subject.Description = subjectDef.Description;
+            subject.ModifiedDate = DateTime.UtcNow;
+            if (subject.Id == 0)
+            {
+                dbContext.Subjects.Add(subject);
+            }
+            subjectEntities.Add(subject);
+        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var topicDefinitions = new Dictionary<string, (string Name, string Description)[]>
+        {
+            ["C# & .NET"] = new[]
+            {
+                ("Language fundamentals", "Types, operators, control flow, and core C# syntax."),
+                ("Async programming", "Task, async/await, ValueTask, concurrency patterns."),
+                ("Dependency injection", "Service lifetimes, registration, and resolving dependencies.")
+            },
+            ["Data Engineering"] = new[]
+            {
+                ("SQL fundamentals", "SELECT, joins, aggregation, and basic DDL/DML."),
+                ("Database design", "Normalization, indexes, constraints, and schema design."),
+                ("Data pipelines", "ETL/ELT, batch and streaming data movement.")
+            }
+        };
+
+        var topicEntities = new List<Topic>();
+        foreach (var subject in subjectEntities)
+        {
+            foreach (var (topicName, topicDesc) in topicDefinitions[subject.Name])
+            {
+                var topic = await dbContext.Topics.SingleOrDefaultAsync(item => item.Name == topicName && item.SubjectId == subject.Id, cancellationToken)
+                    ?? new Topic { SubjectId = subject.Id, Name = topicName, Description = topicDesc };
+                topic.Description = topicDesc;
+                topic.ModifiedDate = DateTime.UtcNow;
+                if (topic.Id == 0)
+                {
+                    dbContext.Topics.Add(topic);
+                }
+                topicEntities.Add(topic);
+            }
+        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Use existing bloom levels (1..6 seeded by migrations) and rubrics from above.
+        var bloomLevelIds = new[] { 1, 2, 3, 4, 5, 6 };
+        var rubricIds = rubrics.Values.Select(r => r.Id).ToList();
+        var questionSeed = new Dictionary<string, (string Content, string ExpectedAnswer, int BloomLevelId, string RubricName)[]>
+        {
+            ["Language fundamentals"] = new[]
+            {
+                ("What is the difference between a struct and a class in C#?", "Structs are value types stored on the stack; classes are reference types on the heap. Structs are copied on assignment; classes copy the reference.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("Explain value types vs reference types.", "Value types hold data directly; reference types hold a reference to data. Default assignment copies value types but copies references for reference types.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What does the `var` keyword do?", "It instructs the compiler to infer the type from the initialization expression; it is still strongly typed at compile time.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is a nullable reference type?", "A reference type annotated with `?` that may be null; the compiler warns about possible null dereferences.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("Explain extension methods.", "Static methods in static classes that appear as instance methods on the type they extend via `this` parameter.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What are records in C#?", "Immutable reference types with value-based equality, concise syntax, and `with` expressions for nondestructive mutation.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is pattern matching?", "Language feature to test whether a value has a certain shape and extract data from it, e.g. `is`, `switch` expressions.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("Explain `async`/`await`.", "Builds a state machine and yields the thread while awaiting I/O, improving scalability without blocking.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `Task.WhenAll`?", "Starts multiple tasks and returns a task that completes when all supplied tasks complete.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is the `using` statement?", "Ensures `IDisposable.Dispose` is called even if an exception occurs, via try/finally.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What are delegates?", "Type-safe function pointers that can reference methods and be passed as parameters.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is LINQ?", "Language Integrated Query for querying collections with a uniform syntax across in-memory and remote sources.", 3, "[DEMO] Vận dụng và phân tích")
+            },
+            ["Async programming"] = new[]
+            {
+                ("What problem does async/await solve?", "It avoids blocking threads during I/O waits, improving throughput and responsiveness.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is deadlock risk with `.Result`?", "Blocking on an async method can deadlock in synchronization contexts that require the same thread.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("Explain `ConfigureAwait(false)`.", "Tells the awaiter not to resume on the original context, avoiding deadlocks in library code.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `ValueTask`?", "A lighter-weight alternative to `Task` for synchronous-completing async methods, reducing allocations.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `CancellationToken`?", "A mechanism to cooperatively cancel long-running operations.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `Task.Run`?", "Queues work to the thread pool for CPU-bound work; not for I/O-bound async.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `IAsyncEnumerable`?", "Enables async streaming of results, awaiting each element as it arrives.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `Channel<T>`?", "A producer-consumer queue for async message passing between components.", 4, "[DEMO] Vận dụng và phân tích"),
+                ("Explain `AsyncLocal`.", "Flows ambient data across async flows within a logical call context.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `TaskCompletionSource`?", "Lets you manually control the completion of a `Task`, useful for wrapping event-based APIs.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is `Task.Delay`?", "Asynchronously waits for a time interval without blocking a thread.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is `await foreach`?", "Consumes `IAsyncAsyncEnumerable` elements as they become available asynchronously.", 3, "[DEMO] Vận dụng và phân tích")
+            },
+            ["Dependency injection"] = new[]
+            {
+                ("What is dependency injection?", "A technique where a class receives its dependencies from an external source rather than creating them.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What are the three service lifetimes?", "Transient (new per resolve), Scoped (new per request/scope), Singleton (one instance app-wide).", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is captive dependency?", "A longer-lived service holding a shorter-lived service, e.g. Singleton holding Scoped, causing stale/shared state.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("How does `AddScoped` work in ASP.NET Core?", "One instance per HTTP request scope; disposed at end of request.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `IServiceProvider`?", "The root service locator used to resolve registered services.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `IServiceScope`?", "Creates a scope for resolving Scoped services and disposes them when disposed.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `IServiceScopeFactory`?", "Factory used to create `IServiceScope` instances, often injected into background services.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("Can you inject Scoped into Singleton?", "Not directly without risks; use `IServiceScopeFactory` to create a scope inside the singleton.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is `KeyedService`?", "Registers multiple implementations of the same service distinguished by a key.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `IAsyncDisposable`?", "Disposes resources asynchronously, used with `await using`.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `ActivatorUtilities`?", "Creates types with constructor injection manually, combining explicit and resolved parameters.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `IHttpContextAccessor`?", "Provides access to the current `HttpContext` outside of controllers, e.g. in services.", 2, "[DEMO] Kiến thức nền tảng")
+            },
+            ["SQL fundamentals"] = new[]
+            {
+                ("What is a primary key?", "A column or set of columns that uniquely identifies each row in a table.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is `INNER JOIN`?", "Returns rows that have matching values in both tables.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is `LEFT JOIN`?", "Returns all rows from the left table and matched rows from the right; nulls when no match.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `GROUP BY`?", "Groups rows by one or more columns so aggregate functions can be applied per group.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is `HAVING`?", "Filters groups after `GROUP BY`, unlike `WHERE` which filters rows before grouping.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is a subquery?", "A query nested inside another query, used in `SELECT`, `FROM`, or `WHERE` clauses.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is a CTE?", "Common Table Expression: a named temporary result set referenced within a single statement.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `UNION` vs `UNION ALL`?", "`UNION` removes duplicates; `UNION ALL` keeps all rows and is faster.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is an index?", "A data structure that speeds up row lookup at the cost of storage and write performance.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `ACID`?", "Atomicity, Consistency, Isolation, Durability — guarantees for reliable transactions.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is a stored procedure?", "A precompiled set of SQL statements stored in the database and callable by name.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is a view?", "A saved query that acts like a virtual table, often used to simplify access or restrict columns.", 2, "[DEMO] Kiến thức nền tảng")
+            },
+            ["Database design"] = new[]
+            {
+                ("What is normalization?", "Organizing tables to reduce redundancy and improve data integrity by splitting into related tables.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is 1NF?", "Each table cell holds a single value, and there are no repeating groups.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is 2NF?", "1NF plus all non-key attributes depend on the whole primary key, not part of it.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is 3NF?", "2NF plus no transitive dependencies among non-key attributes.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is a foreign key?", "A column that references the primary key of another table, enforcing referential integrity.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is a composite key?", "A primary key made of two or more columns.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is a clustered index?", "Determines physical storage order of rows; only one per table.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is a nonclustered index?", "A separate structure pointing to data rows; multiple allowed per table.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is a covering index?", "An index containing all columns needed by a query, avoiding table lookups.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is denormalization?", "Intentionally adding redundancy to improve read performance, accepting some inconsistency risk.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is a many-to-many relationship?", "Resolved via a junction/associative table with foreign keys to both sides.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is `ON DELETE CASCADE`?", "Automatically deletes child rows when the referenced parent row is deleted.", 2, "[DEMO] Kiến thức nền tảng")
+            },
+            ["Data pipelines"] = new[]
+            {
+                ("What is ETL?", "Extract, Transform, Load: pull data, transform it, then load into a target system.", 1, "[DEMO] Kiến thức nền tảng"),
+                ("What is ELT?", "Extract, Load, Transform: load raw data first, then transform inside the target system.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is batch processing?", "Processing data in large chunks at scheduled intervals.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is streaming?", "Processing data record-by-record as it arrives, with low latency.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is exactly-once processing?", "Guarantee that each record affects the output exactly once, even with retries.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is a data lake?", "A repository storing raw data in its native format until needed.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is a data warehouse?", "A system optimized for analytical queries over large historical datasets.", 2, "[DEMO] Kiến thức nền tảng"),
+                ("What is CDC?", "Change Data Capture: tracking and propagating changes from source systems.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is data lineage?", "Tracking the origin, movement, and transformation of data through systems.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is idempotency in pipelines?", "Reprocessing the same input yields the same output without side effects.", 4, "[DEMO] Thiết kế hệ thống"),
+                ("What is a dead letter queue?", "A queue holding records that could not be processed after retries, for later inspection.", 3, "[DEMO] Vận dụng và phân tích"),
+                ("What is schema evolution?", "Handling changes to data structure over time without breaking downstream consumers.", 4, "[DEMO] Thiết kế hệ thống")
+            }
+        };
+
+        var questionOrder = await dbContext.Questions.MaxAsync(q => (int?)q.DisplayOrder, cancellationToken) ?? 0;
+        foreach (var topic in topicEntities)
+        {
+            var topicQuestions = questionSeed[topic.Name];
+            foreach (var (content, expected, bloomId, rubricName) in topicQuestions)
+            {
+                dbContext.Questions.Add(new Question
+                {
+                    Content = content,
+                    Context = $"[SEED] {topic.Subject.Name} / {topic.Name}",
+                    ExpectedAnswer = expected,
+                    BloomLevelId = bloomId,
+                    RubricId = rubrics[rubricName].Id,
+                    TopicId = topic.Id,
+                    SubjectId = topic.SubjectId,
+                    DisplayOrder = ++questionOrder,
+                    IsActive = true,
+                    ModifiedDate = DateTime.UtcNow
+                });
+            }
+        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+
         var questionDefinitions = new[]
         {
             new QuestionDefinition("C# & .NET", "Hãy phân biệt value type và reference type trong C#. Điều gì xảy ra khi truyền từng loại vào một phương thức?", "Value type lưu trực tiếp giá trị và mặc định được sao chép khi gán/truyền tham số; reference type lưu tham chiếu đến đối tượng. Cần đề cập stack/heap một cách thận trọng, ref/out/in và tác động khi thay đổi trạng thái đối tượng.", 2, "[DEMO] Kiến thức nền tảng"),

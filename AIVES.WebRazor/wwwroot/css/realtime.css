@@ -59,3 +59,5 @@
 .monitor-live{min-height:2.5em;margin:10px 0;color:var(--muted);font-style:italic;white-space:pre-wrap}
 .monitor-log{max-height:280px;overflow:auto;padding:0}
 @media(max-width:575.98px){.monitor-grid{grid-template-columns:1fr}.viva-timer{align-items:flex-start}}
+
+.status-select{min-width:12rem}

@@ -89,6 +89,20 @@
     connection.on('EditorsChanged', (questionId, editors) =>
         document.dispatchEvent(new CustomEvent('aives:editors', { detail: { questionId, editors } })));
 
+    // ---- Auto-refresh on live data changes --------------------------------
+    document.addEventListener('aives:entity-changed', (event) => {
+        const change = event.detail;
+        if (change.entity !== 'exam') return;
+        // Anything missed while offline is unknown, so reload to show fresh data.
+        location.reload();
+    });
+    document.addEventListener('aives:reconnected', () => {
+        document.querySelectorAll('[data-refresh-on-live]').forEach(region => {
+            const handler = region.dataset.refreshHandler || 'Rows';
+            window.refreshRegion(region, handler);
+        });
+    });
+
     const ready = connection.start()
         .then(() => setStatus('live', 'Real-time'))
         .catch((error) => {
