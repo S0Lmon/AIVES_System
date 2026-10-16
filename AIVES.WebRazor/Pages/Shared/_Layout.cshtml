@@ -51,9 +51,6 @@
                     <a class="side-link @Active("/Exams")" asp-page="/Exams/Index">
                         <span>@L10n.T("Exams")</span>
                     </a>
-                    <a class="side-link @(page.StartsWith("/Exams/Calendar", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-page="/Exams/Calendar">
-                        <span>@L10n.T("Calendar")</span>
-                    </a>
                     <a class="side-link @Active("/Grading")" asp-page="/Grading/Index">
                         <span>@L10n.T("Grading")</span>
                     </a>
@@ -78,10 +75,10 @@
                 <div class="nav-label nav-label-spaced">@L10n.T("Legal")</div>
                 <a class="side-link" asp-page="/Privacy"><span>@L10n.T("Data policy")</span></a>
             </nav>
-            <div class="sidebar-note">
-                <div class="note-dot"></div>
-                <div><strong>@L10n.T("System ready")</strong><small>@L10n.T("All services online")</small></div>
-            </div>
+                <div class="sidebar-note d-none">
+                    <div class="note-dot"></div>
+                    <div><strong>@L10n.T("System ready")</strong><small>@L10n.T("All services online")</small></div>
+                </div>
         </aside>
         <div class="app-main">
             <header class="topbar">
@@ -90,7 +87,7 @@
                     <strong>@ViewData["Title"]</strong>
                 </div>
                 <div class="topbar-actions">
-                    <div class="database-pill"><span></span><span>@L10n.T("System online")</span></div>
+                    <div class="database-pill d-none"><span></span><span>@L10n.T("System online")</span></div>
                     <div class="d-flex align-items-center gap-2">
                         @await Html.PartialAsync("_LanguageSwitcher")
                         @if (User.Identity?.IsAuthenticated == true)
@@ -105,7 +102,7 @@
                     </div>
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <span class="live-status" data-live-status="connecting" title="@L10n.T("Real-time connection status")"><span class="live-dot"></span><span data-live-label>@L10n.T("Connecting…")</span></span>
+                        <span class="live-status d-none" data-live-status="connecting" title="@L10n.T("Real-time connection status")"><span class="live-dot"></span><span data-live-label>@L10n.T("Connecting…")</span></span>
                         <div class="dropdown">
                             <button class="online-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <span class="online-dot"></span> <span data-online-count>0</span> @L10n.T("online")
