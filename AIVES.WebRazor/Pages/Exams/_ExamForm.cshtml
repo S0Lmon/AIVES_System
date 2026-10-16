@@ -45,7 +45,6 @@
     <section class="form-section"><div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("Select students in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
         <div class="row g-3">
             <div class="col-12">
-                <label for="studentSearch" class="form-label">@L10n.T("Candidates")</label>
                 <span class="text-danger" asp-validation-for="Input.CandidateEmails"></span>
                 <div class="student-picker" id="studentPicker" data-url="?handler=Students"
                      data-selected-label="@L10n.T("selected")" data-student-label="@L10n.T("student")" data-students-label="@L10n.T("students")"
@@ -95,9 +94,8 @@
     <div class="form-check mb-3"><input asp-for="Input.ScheduleOverflowAllowed" class="form-check-input" /><label asp-for="Input.ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run past the end time")</label><div class="form-text">@L10n.T("Tick this only if you accept that the last slots end after the chosen end time.")</div></div>
     <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>@if (editing) { <a asp-page="Details" asp-route-id="@Model.Input.Id" class="btn btn-light">@L10n.T("Cancel")</a> } else { <a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a> }</div>
 </form></div>
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
+<partial name="_ValidationScriptsPartial" />
+<link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
     <script>
     (() => {
         const subject = document.getElementById('examSubject');
@@ -303,4 +301,3 @@
         syncSelection();
     })();
     </script>
-}
