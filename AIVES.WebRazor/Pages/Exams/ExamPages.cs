@@ -287,6 +287,7 @@ public sealed class CreateModel(
         if (!ModelState.IsValid)
         {
             await FillAsync(cancellationToken);
+            await LoadStudentsAsync(cancellationToken);
             return Page();
         }
         try
@@ -303,6 +304,7 @@ public sealed class CreateModel(
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await FillAsync(cancellationToken);
+            await LoadStudentsAsync(cancellationToken);
             return Page();
         }
     }
@@ -365,6 +367,7 @@ public sealed class EditModel(
         if (!ModelState.IsValid)
         {
             await FillAsync(cancellationToken);
+            await LoadStudentsAsync(cancellationToken);
             return Page();
         }
         try
@@ -383,6 +386,7 @@ public sealed class EditModel(
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await FillAsync(cancellationToken);
+            await LoadStudentsAsync(cancellationToken);
             return Page();
         }
     }

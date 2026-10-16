@@ -4,6 +4,13 @@
     var editing = Model.Input.Id is not null;
     var title = editing ? L10n.T("Edit exam") : L10n.T("New exam");
     var students = Model.Students;
+    var candidateEmails = Model.Input.CandidateEmails ?? string.Empty;
+    var selectedEmails = candidateEmails.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(email => email.Trim())
+        .Where(email => email.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var selectedEmailSet = selectedEmails.ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
 <div class="page-heading"><div><span class="page-kicker">Exams / @(editing ? "Edit" : "New")</span><h1>@title</h1><p>@L10n.T("Questions are drawn from the active questions of the chosen subject (and topic). Saving assigns a fresh set to every candidate.")</p></div></div>
 <div class="panel form-panel mb-4"><form method="post">
@@ -38,21 +45,48 @@
     <section class="form-section"><div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("Select students in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
         <div class="row g-3">
             <div class="col-12">
-                <label class="form-label">@L10n.T("Candidate emails")</label>
+                <label for="studentSearch" class="form-label">@L10n.T("Candidates")</label>
                 <span class="text-danger" asp-validation-for="Input.CandidateEmails"></span>
-                <div class="input-group mb-2">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="studentSearch" class="form-control" placeholder="@L10n.T("Search students by name or email…")" />
+                <div class="student-picker" id="studentPicker" data-url="?handler=Students"
+                     data-selected-label="@L10n.T("selected")" data-student-label="@L10n.T("student")" data-students-label="@L10n.T("students")"
+                     data-no-results="@L10n.T("No students found.")" data-no-selection="@L10n.T("No students selected yet.")"
+                     data-move-up="@L10n.T("Move student up")" data-move-down="@L10n.T("Move student down")" data-remove="@L10n.T("Remove student")">
+                    <div class="student-picker-toolbar">
+                        <div class="student-picker-search">
+                            <label for="studentSearch" class="form-label mb-1">@L10n.T("Find students")</label>
+                            <input type="search" id="studentSearch" class="form-control" autocomplete="off" placeholder="@L10n.T("Search by name or email…")" />
+                        </div>
+                        <div class="student-picker-summary">
+                            <span id="studentPickerCount" class="badge-soft">0 selected</span>
+                            <button type="button" id="clearStudents" class="btn btn-light btn-sm">@L10n.T("Clear all")</button>
+                        </div>
+                    </div>
+                    <div class="student-picker-columns">
+                        <section class="student-picker-panel" aria-labelledby="availableStudentsHeading">
+                            <div class="student-picker-panel-heading">
+                                <h3 id="availableStudentsHeading">@L10n.T("Available students")</h3>
+                                <span id="studentResultCount" class="form-text"></span>
+                            </div>
+                            <div id="studentResults" class="student-picker-list" role="group" aria-label="@L10n.T("Available students")"></div>
+                        </section>
+                        <section class="student-picker-panel" aria-labelledby="selectedStudentsHeading">
+                            <div class="student-picker-panel-heading">
+                                <h3 id="selectedStudentsHeading">@L10n.T("Sitting order")</h3>
+                                <span class="form-text">@L10n.T("Use the arrows to change the order.")</span>
+                            </div>
+                            <ol id="selectedStudents" class="student-picker-list student-picker-selected"></ol>
+                        </section>
+                    </div>
+                    <div id="studentPickerStatus" class="form-text student-picker-status" role="status" aria-live="polite"></div>
                 </div>
-                <select id="studentSelect" multiple="multiple" size="10" class="form-select" style="height:auto;" data-url="?handler=Students" data-selected-emails="@(string.Join("|", Model.Input.CandidateEmails.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Select(e => e.Trim()).Where(e => e.Length > 0)))">
+                <select id="studentSelect" multiple="multiple" class="d-none" aria-hidden="true" tabindex="-1" data-selected-emails="@string.Join("|", selectedEmails)">
                     @foreach (var student in students)
                     {
-                        var isSelected = Model.Input.CandidateEmails.Contains(student.Email, StringComparison.OrdinalIgnoreCase);
+                        var isSelected = selectedEmailSet.Contains(student.Email);
                         if (isSelected) { <option value="@student.Email" selected>@student.DisplayName &lt;@student.Email&gt;</option> }
                         else { <option value="@student.Email">@student.DisplayName &lt;@student.Email&gt;</option> }
                     }
                 </select>
-                <div class="form-text">@L10n.T("Type to filter, then click a student to add. Hold Ctrl/Cmd to select multiple. Order matters: the list order sets the sitting order.")</div>
                 <input asp-for="Input.CandidateEmails" type="hidden" id="candidateEmailsHidden" />
             </div>
         </div>
@@ -63,8 +97,7 @@
 </form></div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" asp-append-version="true" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js" asp-append-version="true"></script>
+    <link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
     <script>
     (() => {
         const subject = document.getElementById('examSubject');
@@ -99,67 +132,175 @@
         const select = document.getElementById('studentSelect');
         const search = document.getElementById('studentSearch');
         const hidden = document.getElementById('candidateEmailsHidden');
-        const url = select.dataset.url;
-        if (!select || !search || !hidden || !url) return;
+        const picker = document.getElementById('studentPicker');
+        const results = document.getElementById('studentResults');
+        const selectedList = document.getElementById('selectedStudents');
+        const count = document.getElementById('studentPickerCount');
+        const resultCount = document.getElementById('studentResultCount');
+        const status = document.getElementById('studentPickerStatus');
+        const clearButton = document.getElementById('clearStudents');
+        if (!select || !search || !hidden || !picker || !results || !selectedList || !count || !resultCount || !status || !clearButton) return;
 
-        let selectedEmails = new Set();
-        const updateHidden = () => {
-            const emails = Array.from(select.selectedOptions).map(o => o.value);
-            hidden.value = emails.join('\n');
-            selectedEmails = new Set(emails);
+        const students = new Map();
+        for (const option of select.options) {
+            students.set(option.value.toLowerCase(), { email: option.value, text: option.text });
+        }
+        const selected = (select.dataset.selectedEmails || '')
+            .split('|')
+            .map(email => email.trim())
+            .filter(Boolean)
+            .map(email => {
+                const student = students.get(email.toLowerCase());
+                const value = student || { email, text: email };
+                students.set(email.toLowerCase(), value);
+                return value;
+            });
+        let querySequence = 0;
+
+        const syncSelection = () => {
+            hidden.value = selected.map(student => student.email).join('\n');
+            count.textContent = `${selected.length} ${picker.dataset.selectedLabel}`;
+            clearButton.disabled = selected.length === 0;
+            for (const option of select.options) {
+                option.selected = selected.some(student => student.email.toLowerCase() === option.value.toLowerCase());
+            }
+            for (const checkbox of results.querySelectorAll('input[type="checkbox"]')) {
+                const email = checkbox.value.toLowerCase();
+                checkbox.checked = selected.some(student => student.email.toLowerCase() === email);
+            }
+            renderSelected();
         };
 
-        select.addEventListener('change', updateHidden);
-
-        // Search filtering
-        search.addEventListener('input', () => {
-            const q = search.value.toLowerInvariant?.() ?? search.value.toLowerCase();
-            for (const option of select.options) {
-                const text = option.text.toLowerCase();
-                option.hidden = !text.includes(q);
+        const renderResults = () => {
+            const query = search.value.trim().toLowerCase();
+            const visibleStudents = Array.from(students.values())
+                .filter(student => !query || `${student.text} ${student.email}`.toLowerCase().includes(query))
+                .sort((a, b) => a.text.localeCompare(b.text));
+            results.replaceChildren();
+            resultCount.textContent = `${visibleStudents.length} ${visibleStudents.length === 1 ? picker.dataset.studentLabel : picker.dataset.studentsLabel}`;
+            if (visibleStudents.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'student-picker-empty';
+                empty.textContent = picker.dataset.noResults;
+                results.append(empty);
+                return;
             }
-        });
+            for (const student of visibleStudents) {
+                const row = document.createElement('label');
+                row.className = 'student-picker-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = student.email;
+                checkbox.checked = selected.some(item => item.email.toLowerCase() === student.email.toLowerCase());
+                checkbox.setAttribute('aria-label', student.text);
+                checkbox.addEventListener('change', () => {
+                    const index = selected.findIndex(item => item.email.toLowerCase() === student.email.toLowerCase());
+                    if (checkbox.checked && index < 0) selected.push(student);
+                    if (!checkbox.checked && index >= 0) selected.splice(index, 1);
+                    status.textContent = '';
+                    syncSelection();
+                });
+                const identity = document.createElement('span');
+                identity.className = 'student-picker-identity';
+                identity.textContent = student.text;
+                row.append(checkbox, identity);
+                results.append(row);
+            }
+        };
 
-        // Initial selected emails from data attribute
-        const initial = select.dataset.selectedEmails;
-        if (initial) {
-            initial.split('|').forEach(email => {
-                for (const option of select.options) {
-                    if (option.value === email) {
-                        option.selected = true;
-                        break;
-                    }
-                }
+        const renderSelected = () => {
+            selectedList.replaceChildren();
+            if (selected.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'student-picker-empty';
+                empty.textContent = picker.dataset.noSelection;
+                selectedList.append(empty);
+                return;
+            }
+            selected.forEach((student, index) => {
+                const row = document.createElement('li');
+                row.className = 'student-picker-option student-picker-selected-option';
+                const position = document.createElement('span');
+                position.className = 'student-picker-position';
+                position.textContent = `${index + 1}`;
+                const identity = document.createElement('span');
+                identity.className = 'student-picker-identity';
+                identity.textContent = student.text;
+                const actions = document.createElement('span');
+                actions.className = 'student-picker-actions';
+                const up = document.createElement('button');
+                up.type = 'button';
+                up.className = 'btn btn-light btn-sm';
+                up.textContent = '↑';
+                up.disabled = index === 0;
+                up.setAttribute('aria-label', `${picker.dataset.moveUp}: ${student.email}`);
+                up.addEventListener('click', () => {
+                    [selected[index - 1], selected[index]] = [selected[index], selected[index - 1]];
+                    syncSelection();
+                });
+                const down = document.createElement('button');
+                down.type = 'button';
+                down.className = 'btn btn-light btn-sm';
+                down.textContent = '↓';
+                down.disabled = index === selected.length - 1;
+                down.setAttribute('aria-label', `${picker.dataset.moveDown}: ${student.email}`);
+                down.addEventListener('click', () => {
+                    [selected[index], selected[index + 1]] = [selected[index + 1], selected[index]];
+                    syncSelection();
+                });
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'btn btn-light btn-sm student-picker-remove';
+                remove.textContent = '×';
+                remove.setAttribute('aria-label', `${picker.dataset.remove}: ${student.email}`);
+                remove.addEventListener('click', () => {
+                    selected.splice(index, 1);
+                    syncSelection();
+                });
+                actions.append(up, down, remove);
+                row.append(position, identity, actions);
+                selectedList.append(row);
             });
-            updateHidden();
-        }
+        };
 
-        // Remote search fallback: if fewer than 5 visible options, fetch more
+        const url = new URL(picker.dataset.url, window.location.href);
         let debounceTimer;
         search.addEventListener('input', () => {
             clearTimeout(debounceTimer);
-            const q = search.value.trim();
-            if (q.length < 2) return;
+            status.textContent = '';
+            renderResults();
+            const requestId = ++querySequence;
+            const query = search.value.trim();
+            if (query.length < 2) return;
             debounceTimer = setTimeout(async () => {
-                const visible = Array.from(select.options).filter(o => !o.hidden).length;
-                if (visible >= 5) return;
                 try {
-                    const resp = await fetch(`${url}?q=${encodeURIComponent(q)}`);
+                    const requestUrl = new URL(url);
+                    requestUrl.searchParams.set('q', query);
+                    const resp = await fetch(requestUrl);
+                    if (!resp.ok) throw new Error(`Student search failed (${resp.status}).`);
                     const data = await resp.json();
-                    const existing = new Set(Array.from(select.options).map(o => o.value));
                     for (const item of data) {
-                        if (!existing.has(item.id)) {
-                            const opt = document.createElement('option');
-                            opt.value = item.id;
-                            opt.text = item.text;
-                            select.append(opt);
-                            existing.add(item.id);
+                        students.set(item.id.toLowerCase(), { email: item.id, text: item.text });
+                        if (!Array.from(select.options).some(option => option.value.toLowerCase() === item.id.toLowerCase())) {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.text = item.text;
+                            select.append(option);
                         }
                     }
-                    search.dispatchEvent(new Event('input'));
-                } catch (e) { console.warn('[AIVES] Student search failed', e); }
-            }, 300);
+                    if (requestId === querySequence) renderResults();
+                } catch (error) {
+                    if (requestId === querySequence) status.textContent = error.message || 'Unable to search students. Please try again.';
+                }
+            }, 250);
         });
+        clearButton.addEventListener('click', () => {
+            selected.splice(0, selected.length);
+            status.textContent = '';
+            syncSelection();
+        });
+        renderResults();
+        syncSelection();
     })();
     </script>
 }
