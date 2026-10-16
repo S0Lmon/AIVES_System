@@ -1,20 +1,20 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AIVES.BLL.Services.Exams;
 using AIVES.DTO;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace AIVES.WebRazor.Realtime;
 
-/// <summary>
-/// Watches for exams whose end time has passed and pushes an <c>exam.ended</c> SignalR
-/// notification to every client (lecturers and students) so UIs refresh from "in progress"
-/// to "finished" without a manual reload.
-/// </summary>
 public sealed class ExamExpiryService(
-    IExamService exams,
+    IServiceScopeFactory scopes,
     IHubContext<AivesHub, IAivesClient> hub,
     TimeProvider clock,
     ILogger<ExamExpiryService> logger) : BackgroundService
@@ -40,6 +40,8 @@ public sealed class ExamExpiryService(
 
     private async Task MarkEndedExams(CancellationToken cancellationToken)
     {
+        using var scope = scopes.CreateScope();
+        var exams = scope.ServiceProvider.GetRequiredService<IExamService>();
         var now = clock.GetUtcNow().UtcDateTime;
         var actor = new ExamActor(string.Empty, true, null);
         var all = await exams.ListAsync(actor, cancellationToken);
