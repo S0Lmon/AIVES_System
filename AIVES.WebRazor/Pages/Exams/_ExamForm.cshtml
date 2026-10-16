@@ -12,292 +12,426 @@
         .ToList();
     var selectedEmailSet = selectedEmails.ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
-<div class="page-heading"><div><span class="page-kicker">Exams / @(editing ? "Edit" : "New")</span><h1>@title</h1><p>@L10n.T("Questions are drawn from the active questions of the chosen subject (and topic). Saving assigns a fresh set to every candidate.")</p></div></div>
-<div class="panel form-panel mb-4"><form method="post">
-    <div asp-validation-summary="All" class="alert alert-danger"></div>
-    <input asp-for="Input.Id" type="hidden" />
-    <section class="form-section"><div class="section-title"><span class="section-number">1</span><div><h2>@L10n.T("Exam")</h2><p>@L10n.T("Name the session and choose where its questions come from.")</p></div></div>
-        <div class="row g-3">
-            <div class="col-12"><label asp-for="Input.Title" class="form-label">@L10n.T("Title")</label><span class="text-danger" asp-validation-for="Input.Title"></span><input asp-for="Input.Title" class="form-control" maxlength="@ExamLimits.TitleMaxLength" /></div>
-            <div class="col-md-6"><label asp-for="Input.SubjectId" class="form-label">@L10n.T("Subject")</label><span class="text-danger" asp-validation-for="Input.SubjectId"></span><select asp-for="Input.SubjectId" class="form-select" id="examSubject"><option value="0">@L10n.T("Choose a subject")</option>@foreach (var subject in Model.Subjects) { <option value="@subject.Id">@subject.Name</option> }</select></div>
-            <div class="col-md-6"><label asp-for="Input.TopicId" class="form-label">@L10n.T("Topic")</label><span class="text-danger" asp-validation-for="Input.TopicId"></span><select asp-for="Input.TopicId" class="form-select"><option value="">@L10n.T("Any topic")</option>@foreach (var topic in Model.Topics) { <option value="@topic.Id" data-subject="@topic.SubjectId">@topic.Name</option> }</select></div>
-            <div class="col-md-6"><label asp-for="Input.Term" class="form-label">@L10n.T("Term / semester")</label><span class="text-danger" asp-validation-for="Input.Term"></span><input asp-for="Input.Term" class="form-control" maxlength="@ExamLimits.TermMaxLength" /></div>
-            <div class="col-md-6"><label asp-for="Input.ExamType" class="form-label">@L10n.T("Examination type")</label><span class="text-danger" asp-validation-for="Input.ExamType"></span><input asp-for="Input.ExamType" class="form-control" maxlength="@ExamLimits.ExamTypeMaxLength" /></div>
-        </div>
-    </section>
-    <section class="form-section"><div class="section-title"><span class="section-number">2</span><div><h2>@L10n.T("Schedule")</h2><p>@L10n.T("Candidates sit one after another; each slot follows the previous one.")</p></div></div><div class="row g-3">
-        <div class="col-md-6"><label asp-for="Input.StartsAtLocal" class="form-label">@L10n.T("First slot starts") (@Model.TimeZoneLabel)</label><span class="text-danger" asp-validation-for="Input.StartsAtLocal"></span><input asp-for="Input.StartsAtLocal" type="datetime-local" value="@Model.Input.StartsAtLocal?.ToString("yyyy-MM-ddTHH:mm")" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.EndsAtLocal" class="form-label">@L10n.T("Exam ends") (@Model.TimeZoneLabel)</label><span class="text-danger" asp-validation-for="Input.EndsAtLocal"></span><input asp-for="Input.EndsAtLocal" type="datetime-local" value="@Model.Input.EndsAtLocal?.ToString("yyyy-MM-ddTHH:mm")" class="form-control" /><div class="form-text">@L10n.T("The window all slots must fit into. Leave empty to end with the last slot.")</div></div>
-        <div class="col-md-6"><label asp-for="Input.SlotMinutes" class="form-label">@L10n.T("Minutes per candidate")</label><span class="text-danger" asp-validation-for="Input.SlotMinutes"></span><input asp-for="Input.SlotMinutes" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.BufferMinutes" class="form-label">@L10n.T("Buffer between candidates (minutes)")</label><span class="text-danger" asp-validation-for="Input.BufferMinutes"></span><input asp-for="Input.BufferMinutes" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.BreakMinutes" class="form-label">@L10n.T("Break length (minutes)")</label><span class="text-danger" asp-validation-for="Input.BreakMinutes"></span><input asp-for="Input.BreakMinutes" type="number" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.BreakEveryCount" class="form-label">@L10n.T("Break after every N candidates")</label><span class="text-danger" asp-validation-for="Input.BreakEveryCount"></span><input asp-for="Input.BreakEveryCount" type="number" class="form-control" /></div>
-    </div></section>
-    <section class="form-section"><div class="section-title"><span class="section-number">3</span><div><h2>@L10n.T("Questions per candidate")</h2><p>@L10n.T("Main questions are fixed per candidate; follow-up questions are the most the examiner may add.")</p></div></div><div class="row g-3">
-        <div class="col-md-6"><label asp-for="Input.Strategy" class="form-label">@L10n.T("Question selection strategy")</label><span class="text-danger" asp-validation-for="Input.Strategy"></span><select asp-for="Input.Strategy" class="form-select"><option value="@QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option><option value="@QuestionSelectionStrategy.Random">@L10n.T("Random: draw each set purely at random")</option></select></div>
-        <div class="col-md-6"><label asp-for="Input.MainQuestionCount" class="form-label">@L10n.T("Main questions")</label><span class="text-danger" asp-validation-for="Input.MainQuestionCount"></span><input asp-for="Input.MainQuestionCount" type="number" min="1" max="@ExamLimits.MaxMainQuestions" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label><span class="text-danger" asp-validation-for="Input.MaxFollowUpQuestions"></span><input asp-for="Input.MaxFollowUpQuestions" type="number" min="0" max="@ExamLimits.MaxFollowUpQuestions" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.MaxFollowUpsPerQuestion" class="form-label">@L10n.T("Follow-ups per question")</label><span class="text-danger" asp-validation-for="Input.MaxFollowUpsPerQuestion"></span><input asp-for="Input.MaxFollowUpsPerQuestion" type="number" min="0" max="@ExamLimits.MaxFollowUpsPerQuestionLimit" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.AnswerTimeLimitSeconds" class="form-label">@L10n.T("Answer time limit (seconds)")</label><span class="text-danger" asp-validation-for="Input.AnswerTimeLimitSeconds"></span><input asp-for="Input.AnswerTimeLimitSeconds" type="number" min="@ExamLimits.MinAnswerSeconds" max="@ExamLimits.MaxAnswerSeconds" class="form-control" /></div>
-        <div class="col-md-6"><label asp-for="Input.Language" class="form-label">@L10n.T("Interview language")</label><span class="text-danger" asp-validation-for="Input.Language"></span><select asp-for="Input.Language" class="form-select">@if (Model.Languages.Contains(AppLanguage.Vi)) { <option value="@AppLanguage.Vi">Tiếng Việt</option> }@if (Model.Languages.Contains(AppLanguage.En)) { <option value="@AppLanguage.En">English</option> }</select></div>
-        <div class="col-md-6"><label asp-for="Input.Recording" class="form-label">@L10n.T("Record the viva")</label><span class="text-danger" asp-validation-for="Input.Recording"></span><select asp-for="Input.Recording" class="form-select"><option value="@RecordingMode.Audio">@L10n.T("Audio of every answer")</option><option value="@RecordingMode.AudioVideo">@L10n.T("Audio and camera video")</option><option value="@RecordingMode.None">@L10n.T("Do not record")</option></select><div class="form-text">@L10n.T("Kept encrypted as evidence for grade appeals. Students must agree before they start; only you and administrators can play it.")</div></div>
-    </div></section>
-    <section class="form-section"><div class="section-title"><span class="section-number">4</span><div><h2>@L10n.T("Candidates")</h2><p>@L10n.T("Select students in sitting order. Students see their slot under My exams once they sign in with the same email.")</p></div></div>
-        <div class="row g-3">
-            <div class="col-12">
-                <span class="text-danger" asp-validation-for="Input.CandidateEmails"></span>
-                <div class="student-picker" id="studentPicker" data-url="?handler=Students"
-                     data-selected-label="@L10n.T("selected")" data-student-label="@L10n.T("student")" data-students-label="@L10n.T("students")"
-                     data-no-results="@L10n.T("No students found.")" data-no-selection="@L10n.T("No students selected yet.")"
-                     data-move-up="@L10n.T("Move student up")" data-move-down="@L10n.T("Move student down")" data-remove="@L10n.T("Remove student")">
-                    <div class="student-picker-toolbar">
-                        <div class="student-picker-search">
-                            <label for="studentSearch" class="form-label mb-1">@L10n.T("Find students")</label>
-                            <input type="search" id="studentSearch" class="form-control" autocomplete="off" placeholder="@L10n.T("Search by name or email…")" />
-                        </div>
-                        <div class="student-picker-summary">
-                            <span id="studentPickerCount" class="badge-soft">0 selected</span>
-                            <button type="button" id="clearStudents" class="btn btn-light btn-sm">@L10n.T("Clear all")</button>
-                        </div>
-                    </div>
-                    <div class="student-picker-columns">
-                        <section class="student-picker-panel" aria-labelledby="availableStudentsHeading">
-                            <div class="student-picker-panel-heading">
-                                <h3 id="availableStudentsHeading">@L10n.T("Available students")</h3>
-                                <span id="studentResultCount" class="form-text"></span>
-                            </div>
-                            <div id="studentResults" class="student-picker-list" role="group" aria-label="@L10n.T("Available students")"></div>
-                        </section>
-                        <section class="student-picker-panel" aria-labelledby="selectedStudentsHeading">
-                            <div class="student-picker-panel-heading">
-                                <h3 id="selectedStudentsHeading">@L10n.T("Sitting order")</h3>
-                                <span class="form-text">@L10n.T("Use the arrows to change the order.")</span>
-                            </div>
-                            <ol id="selectedStudents" class="student-picker-list student-picker-selected"></ol>
-                        </section>
-                    </div>
-                    <div id="studentPickerStatus" class="form-text student-picker-status" role="status" aria-live="polite"></div>
+<div class="page-heading">
+    <div><span class="page-kicker">Exams / @(editing ? "Edit" : "New")</span>
+        <h1>@title</h1>
+        <p>@L10n.T("Questions are drawn from the active questions of the chosen subject (and topic). Saving assigns a fresh set to every candidate.")</p>
+    </div>
+</div>
+<div class="panel form-panel mb-4">
+    <form method="post">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <input asp-for="Input.Id" type="hidden" />
+        <section class="form-section">
+            <div class="section-title"><span class="section-number">1</span>
+                <div>
+                    <h2>@L10n.T("Exam")</h2>
+                    <p>@L10n.T("Name the session and choose where its questions come from.")</p>
                 </div>
-                <select id="studentSelect" multiple="multiple" class="d-none" aria-hidden="true" tabindex="-1" data-selected-emails="@string.Join("|", selectedEmails)">
-                    @foreach (var student in students)
-                    {
-                        var isSelected = selectedEmailSet.Contains(student.Email);
-                        if (isSelected) { <option value="@student.Email" selected>@student.DisplayName &lt;@student.Email&gt;</option> }
-                        else { <option value="@student.Email">@student.DisplayName &lt;@student.Email&gt;</option> }
-                    }
-                </select>
-                <input asp-for="Input.CandidateEmails" type="hidden" id="candidateEmailsHidden" />
             </div>
-        </div>
-        <label asp-for="Input.Instructions" class="form-label mt-3">@L10n.T("Instructions or notes")</label><span class="text-danger" asp-validation-for="Input.Instructions"></span><textarea asp-for="Input.Instructions" rows="3" maxlength="@ExamLimits.InstructionsMaxLength" class="form-control"></textarea>
-    </section>
-    <div class="form-check mb-3"><input asp-for="Input.ScheduleOverflowAllowed" class="form-check-input" /><label asp-for="Input.ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run past the end time")</label><div class="form-text">@L10n.T("Tick this only if you accept that the last slots end after the chosen end time.")</div></div>
-    <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>@if (editing) { <a asp-page="Details" asp-route-id="@Model.Input.Id" class="btn btn-light">@L10n.T("Cancel")</a> } else { <a asp-page="Index" class="btn btn-light">@L10n.T("Cancel")</a> }</div>
-</form></div>
-<partial name="_ValidationScriptsPartial" />
-<link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
-    <script>
-    (() => {
-        const subject = document.getElementById('examSubject');
-        const topic = document.getElementById('Input_TopicId');
-        if (!subject || !topic) return;
-        const filterTopics = () => {
-            for (const option of topic.options) {
-                if (!option.value) continue;
-                option.hidden = subject.value && option.dataset.subject !== subject.value;
-                if (option.hidden && option.selected) topic.value = '';
-            }
-        };
-        subject.addEventListener('change', filterTopics);
-        filterTopics();
-    })();
-    (() => {
-        // Moving the start moves the end by the same amount, so the exam window keeps its length.
-        const start = document.getElementById('Input_StartsAtLocal');
-        const end = document.getElementById('Input_EndsAtLocal');
-        if (!start || !end) return;
-        const parse = (value) => value ? new Date(value + 'Z') : null;
-        let previous = parse(start.value);
-        start.addEventListener('change', () => {
-            const next = parse(start.value);
-            const currentEnd = parse(end.value);
-            if (previous && next && currentEnd)
-                end.value = new Date(currentEnd.getTime() + (next - previous)).toISOString().slice(0, 16);
-            previous = next;
-        });
-    })();
-    (() => {
-        const select = document.getElementById('studentSelect');
-        const search = document.getElementById('studentSearch');
-        const hidden = document.getElementById('candidateEmailsHidden');
-        const picker = document.getElementById('studentPicker');
-        const results = document.getElementById('studentResults');
-        const selectedList = document.getElementById('selectedStudents');
-        const count = document.getElementById('studentPickerCount');
-        const resultCount = document.getElementById('studentResultCount');
-        const status = document.getElementById('studentPickerStatus');
-        const clearButton = document.getElementById('clearStudents');
-        if (!select || !search || !hidden || !picker || !results || !selectedList || !count || !resultCount || !status || !clearButton) return;
-
-        const students = new Map();
-        for (const option of select.options) {
-            students.set(option.value.toLowerCase(), { email: option.value, text: option.text });
-        }
-        const selected = (select.dataset.selectedEmails || '')
-            .split('|')
-            .map(email => email.trim())
-            .filter(Boolean)
-            .map(email => {
-                const student = students.get(email.toLowerCase());
-                const value = student || { email, text: email };
-                students.set(email.toLowerCase(), value);
-                return value;
-            });
-        let querySequence = 0;
-
-        const syncSelection = () => {
-            hidden.value = selected.map(student => student.email).join('\n');
-            count.textContent = `${selected.length} ${picker.dataset.selectedLabel}`;
-            clearButton.disabled = selected.length === 0;
-            for (const option of select.options) {
-                option.selected = selected.some(student => student.email.toLowerCase() === option.value.toLowerCase());
-            }
-            for (const checkbox of results.querySelectorAll('input[type="checkbox"]')) {
-                const email = checkbox.value.toLowerCase();
-                checkbox.checked = selected.some(student => student.email.toLowerCase() === email);
-            }
-            renderSelected();
-        };
-
-        const renderResults = () => {
-            const query = search.value.trim().toLowerCase();
-            const visibleStudents = Array.from(students.values())
-                .filter(student => !query || `${student.text} ${student.email}`.toLowerCase().includes(query))
-                .sort((a, b) => a.text.localeCompare(b.text));
-            results.replaceChildren();
-            resultCount.textContent = `${visibleStudents.length} ${visibleStudents.length === 1 ? picker.dataset.studentLabel : picker.dataset.studentsLabel}`;
-            if (visibleStudents.length === 0) {
-                const empty = document.createElement('p');
-                empty.className = 'student-picker-empty';
-                empty.textContent = picker.dataset.noResults;
-                results.append(empty);
-                return;
-            }
-            for (const student of visibleStudents) {
-                const row = document.createElement('label');
-                row.className = 'student-picker-option';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = student.email;
-                checkbox.checked = selected.some(item => item.email.toLowerCase() === student.email.toLowerCase());
-                checkbox.setAttribute('aria-label', student.text);
-                checkbox.addEventListener('change', () => {
-                    const index = selected.findIndex(item => item.email.toLowerCase() === student.email.toLowerCase());
-                    if (checkbox.checked && index < 0) selected.push(student);
-                    if (!checkbox.checked && index >= 0) selected.splice(index, 1);
-                    status.textContent = '';
-                    syncSelection();
-                });
-                const identity = document.createElement('span');
-                identity.className = 'student-picker-identity';
-                identity.textContent = student.text;
-                row.append(checkbox, identity);
-                results.append(row);
-            }
-        };
-
-        const renderSelected = () => {
-            selectedList.replaceChildren();
-            if (selected.length === 0) {
-                const empty = document.createElement('li');
-                empty.className = 'student-picker-empty';
-                empty.textContent = picker.dataset.noSelection;
-                selectedList.append(empty);
-                return;
-            }
-            selected.forEach((student, index) => {
-                const row = document.createElement('li');
-                row.className = 'student-picker-option student-picker-selected-option';
-                const position = document.createElement('span');
-                position.className = 'student-picker-position';
-                position.textContent = `${index + 1}`;
-                const identity = document.createElement('span');
-                identity.className = 'student-picker-identity';
-                identity.textContent = student.text;
-                const actions = document.createElement('span');
-                actions.className = 'student-picker-actions';
-                const up = document.createElement('button');
-                up.type = 'button';
-                up.className = 'btn btn-light btn-sm';
-                up.textContent = '↑';
-                up.disabled = index === 0;
-                up.setAttribute('aria-label', `${picker.dataset.moveUp}: ${student.email}`);
-                up.addEventListener('click', () => {
-                    [selected[index - 1], selected[index]] = [selected[index], selected[index - 1]];
-                    syncSelection();
-                });
-                const down = document.createElement('button');
-                down.type = 'button';
-                down.className = 'btn btn-light btn-sm';
-                down.textContent = '↓';
-                down.disabled = index === selected.length - 1;
-                down.setAttribute('aria-label', `${picker.dataset.moveDown}: ${student.email}`);
-                down.addEventListener('click', () => {
-                    [selected[index], selected[index + 1]] = [selected[index + 1], selected[index]];
-                    syncSelection();
-                });
-                const remove = document.createElement('button');
-                remove.type = 'button';
-                remove.className = 'btn btn-light btn-sm student-picker-remove';
-                remove.textContent = '×';
-                remove.setAttribute('aria-label', `${picker.dataset.remove}: ${student.email}`);
-                remove.addEventListener('click', () => {
-                    selected.splice(index, 1);
-                    syncSelection();
-                });
-                actions.append(up, down, remove);
-                row.append(position, identity, actions);
-                selectedList.append(row);
-            });
-        };
-
-        const url = new URL(picker.dataset.url, window.location.href);
-        let debounceTimer;
-        search.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            status.textContent = '';
-            renderResults();
-            const requestId = ++querySequence;
-            const query = search.value.trim();
-            if (query.length < 2) return;
-            debounceTimer = setTimeout(async () => {
-                try {
-                    const requestUrl = new URL(url);
-                    requestUrl.searchParams.set('q', query);
-                    const resp = await fetch(requestUrl);
-                    if (!resp.ok) throw new Error(`Student search failed (${resp.status}).`);
-                    const data = await resp.json();
-                    for (const item of data) {
-                        students.set(item.id.toLowerCase(), { email: item.id, text: item.text });
-                        if (!Array.from(select.options).some(option => option.value.toLowerCase() === item.id.toLowerCase())) {
-                            const option = document.createElement('option');
-                            option.value = item.id;
-                            option.text = item.text;
-                            select.append(option);
-                        }
+            <div class="row g-3">
+                <div class="col-12"><label asp-for="Input.Title" class="form-label">@L10n.T("Title")</label><span
+                    class="text-danger" asp-validation-for="Input.Title"></span><input asp-for="Input.Title"
+                                                                                       class="form-control" maxlength="@ExamLimits.TitleMaxLength" /></div>
+                    <div class="col-md-6"><label asp-for="Input.SubjectId"
+                                                     class="form-label">@L10n.T("Subject")</label><span class="text-danger"
+                                                                           asp-validation-for="Input.SubjectId"></span>```cshtml
+                        <select asp-for="Input.SubjectId" class="form-select" id="examSubject">
+                            <option value="">@L10n.T("Choose a subject")</option>
+                            @foreach (var subject in Model.Subjects)
+                            {
+                                <option value="@subject.Id">@subject.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6"><label asp-for="Input.TopicId" class="form-label">@L10n.T("Topic")</label><span
+                        class="text-danger" asp-validation-for="Input.TopicId"></span><select asp-for="Input.TopicId"
+                                                                                          class="form-select">
+                        <option value="">@L10n.T("Any topic")</option>@foreach (var topic in Model.Topics) {
+                        <option
+                        value="@topic.Id" data-subject="@topic.SubjectId">@topic.Name</option>
                     }
-                    if (requestId === querySequence) renderResults();
-                } catch (error) {
-                    if (requestId === querySequence) status.textContent = error.message || 'Unable to search students. Please try again.';
-                }
-            }, 250);
-        });
-        clearButton.addEventListener('click', () => {
-            selected.splice(0, selected.length);
-            status.textContent = '';
-            syncSelection();
-        });
-        renderResults();
-        syncSelection();
-    })();
-    </script>
+                </select></div>
+                <div class="col-md-6"><label asp-for="Input.Term" class="form-label">@L10n.T("Term / semester")</label><span class="text-danger" asp-validation-for="Input.Term"></span><input
+                    asp-for="Input.Term" class="form-control" maxlength="@ExamLimits.TermMaxLength" /></div>
+                    <div class="col-md-6"><label asp-for="Input.ExamType" class="form-label">@L10n.T("Examination type")</label><span class="text-danger" asp-validation-for="Input.ExamType"></span><input
+                        asp-for="Input.ExamType" class="form-control" maxlength="@ExamLimits.ExamTypeMaxLength" /></div>
+                    </div>
+                </section>
+                <section class="form-section">
+                    <div class="section-title"><span class="section-number">2</span>
+                        <div>
+                            <h2>@L10n.T("Schedule")</h2>
+                            <p>@L10n.T("Candidates sit one after another; each slot follows the previous one.")</p>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label asp-for="Input.StartsAtLocal" class="form-label">@L10n.T("First slot starts") (@Model.TimeZoneLabel)</label><span class="text-danger"
+                                                                                                                                                                           asp-validation-for="Input.StartsAtLocal"></span><input asp-for="Input.StartsAtLocal"
+                                                                                   type="datetime-local" value="@Model.Input.StartsAtLocal?.ToString("yyyy-MM-ddTHH:mm")"
+                                                                                   class="form-control" /></div>
+                            <div class="col-md-6"><label asp-for="Input.EndsAtLocal" class="form-label">@L10n.T("Exam ends")
+                                (@Model.TimeZoneLabel)</label><span class="text-danger"
+                                                                    asp-validation-for="Input.EndsAtLocal"></span><input asp-for="Input.EndsAtLocal"
+                                                                                     type="datetime-local" value="@Model.Input.EndsAtLocal?.ToString("yyyy-MM-ddTHH:mm")"
+                                                                                     class="form-control" />
+                                <div class="form-text">@L10n.T("The window all slots must fit into. Leave empty to end with the last slot.")</div>
+                            </div>
+                            <div class="col-md-6"><label asp-for="Input.SlotMinutes" class="form-label">@L10n.T("Minutes per candidate")</label><span class="text-danger"
+                                                                                                                                                          asp-validation-for="Input.SlotMinutes"></span><input asp-for="Input.SlotMinutes" type="number"
+                                                                                     class="form-control" /></div>
+                                <div class="col-md-6"><label asp-for="Input.BufferMinutes" class="form-label">@L10n.T("Buffer between candidates (minutes)")</label><span class="text-danger"
+                                                                                                                                                                              asp-validation-for="Input.BufferMinutes"></span><input asp-for="Input.BufferMinutes"
+                                                                                           type="number" class="form-control" /></div>
+                                    <div class="col-md-6"><label asp-for="Input.BreakMinutes" class="form-label">@L10n.T("Break length (minutes)")</label><span class="text-danger"
+                                                                                                                                                                    asp-validation-for="Input.BreakMinutes"></span><input asp-for="Input.BreakMinutes" type="number"
+                                                                                              class="form-control" /></div>
+                                        <div class="col-md-6"><label asp-for="Input.BreakEveryCount" class="form-label">@L10n.T("Break after every N candidates")</label><span class="text-danger"
+                                                                                                                                                                                   asp-validation-for="Input.BreakEveryCount"></span><input asp-for="Input.BreakEveryCount"
+                                                                                                     type="number" class="form-control" /></div>
+                                        </div>
+                                    </section>
+                                    <section class="form-section">
+                                        <div class="section-title"><span class="section-number">3</span>
+                                            <div>
+                                                <h2>@L10n.T("Questions per candidate")</h2>
+                                                <p>@L10n.T("Main questions are fixed per candidate; follow-up questions are the most the examiner may add.")</p>
+                                            </div>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6"><label asp-for="Input.Strategy" class="form-label">@L10n.T("Question selection strategy")</label><span class="text-danger" asp-validation-for="Input.Strategy"></span><select
+                                                asp-for="Input.Strategy" class="form-select">
+                                                <option value="@QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option>
+                                                <option value="@QuestionSelectionStrategy.Random">@L10n.T("Random: draw each set purely at random")</option>
+                                            </select></div>
+                                            <div class="col-md-6"><label asp-for="Input.MainQuestionCount" class="form-label">@L10n.T("Main questions")</label><span class="text-danger"
+                                                                                                                                                                         asp-validation-for="Input.MainQuestionCount"></span><input asp-for="Input.MainQuestionCount"
+                                                                                                           type="number" min="1" max="@ExamLimits.MaxMainQuestions" class="form-control" /></div>
+                                                <div class="col-md-6"><label asp-for="Input.MaxFollowUpQuestions" class="form-label">@L10n.T("Maximum follow-up questions")</label><span class="text-danger"
+                                                                                                                                                                                             asp-validation-for="Input.MaxFollowUpQuestions"></span><input
+                                                    asp-for="Input.MaxFollowUpQuestions" type="number" min="0"
+                                                    max="@ExamLimits.MaxFollowUpQuestions" class="form-control" /></div>
+                                                    <div class="col-md-6"><label asp-for="Input.MaxFollowUpsPerQuestion"
+                                                                                     class="form-label">@L10n.T("Follow-ups per question")</label><span class="text-danger"
+                                                                                                                           asp-validation-for="Input.MaxFollowUpsPerQuestion"></span><input
+                                                        asp-for="Input.MaxFollowUpsPerQuestion" type="number" min="0"
+                                                        max="@ExamLimits.MaxFollowUpsPerQuestionLimit" class="form-control" /></div>
+                                                        <div class="col-md-6"><label asp-for="Input.AnswerTimeLimitSeconds" class="form-label">@L10n.T("Answer time limit (seconds)")</label><span class="text-danger"
+                                                                                                                                                                                                       asp-validation-for="Input.AnswerTimeLimitSeconds"></span><input
+                                                            asp-for="Input.AnswerTimeLimitSeconds" type="number" min="@ExamLimits.MinAnswerSeconds"
+                                                            max="@ExamLimits.MaxAnswerSeconds" class="form-control" /></div>
+                                                            <div class="col-md-6"><label asp-for="Input.Language" class="form-label">@L10n.T("Interview language")</label><span class="text-danger" asp-validation-for="Input.Language"></span><select
+                                                                asp-for="Input.Language" class="form-select">@if (Model.Languages.Contains(AppLanguage.Vi)) {
+                                                                <option value="@AppLanguage.Vi">Tiếng Việt</option>
+                                                            }
+                                                            @if
+                                                                                    (Model.Languages.Contains(AppLanguage.En))
+                                                            {
+                                                                <option value="@AppLanguage.En">English</option>
+                                                            }
+                                                        </select></div>
+                                                        <div class="col-md-6"><label asp-for="Input.Recording" class="form-label">@L10n.T("Record the viva")</label><span class="text-danger" asp-validation-for="Input.Recording"></span><select
+                                                            asp-for="Input.Recording" class="form-select">
+                                                            <option value="@RecordingMode.Audio">@L10n.T("Audio of every answer")</option>
+                                                            <option value="@RecordingMode.AudioVideo">@L10n.T("Audio and camera video")</option>
+                                                            <option value="@RecordingMode.None">@L10n.T("Do not record")</option>
+                                                        </select>
+                                                        <div class="form-text">@L10n.T("Kept encrypted as evidence for grade appeals. Students must agree before they start; only you and administrators can play it.")</div>
+                                                    </div>
+                                                </div>
+                                            </section>
+                                            <section class="form-section">
+                                                <div class="section-title"><span class="section-number">4</span>
+                                                    <div>
+                                                        <h2>@L10n.T("Candidates")</h2>
+                                                        <p>@L10n.T("Select students in sitting order. Students see their slot under My exams once they sign in with the same email.")</p>
+                                                    </div>
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <span class="text-danger" asp-validation-for="Input.CandidateEmails"></span>
+                                                        <div class="student-picker" id="studentPicker" data-url="?handler=Students"
+                                                             data-selected-label="@L10n.T("selected")" data-student-label="@L10n.T("student")"
+                                                             data-students-label="@L10n.T("students")" data-no-results="@L10n.T("No students found.")"
+                                                             data-no-selection="@L10n.T("No students selected yet.")"
+                                                             data-move-up="@L10n.T("Move student up")" data-move-down="@L10n.T("Move student down")"
+                                                             data-remove="@L10n.T("Remove student")">
+                                                            <div class="student-picker-toolbar">
+                                                                <div class="student-picker-search">
+                                                                    <label for="studentSearch" class="form-label mb-1">@L10n.T("Find students")</label>
+                                                                    <input type="search" id="studentSearch" class="form-control" autocomplete="off"
+                                                                           placeholder="@L10n.T("Search by name or email…")" />
+                                                                </div>
+                                                                <div class="student-picker-summary">
+                                                                    <span id="studentPickerCount" class="badge-soft">0 selected</span>
+                                                                    <button type="button" id="clearStudents" class="btn btn-light btn-sm">@L10n.T("Clear all")</button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="student-picker-columns">
+                                                                <section class="student-picker-panel" aria-labelledby="availableStudentsHeading">
+                                                                    <div class="student-picker-panel-heading">
+                                                                        <h3 id="availableStudentsHeading">@L10n.T("Available students")</h3>
+                                                                        <span id="studentResultCount" class="form-text"></span>
+                                                                    </div>
+                                                                    <div id="studentResults" class="student-picker-list" role="group"
+                                                                         aria-label="@L10n.T("Available students")"></div>
+                                                                </section>
+                                                                <section class="student-picker-panel" aria-labelledby="selectedStudentsHeading">
+                                                                    <div class="student-picker-panel-heading">
+                                                                        <h3 id="selectedStudentsHeading">@L10n.T("Sitting order")</h3>
+                                                                        <span class="form-text">@L10n.T("Use the arrows to change the order.")</span>
+                                                                    </div>
+                                                                    <ol id="selectedStudents" class="student-picker-list student-picker-selected"></ol>
+                                                                </section>
+                                                            </div>
+                                                            <div id="studentPickerStatus" class="form-text student-picker-status" role="status"
+                                                                 aria-live="polite"></div>
+                                                        </div>
+                                                        <select id="studentSelect" multiple="multiple" class="d-none" aria-hidden="true" tabindex="-1"
+                                                                data-selected-emails="@string.Join("|", selectedEmails)">
+                                                            @foreach (var student in students)
+                                                            {
+                                                                var isSelected = selectedEmailSet.Contains(student.Email);
+                                                                if (isSelected)
+                                                                {
+                                                                    <option value="@student.Email" selected>@student.DisplayName
+                                                                        &lt;@student.Email&gt;</option>
+                                                                    }
+                        else
+                                                                    {
+
+                                                                        <option value="@student.Email">@student.DisplayName &lt;@student.Email&gt;</option>
+                                                                    }
+                                                                }
+                                                            </select>
+                                                            <input asp-for="Input.CandidateEmails" type="hidden" id="candidateEmailsHidden" />
+                                                        </div>
+                                                    </div>
+                                                    <label asp-for="Input.Instructions" class="form-label mt-3">@L10n.T("Instructions or notes")</label><span
+                                                    class="text-danger" asp-validation-for="Input.Instructions"></span><textarea
+                                                    asp-for="Input.Instructions" rows="3" maxlength="@ExamLimits.InstructionsMaxLength"
+                                                    class="form-control"></textarea>
+                                                </section>
+                                                <div class="form-check mb-3"><input asp-for="Input.ScheduleOverflowAllowed" class="form-check-input" /><label
+                                                    asp-for="Input.ScheduleOverflowAllowed" class="form-check-label">@L10n.T("Allow the schedule to run past the end time")</label>
+                                                    <div class="form-text">@L10n.T("Tick this only if you accept that the last slots end after the chosen end time.")</div>
+                                                </div>
+                                                <div class="d-flex gap-2"><button type="submit" class="btn btn-primary">@(editing ? L10n.T("Save and reassign questions") : L10n.T("Create exam"))</button>@if (editing) {
+                                                    <a asp-page="Details"
+                                                       asp-route-id="@Model.Input.Id" class="btn btn-light">@L10n.T("Cancel")</a>
+                                                } else
+                                                {
+
+                                                    <a asp-page="Index"
+                                                       class="btn btn-light">@L10n.T("Cancel")</a>
+                                                }
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <partial name="_ValidationScriptsPartial" />
+                                    <link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
+                                    <script>
+                                        (() => {
+                                            const subject = document.getElementById('examSubject');
+                                            const topic = document.getElementById('Input_TopicId');
+                                            if (!subject || !topic) return;
+                                            const filterTopics = () => {
+                                                for (const option of topic.options) {
+                                                    if (!option.value) continue;
+                                                    option.hidden = subject.value && option.dataset.subject !== subject.value;
+                                                    if (option.hidden && option.selected) topic.value = '';
+                                                }
+                                            };
+                                            subject.addEventListener('change', filterTopics);
+                                            filterTopics();
+                                        })();
+                                        (() => {
+                                            // Moving the start moves the end by the same amount, so the exam window keeps its length.
+                                            const start = document.getElementById('Input_StartsAtLocal');
+                                            const end = document.getElementById('Input_EndsAtLocal');
+                                            if (!start || !end) return;
+                                            const parse = (value) => value ? new Date(value + 'Z') : null;
+                                            let previous = parse(start.value);
+                                            start.addEventListener('change', () => {
+                                                const next = parse(start.value);
+                                                const currentEnd = parse(end.value);
+                                                if (previous && next && currentEnd)
+                                                    end.value = new Date(currentEnd.getTime() + (next - previous)).toISOString().slice(0, 16);
+                                                previous = next;
+                                            });
+                                        })();
+                                        (() => {
+                                            const select = document.getElementById('studentSelect');
+                                            const search = document.getElementById('studentSearch');
+                                            const hidden = document.getElementById('candidateEmailsHidden');
+                                            const picker = document.getElementById('studentPicker');
+                                            const results = document.getElementById('studentResults');
+                                            const selectedList = document.getElementById('selectedStudents');
+                                            const count = document.getElementById('studentPickerCount');
+                                            const resultCount = document.getElementById('studentResultCount');
+                                            const status = document.getElementById('studentPickerStatus');
+                                            const clearButton = document.getElementById('clearStudents');
+                                            if (!select || !search || !hidden || !picker || !results || !selectedList || !count || !resultCount || !status || !clearButton) return;
+
+                                            const students = new Map();
+                                            for (const option of select.options) {
+                                                students.set(option.value.toLowerCase(), { email: option.value, text: option.text });
+                                            }
+                                            const selected = (select.dataset.selectedEmails || '')
+                                                .split('|')
+                                                .map(email => email.trim())
+                                                .filter(Boolean)
+                                                .map(email => {
+                                                    const student = students.get(email.toLowerCase());
+                                                    const value = student || { email, text: email };
+                                                    students.set(email.toLowerCase(), value);
+                                                    return value;
+                                                });
+                                            let querySequence = 0;
+
+                                            const syncSelection = () => {
+                                                hidden.value = selected.map(student => student.email).join('\n');
+                                                count.textContent = `${selected.length} ${picker.dataset.selectedLabel}`;
+                                                clearButton.disabled = selected.length === 0;
+                                                for (const option of select.options) {
+                                                    option.selected = selected.some(student => student.email.toLowerCase() === option.value.toLowerCase());
+                                                }
+                                                for (const checkbox of results.querySelectorAll('input[type="checkbox"]')) {
+                                                    const email = checkbox.value.toLowerCase();
+                                                    checkbox.checked = selected.some(student => student.email.toLowerCase() === email);
+                                                }
+                                                renderSelected();
+                                            };
+
+                                            const renderResults = () => {
+                                                const query = search.value.trim().toLowerCase();
+                                                const visibleStudents = Array.from(students.values())
+                                                    .filter(student => !query || `${student.text} ${student.email}`.toLowerCase().includes(query))
+                                                    .sort((a, b) => a.text.localeCompare(b.text));
+                                                results.replaceChildren();
+                                                resultCount.textContent = `${visibleStudents.length} ${visibleStudents.length === 1 ? picker.dataset.studentLabel : picker.dataset.studentsLabel}`;
+                                                if (visibleStudents.length === 0) {
+                                                    const empty = document.createElement('p');
+                                                    empty.className = 'student-picker-empty';
+                                                    empty.textContent = picker.dataset.noResults;
+                                                    results.append(empty);
+                                                    return;
+                                                }
+                                                for (const student of visibleStudents) {
+                                                    const row = document.createElement('label');
+                                                    row.className = 'student-picker-option';
+                                                    const checkbox = document.createElement('input');
+                                                    checkbox.type = 'checkbox';
+                                                    checkbox.value = student.email;
+                                                    checkbox.checked = selected.some(item => item.email.toLowerCase() === student.email.toLowerCase());
+                                                    checkbox.setAttribute('aria-label', student.text);
+                                                    checkbox.addEventListener('change', () => {
+                                                        const index = selected.findIndex(item => item.email.toLowerCase() === student.email.toLowerCase());
+                                                        if (checkbox.checked && index < 0) selected.push(student);
+                                                        if (!checkbox.checked && index >= 0) selected.splice(index, 1);
+                                                        status.textContent = '';
+                                                        syncSelection();
+                                                    });
+                                                    const identity = document.createElement('span');
+                                                    identity.className = 'student-picker-identity';
+                                                    identity.textContent = student.text;
+                                                    row.append(checkbox, identity);
+                                                    results.append(row);
+                                                }
+                                            };
+
+                                            const renderSelected = () => {
+                                                selectedList.replaceChildren();
+                                                if (selected.length === 0) {
+                                                    const empty = document.createElement('li');
+                                                    empty.className = 'student-picker-empty';
+                                                    empty.textContent = picker.dataset.noSelection;
+                                                    selectedList.append(empty);
+                                                    return;
+                                                }
+                                                selected.forEach((student, index) => {
+                                                    const row = document.createElement('li');
+                                                    row.className = 'student-picker-option student-picker-selected-option';
+                                                    const position = document.createElement('span');
+                                                    position.className = 'student-picker-position';
+                                                    position.textContent = `${index + 1}`;
+                                                    const identity = document.createElement('span');
+                                                    identity.className = 'student-picker-identity';
+                                                    identity.textContent = student.text;
+                                                    const actions = document.createElement('span');
+                                                    actions.className = 'student-picker-actions';
+                                                    const up = document.createElement('button');
+                                                    up.type = 'button';
+                                                    up.className = 'btn btn-light btn-sm';
+                                                    up.textContent = '↑';
+                                                    up.disabled = index === 0;
+                                                    up.setAttribute('aria-label', `${picker.dataset.moveUp}: ${student.email}`);
+                                                    up.addEventListener('click', () => {
+                                                        [selected[index - 1], selected[index]] = [selected[index], selected[index - 1]];
+                                                        syncSelection();
+                                                    });
+                                                    const down = document.createElement('button');
+                                                    down.type = 'button';
+                                                    down.className = 'btn btn-light btn-sm';
+                                                    down.textContent = '↓';
+                                                    down.disabled = index === selected.length - 1;
+                                                    down.setAttribute('aria-label', `${picker.dataset.moveDown}: ${student.email}`);
+                                                    down.addEventListener('click', () => {
+                                                        [selected[index], selected[index + 1]] = [selected[index + 1], selected[index]];
+                                                        syncSelection();
+                                                    });
+                                                    const remove = document.createElement('button');
+                                                    remove.type = 'button';
+                                                    remove.className = 'btn btn-light btn-sm student-picker-remove';
+                                                    remove.textContent = '×';
+                                                    remove.setAttribute('aria-label', `${picker.dataset.remove}: ${student.email}`);
+                                                    remove.addEventListener('click', () => {
+                                                        selected.splice(index, 1);
+                                                        syncSelection();
+                                                    });
+                                                    actions.append(up, down, remove);
+                                                    row.append(position, identity, actions);
+                                                    selectedList.append(row);
+                                                });
+                                            };
+
+                                            const url = new URL(picker.dataset.url, window.location.href);
+                                            let debounceTimer;
+                                            search.addEventListener('input', () => {
+                                                clearTimeout(debounceTimer);
+                                                status.textContent = '';
+                                                renderResults();
+                                                const requestId = ++querySequence;
+                                                const query = search.value.trim();
+                                                if (query.length < 2) return;
+                                                debounceTimer = setTimeout(async () => {
+                                                    try {
+                                                        const requestUrl = new URL(url);
+                                                        requestUrl.searchParams.set('q', query);
+                                                        const resp = await fetch(requestUrl);
+                                                        if (!resp.ok) throw new Error(`Student search failed (${resp.status}).`);
+                                                        const data = await resp.json();
+                                                        for (const item of data) {
+                                                            students.set(item.id.toLowerCase(), { email: item.id, text: item.text });
+                                                            if (!Array.from(select.options).some(option => option.value.toLowerCase() === item.id.toLowerCase())) {
+                                                                const option = document.createElement('option');
+                                                                option.value = item.id;
+                                                                option.text = item.text;
+                                                                select.append(option);
+                                                            }
+                                                        }
+                                                        if (requestId === querySequence) renderResults();
+                                                    } catch (error) {
+                                                        if (requestId === querySequence) status.textContent = error.message || 'Unable to search students. Please try again.';
+                                                    }
+                                                }, 250);
+                                            });
+                                            clearButton.addEventListener('click', () => {
+                                                selected.splice(0, selected.length);
+                                                status.textContent = '';
+                                                syncSelection();
+                                            });
+                                            renderResults();
+                                            syncSelection();
+                                        })();
+                                    </script>
