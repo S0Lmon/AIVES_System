@@ -15,6 +15,7 @@ public static class LiveActions
     public const string Created = "created";
     public const string Updated = "updated";
     public const string Deleted = "deleted";
+    public const string Ended = "ended";
 }
 
 /// <summary>

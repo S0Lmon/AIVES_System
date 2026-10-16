@@ -90,6 +90,7 @@ public static class RazorPresentation
         services.AddSingleton<PresenceTracker>();
         services.AddSingleton<AnswerSessions>();
         services.AddScoped<ILiveUpdates, LiveUpdates>();
+        services.AddHostedService<ExamExpiryService>();
 
         services.Configure<RequestLocalizationOptions>(options =>
         {

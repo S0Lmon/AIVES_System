@@ -204,6 +204,7 @@ public sealed record StudentExamDto(
     int MaxFollowUpQuestions,
     int CandidateId = 0,
     InterviewStatus? InterviewStatus = null,
+    CandidateStatus? StatusOverride = null,
     bool ResultAvailable = false,
     decimal? FinalScore = null);
 

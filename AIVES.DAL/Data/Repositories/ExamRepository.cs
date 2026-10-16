@@ -150,6 +150,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             {
                 CandidateId = candidate.Id,
                 Status = candidate.Attempt == null ? (InterviewStatus?)null : candidate.Attempt.Status,
+                StatusOverride = candidate.StatusOverride,
                 FinalizedAtUtc = candidate.Attempt == null ? null : candidate.Attempt.FinalizedAtUtc,
                 FinalScore = candidate.Attempt == null ? null : candidate.Attempt.FinalScore,
                 candidate.Order,
@@ -170,7 +171,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 var start = row.SlotStartsAtUtc ?? ExamSchedule.LegacySlotStart(row.StartsAtUtc, row.SlotMinutes, row.Order);
                 return new StudentExamDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.Order, row.Count,
                     start, start.AddMinutes(row.SlotMinutes), row.MainQuestionCount, row.MaxFollowUpQuestions,
-                    row.CandidateId, row.Status ?? InterviewStatus.NotStarted, row.FinalizedAtUtc != null, row.FinalizedAtUtc != null ? row.FinalScore : null);
+                    row.CandidateId, row.Status ?? InterviewStatus.NotStarted, row.StatusOverride,
+                    row.FinalizedAtUtc != null, row.FinalizedAtUtc != null ? row.FinalScore : null);
             })
             .OrderBy(exam => exam.StartsAtUtc)
             .ToList();
