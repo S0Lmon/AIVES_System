@@ -187,14 +187,24 @@ public sealed class InterviewHub(
         return state;
     }
 
-    /// <summary>Lecturers join an exam's group to watch its vivas live.</summary>
+    /// <summary>Lecturers join any exam's group; students join only their own exam's group.</summary>
     public async Task WatchExam(int examId)
     {
         var user = Context.User;
-        if (!AivesHub.IsStaff(user))
-            throw new HubException("Not allowed.");
-        var actor = new ExamActor(AivesHub.UserId(user), user!.IsInRole(AppRoles.Admin), Email);
-        if (await exams.GetAsync(examId, actor, Context.ConnectionAborted) is null)
+        if (AivesHub.IsStaff(user))
+        {
+            var actor = new ExamActor(AivesHub.UserId(user), user!.IsInRole(AppRoles.Admin), Email);
+            if (await exams.GetAsync(examId, actor, Context.ConnectionAborted) is null)
+                throw new HubException("Not allowed.");
+            await Groups.AddToGroupAsync(Context.ConnectionId, ExamGroup(examId));
+            return;
+        }
+
+        // A student may watch only an exam they are a candidate of.
+        var email = Context.User?.FindFirstValue(ClaimTypes.Email) ?? Context.User?.Identity?.Name ?? string.Empty;
+        var candidate = (await exams.ListForCandidateAsync(email, Context.ConnectionAborted))
+            .FirstOrDefault(item => item.ExamId == examId);
+        if (candidate is null)
             throw new HubException("Not allowed.");
         await Groups.AddToGroupAsync(Context.ConnectionId, ExamGroup(examId));
     }

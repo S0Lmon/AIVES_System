@@ -65,6 +65,10 @@ public static class RazorPresentation
             options.Conventions.AuthorizeFolder("/Reports", AuthorizationPolicies.Staff);
             options.Conventions.AuthorizeFolder("/Admin", AuthorizationPolicies.Admin);
             options.Conventions.AuthorizePage("/Interviews/Monitor", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizePage("/Exams/Create", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizePage("/Exams/Edit", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizePage("/Exams/Details", AuthorizationPolicies.Staff);
+            options.Conventions.AuthorizePage("/Exams/AiExamRoom", AuthorizationPolicies.Staff);
         })
         .AddDataAnnotationsLocalization(options =>
             options.DataAnnotationLocalizerProvider = (_, _) => L10nStringLocalizer.Instance);
