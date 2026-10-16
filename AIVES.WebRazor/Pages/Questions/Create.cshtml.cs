@@ -93,7 +93,7 @@ public sealed class CreateModel(IQuestionService questions, IBloomLevelService b
                 var created = await questions.CreateQuestionAsync(Input.ToDto());
                 await live.EntityChangedAsync(LiveEntities.Question, LiveActions.Created, created.Id, created.Content);
                 TempData["Success"] = L10n.Format("Question #{0} was created.", created.Id);
-                return RedirectToPage("Index");
+                return RedirectToPage("Details", new { id = created.Id });
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
             {

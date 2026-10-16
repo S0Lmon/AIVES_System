@@ -295,7 +295,7 @@ public sealed class CreateModel(
             var result = await Exams.CreateAsync(ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was created and questions were assigned to every candidate."), logger);
             await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Created, result.ExamId, Input.Title);
-            return RedirectToPage("Details", new
+            return RedirectToPage("/Exams/Details/", new
             {
                 id = result.ExamId
             });
@@ -330,7 +330,7 @@ public sealed class EditModel(
         if (exam.HasStarted(DateTime.UtcNow))
         {
             TempData["ExamError"] = L10n.T("This exam has already started, so its settings, candidates and questions are locked.");
-            return RedirectToPage("Details", new
+            return RedirectToPage("/Exams/Details", new
             {
                 id = Id
             });
