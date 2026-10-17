@@ -92,7 +92,7 @@
     // ---- Auto-refresh on live data changes --------------------------------
     document.addEventListener('aives:entity-changed', (event) => {
         const change = event.detail;
-        if (change.entity !== 'exam') return;
+        if (change.entity !== 'exam' || change.actorId === myUserId) return;
         // Anything missed while offline is unknown, so reload to show fresh data.
         location.reload();
     });
