@@ -5,9 +5,9 @@
     ViewData["Title"] = L10n.T("My exams");
 }
 <div class="page-heading"><div><span class="page-kicker">Exams / Mine</span><h1>@L10n.T("My exams")</h1><p>@L10n.T("Your viva slots. Please be ready a few minutes before your slot starts.")</p></div></div>
-<section class="panel overflow-hidden mb-4">@if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("You are not listed for any exam yet.")</p> } else {
-<div class="table-responsive"><table class="table data-table"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Your slot") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Order")</th><th>@L10n.T("Questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
-@foreach (var exam in Model.Exams) { <tr class="@(exam.EndsAtUtc < Model.NowUtc ? "text-muted" : "")"><td><strong>@exam.Title</strong><div class="small text-muted">@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</div></td>
+<section id="my-exams" data-refresh-on-live="exam" class="panel overflow-hidden mb-4">@if (Model.Exams.Count == 0) { <p class="p-4 mb-0 text-muted">@L10n.T("You are not listed for any exam yet.")</p> } else {
+<div class="table-responsive"><table class="table data-table" data-now="@Model.NowUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")"><thead><tr><th>@L10n.T("Exam")</th><th>@L10n.T("Your slot") (@TimeZone.OffsetLabel)</th><th>@L10n.T("Order")</th><th>@L10n.T("Questions")</th><th>@L10n.T("Viva")</th></tr></thead><tbody>
+@foreach (var exam in Model.Exams) { <tr class="@(exam.EndsAtUtc < Model.NowUtc ? "text-muted" : "")" data-starts="@exam.StartsAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")" data-ends="@exam.EndsAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")"><td><strong>@exam.Title</strong><div class="small text-muted">@exam.SubjectName@(exam.TopicName is null ? "" : " / " + exam.TopicName)</div></td>
 <td class="text-nowrap">@TimeZone.ToLocal(exam.StartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(exam.EndsAtUtc).ToString("HH:mm")</td><td>@L10n.Format("{0} of {1}", exam.Order, exam.CandidateCount)</td><td class="small">@L10n.Format("{0} main question(s), up to {1} follow-up(s)", exam.MainQuestionCount, exam.MaxFollowUpQuestions)</td><td>
 @if (exam.StatusOverride is { } ov && ov != CandidateStatus.NotScheduled) { <span class="status-label @ViewText.StatusClass(ov)">@ViewText.Status(ov)</span>@if (ov == CandidateStatus.Absent) { <div class="small text-muted">@L10n.T("Marked absent by your lecturer")</div> } else if (ov == CandidateStatus.Cancelled) { <div class="small text-muted">@L10n.T("Cancelled by your lecturer")</div> } else if (ov == CandidateStatus.RequiresReview) { <div class="small text-muted">@L10n.T("Flagged for review")</div> } }
 else if (exam.ResultAvailable) { <a class="btn btn-sm btn-primary" asp-page="Result" asp-route-id="@exam.CandidateId">@L10n.Format("Result: {0}/10", exam.FinalScore?.ToString("0.##"))</a> }
@@ -17,3 +17,25 @@ else if (Model.NowUtc < exam.StartsAtUtc) { <span class="small text-muted">@L10n
 else { <span class="status-label missing">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Not finished") : L10n.T("Missed"))</span> }
 </td></tr> }
 </tbody></table></div> }</section>
+@section Scripts { <script>
+    (() => {
+        // Turns "Opens at your slot" into the Start button when the slot begins, and closes it when it ends,
+        // without a reload. Times come from the server, so a wrong clock on this computer does not matter.
+        const region = document.getElementById('my-exams');
+        if (!region) return;
+        let timer;
+        const schedule = () => {
+            clearTimeout(timer);
+            const serverNow = Date.parse(region.querySelector('[data-now]')?.dataset.now ?? '');
+            if (Number.isNaN(serverNow)) return;
+            const next = [...region.querySelectorAll('[data-starts]')]
+                .flatMap((row) => [Date.parse(row.dataset.starts), Date.parse(row.dataset.ends)])
+                .filter((time) => time > serverNow).sort((a, b) => a - b)[0];
+            if (next === undefined) return;
+            // Re-checked at least hourly; a refreshed region reschedules through the observer below.
+            timer = setTimeout(() => window.refreshFromPage(region), Math.min(next - serverNow + 1000, 3600000));
+        };
+        new MutationObserver(schedule).observe(region, { childList: true });
+        schedule();
+    })();
+</script> }

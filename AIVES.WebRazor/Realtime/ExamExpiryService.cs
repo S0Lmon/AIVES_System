@@ -20,6 +20,7 @@ public sealed class ExamExpiryService(
     ILogger<ExamExpiryService> logger) : BackgroundService
 {
     private readonly HashSet<int> _endedBroadcasted = new();
+    private bool _seeded;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -50,16 +51,27 @@ public sealed class ExamExpiryService(
         foreach (var id in toRemove)
             _endedBroadcasted.Remove(id);
 
-        foreach (var exam in all.Where(exam => exam.EndsAtUtc < now && !_endedBroadcasted.Contains(exam.Id)))
-        {
+        var newlyEnded = all.Where(exam => exam.EndsAtUtc < now && !_endedBroadcasted.Contains(exam.Id)).ToList();
+        foreach (var exam in newlyEnded)
             _endedBroadcasted.Add(exam.Id);
+        // Exams that ended before this process started were announced long ago (or nobody was online).
+        if (!_seeded)
+        {
+            _seeded = true;
+            return;
+        }
+        foreach (var exam in newlyEnded)
+        {
             try
             {
-                await hub.Clients.All.EntityChanged(new EntityChange(
-                    LiveEntities.Exam, LiveActions.Ended, exam.Id, exam.Title,
-                    string.Empty, "System", now));
+                var details = await exams.GetAsync(exam.Id, actor, cancellationToken);
+                var change = new EntityChange(LiveEntities.Exam, LiveActions.Ended, exam.Id, exam.Title, string.Empty, "System", now);
+                await hub.Clients.Group(AivesHub.StaffGroup).EntityChanged(change);
+                var groups = ExamLive.Emails(details).Select(AivesHub.CandidateGroup).Distinct().ToList();
+                if (groups.Count > 0)
+                    await hub.Clients.Groups(groups).EntityChanged(change);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogWarning(ex, "Could not broadcast exam.ended for exam {ExamId}", exam.Id);
             }
