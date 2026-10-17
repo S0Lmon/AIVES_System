@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using RazorRealtime = Razor::AIVES.WebRazor.Realtime;
+using BllRealtime = AIVES.BLL.Services.Realtime;
 
 namespace AIVES.Tests;
 
@@ -293,8 +294,8 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
     public async Task LecturerWatchingTheExamSeesQuestionsAnswersAndFollowUps()
     {
         await using var lecturer = await ConnectAsync("u-lecturer", "gv@fpt.edu.vn", AppRoles.Lecturer);
-        var events = Channel.CreateUnbounded<RazorRealtime.InterviewEvent>();
-        lecturer.On<RazorRealtime.InterviewEvent>("InterviewEvent", change => events.Writer.TryWrite(change));
+        var events = Channel.CreateUnbounded<BllRealtime.InterviewEvent>();
+        lecturer.On<BllRealtime.InterviewEvent>("InterviewEvent", change => events.Writer.TryWrite(change));
         await lecturer.InvokeAsync("WatchExam", ExamId);
 
         await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);

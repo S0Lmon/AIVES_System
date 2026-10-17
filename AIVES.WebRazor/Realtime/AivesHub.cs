@@ -1,18 +1,10 @@
+using AIVES.BLL.Services.Realtime;
 using AIVES.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace AIVES.WebRazor.Realtime;
-
-/// <summary>A signed-in user as shown in the "online now" list.</summary>
-public sealed record OnlineUser(string UserId, string Name, int Connections);
-
-/// <summary>
-/// One change to the question bank or catalogue. Pages refresh the affected list; the
-/// layout shows a toast and the dashboard adds it to the activity feed.
-/// </summary>
-public sealed record EntityChange(string Entity, string Action, int Id, string Title, string ActorId, string ActorName, DateTime AtUtc);
 
 /// <summary>Messages the server pushes to browsers. Method names are what realtime.js listens for.</summary>
 public interface IAivesClient

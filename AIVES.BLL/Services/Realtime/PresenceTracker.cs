@@ -1,4 +1,7 @@
-namespace AIVES.WebRazor.Realtime;
+namespace AIVES.BLL.Services.Realtime;
+
+/// <summary>A signed-in user as shown in the "online now" list.</summary>
+public sealed record OnlineUser(string UserId, string Name, int Connections);
 
 /// <summary>
 /// Who is connected and who has which question open for editing. Kept in memory, so it is

@@ -11,6 +11,7 @@ using AIVES.BLL.Services.Grading;
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Operations;
 using AIVES.BLL.Services.Recordings;
+using AIVES.BLL.Services.Realtime;
 using AIVES.BLL.Services.Speech;
 using AIVES.DAL;
 using Microsoft.AspNetCore.Identity;
@@ -38,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IExamService, ExamService>();
+        services.AddSingleton<PresenceTracker>();
+        services.AddSingleton<AnswerSessions>();
         services.Configure<InterviewOptions>(configuration.GetSection(InterviewOptions.SectionName));
         services.AddScoped<IInterviewService, InterviewService>();
         services.AddHttpClient<IFollowUpGenerator, GeminiFollowUpGenerator>(nameof(GeminiFollowUpGenerator), client =>

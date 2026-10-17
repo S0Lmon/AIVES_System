@@ -5,7 +5,7 @@ using AIVES.BLL.Services.Recordings;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebRazor.Pages.Exams;
-using AIVES.WebRazor.Realtime;
+using AIVES.BLL.Services.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Options;

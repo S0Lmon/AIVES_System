@@ -1,42 +1,18 @@
+using AIVES.BLL.Services.Realtime;
 using Microsoft.AspNetCore.SignalR;
 
 namespace AIVES.WebRazor.Realtime;
-
-public static class LiveEntities
-{
-    public const string Question = "question";
-    public const string Subject = "subject";
-    public const string Topic = "topic";
-    public const string Exam = "exam";
-}
-
-public static class LiveActions
-{
-    public const string Created = "created";
-    public const string Updated = "updated";
-    public const string Deleted = "deleted";
-    public const string Ended = "ended";
-}
-
-/// <summary>
-/// Page models call this after the BLL has saved a change. Broadcasting is a presentation
-/// concern, so the BLL stays unaware of SignalR.
-/// </summary>
-public interface ILiveUpdates
-{
-    Task EntityChangedAsync(string entity, string action, int id, string title);
-}
 
 public sealed class LiveUpdates(IHubContext<AivesHub, IAivesClient> hub, IHttpContextAccessor http,
     TimeProvider clock, ILogger<LiveUpdates> logger) : ILiveUpdates
 {
     private const int MaxTitleLength = 80;
 
-    public async Task EntityChangedAsync(string entity, string action, int id, string title)
+    public async Task EntityChangedAsync(string entity, string action, int id, string title, string? actorId = null, string? actorName = null)
     {
         var user = http.HttpContext?.User;
         var change = new EntityChange(entity, action, id, Shorten(title),
-            AivesHub.UserId(user), AivesHub.DisplayName(user), clock.GetUtcNow().UtcDateTime);
+            actorId ?? AivesHub.UserId(user), actorName ?? AivesHub.DisplayName(user), clock.GetUtcNow().UtcDateTime);
         try
         {
             if (entity == LiveEntities.Exam)

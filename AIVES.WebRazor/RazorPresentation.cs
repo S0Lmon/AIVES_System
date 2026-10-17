@@ -1,4 +1,5 @@
 using AIVES.DTO;
+using AIVES.BLL.Services.Realtime;
 using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
@@ -87,8 +88,6 @@ public static class RazorPresentation
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeConverter());
             });
-        services.AddSingleton<PresenceTracker>();
-        services.AddSingleton<AnswerSessions>();
         services.AddScoped<ILiveUpdates, LiveUpdates>();
         services.AddHostedService<ExamExpiryService>();
 

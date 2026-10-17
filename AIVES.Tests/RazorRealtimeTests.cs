@@ -16,6 +16,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Channels;
 using RazorHub = Razor::AIVES.WebRazor.Realtime;
+using BllRealtime = AIVES.BLL.Services.Realtime;
 
 namespace AIVES.Tests;
 
@@ -24,7 +25,7 @@ public sealed class PresenceTrackerTests
     [Fact]
     public void SeveralTabsOfOneUserCountAsOneOnlineUser()
     {
-        var presence = new RazorHub.PresenceTracker();
+        var presence = new BllRealtime.PresenceTracker();
         presence.Connect("c1", "u1", "an@fpt.edu.vn");
         presence.Connect("c2", "u1", "an@fpt.edu.vn");
         presence.Connect("c3", "u2", "binh@fpt.edu.vn");
@@ -38,7 +39,7 @@ public sealed class PresenceTrackerTests
     [Fact]
     public void DisconnectReturnsTheQuestionsTheConnectionWasEditing()
     {
-        var presence = new RazorHub.PresenceTracker();
+        var presence = new BllRealtime.PresenceTracker();
         presence.Connect("c1", "u1", "an");
         presence.Connect("c2", "u2", "binh");
         presence.StartEditing("c1", 7);
@@ -53,7 +54,7 @@ public sealed class PresenceTrackerTests
     [Fact]
     public void StopEditingReportsWhetherAnythingChanged()
     {
-        var presence = new RazorHub.PresenceTracker();
+        var presence = new BllRealtime.PresenceTracker();
         presence.Connect("c1", "u1", "an");
         presence.StartEditing("c1", 3);
 
@@ -69,6 +70,10 @@ public sealed class PresenceTrackerTests
         Assert.Contains("AIVES.BLL", references);
         Assert.DoesNotContain("AIVES.DAL", references);
         Assert.DoesNotContain(references, name => name.StartsWith("Microsoft.EntityFrameworkCore"));
+
+        var serviceReferences = typeof(BllRealtime.PresenceTracker).Assembly.GetReferencedAssemblies()
+            .Select(assembly => assembly.Name!);
+        Assert.DoesNotContain("AIVES.WebRazor", serviceReferences);
     }
 }
 
@@ -109,12 +114,12 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
     {
         await using var lecturer = await ConnectAsync("lecturer-1", "giangvien@fpt.edu.vn", AppRoles.Lecturer);
         await using var student = await ConnectAsync("student-1", "sinhvien@fpt.edu.vn", AppRoles.Student);
-        var lecturerChanges = Listen<RazorHub.EntityChange>(lecturer, "EntityChanged");
-        var studentChanges = Listen<RazorHub.EntityChange>(student, "EntityChanged");
+        var lecturerChanges = Listen<BllRealtime.EntityChange>(lecturer, "EntityChanged");
+        var studentChanges = Listen<BllRealtime.EntityChange>(student, "EntityChanged");
 
         using (var scope = app.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<RazorHub.ILiveUpdates>()
-                .EntityChangedAsync(RazorHub.LiveEntities.Question, RazorHub.LiveActions.Created, 42, "Giải thích mô hình 3 lớp");
+                .EntityChangedAsync(BllRealtime.LiveEntities.Question, BllRealtime.LiveActions.Created, 42, "Giải thích mô hình 3 lớp");
 
         var change = await ReadAsync(lecturerChanges);
         Assert.Equal("question", change.Entity);
@@ -131,7 +136,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
     public async Task EveryoneSeesWhoIsOnline()
     {
         await using var first = await ConnectAsync("presence-a", "a@fpt.edu.vn", AppRoles.Lecturer);
-        var updates = Listen<IReadOnlyList<RazorHub.OnlineUser>>(first, "PresenceChanged");
+        var updates = Listen<IReadOnlyList<BllRealtime.OnlineUser>>(first, "PresenceChanged");
         await using var second = await ConnectAsync("presence-b", "b@fpt.edu.vn", AppRoles.Student);
 
         var online = await ReadUntilAsync(updates, users => users.Any(user => user.UserId == "presence-b"));

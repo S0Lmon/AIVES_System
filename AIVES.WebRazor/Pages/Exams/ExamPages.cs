@@ -4,7 +4,7 @@ using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Operations;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
-using AIVES.WebRazor.Realtime;
+using AIVES.BLL.Services.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
@@ -287,7 +287,7 @@ public sealed class CreateModel(
         if (!ModelState.IsValid)
         {
             await FillAsync(cancellationToken);
-            await LoadStudentsAsync(cancellationToken);
+            await LoadStudentsAsync(cancellationToken); 
             return Page();
         }
         try
@@ -295,7 +295,7 @@ public sealed class CreateModel(
             var result = await Exams.CreateAsync(ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was created and questions were assigned to every candidate."), logger);
             await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Created, result.ExamId, Input.Title);
-            return RedirectToPage("/Exams/Details/", new
+            return RedirectToPage("/Exams/Details", new
             {
                 id = result.ExamId
             });
@@ -306,7 +306,7 @@ public sealed class CreateModel(
             await FillAsync(cancellationToken);
             await LoadStudentsAsync(cancellationToken);
             return Page();
-        }
+        }   
     }
 }
 

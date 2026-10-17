@@ -3,7 +3,7 @@ using AIVES.BLL.Services.Ai;
 using AIVES.BLL.Services.Catalog;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
-using AIVES.WebRazor.Realtime;
+using AIVES.BLL.Services.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 

@@ -1,29 +1,16 @@
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
+using AIVES.BLL.Services.Realtime;
 using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
 using System.Security.Claims;
 
 namespace AIVES.WebRazor.Realtime;
-
-/// <summary>One step of a live viva, as the monitoring lecturer sees it.</summary>
-public sealed record InterviewEvent(int ExamId, int CandidateId, string Candidate, string Kind, string Text, int? TurnId, DateTime AtUtc);
-
-public static class InterviewEventKinds
-{
-    public const string Started = "started";
-    public const string Question = "question";
-    public const string FollowUp = "followup";
-    public const string Partial = "partial";
-    public const string Answer = "answer";
-    public const string Completed = "completed";
-}
 
 public interface IInterviewClient
 {
@@ -31,21 +18,6 @@ public interface IInterviewClient
     Task Transcript(int turnId, string text, bool isFinal);
 
     Task InterviewEvent(InterviewEvent change);
-}
-
-/// <summary>Audio and text of the answer a connection is giving right now.</summary>
-public sealed class AnswerSessions
-{
-    public sealed record Session(int CandidateId, int TurnId, string FinalText, float[] Audio, int SpeakingMs);
-
-    private readonly ConcurrentDictionary<string, Session> sessions = new();
-
-    public void Set(string connectionId, Session session) => sessions[connectionId] = session;
-
-    public Session? Take(string connectionId, int candidateId, int turnId) =>
-        sessions.TryRemove(connectionId, out var session) && session.CandidateId == candidateId && session.TurnId == turnId ? session : null;
-
-    public void Forget(string connectionId) => sessions.TryRemove(connectionId, out _);
 }
 
 /// <summary>
