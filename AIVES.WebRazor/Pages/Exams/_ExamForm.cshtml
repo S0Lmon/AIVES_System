@@ -35,7 +35,7 @@
                                                                                        class="form-control" maxlength="@ExamLimits.TitleMaxLength" /></div>
                     <div class="col-md-6"><label asp-for="Input.SubjectId"
                                                      class="form-label">@L10n.T("Subject")</label><span class="text-danger"
-                                                                           asp-validation-for="Input.SubjectId"></span>```cshtml
+                                                                           asp-validation-for="Input.SubjectId"></span>
                         <select asp-for="Input.SubjectId" class="form-select" id="examSubject">
                             <option value="">@L10n.T("Choose a subject")</option>
                             @foreach (var subject in Model.Subjects)
