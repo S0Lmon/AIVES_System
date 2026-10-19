@@ -94,7 +94,8 @@ public sealed class CandidateModel(
             if (Form.Finalize)
             {
                 var candidate = await grading.GetCandidateAsync(Id, ExamPageActors.From(User), cancellationToken);
-                await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, candidate?.ExamId ?? Id, candidate?.ExamTitle ?? string.Empty);
+                await liveUpdates.ExamChangedAsync(LiveActions.Updated, candidate?.ExamId ?? Id, candidate?.ExamTitle ?? string.Empty,
+                    candidate is null ? [] : [candidate.Email]);
             }
             TempData["GradeMessage"] = Form.Finalize ? L10n.T("The grade was confirmed. The student can now see the result.") : L10n.T("The draft grade was saved.");
         }

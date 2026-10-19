@@ -24,7 +24,8 @@ public interface IAivesClient
 
 /// <summary>
 /// The single SignalR hub. Everyone signed in gets presence; only staff join the group that
-/// receives question/catalogue changes, because question content must not reach students.
+/// receives question/catalogue changes, because question content must not reach students. Exam changes go to
+/// staff and to the candidate group of each listed email, never to everyone.
 /// </summary>
 [Authorize]
 public sealed class AivesHub(PresenceTracker presence) : Hub<IAivesClient>
@@ -33,11 +34,15 @@ public sealed class AivesHub(PresenceTracker presence) : Hub<IAivesClient>
     public const string StaffGroup = "staff";
 
     public static string QuestionGroup(int questionId) => $"question-{questionId}";
+    /// <summary>Every connection of one signed-in email; candidates are listed by email, so exam changes reach them here.</summary>
+    public static string CandidateGroup(string email) => $"candidate-{email.Trim().ToLowerInvariant()}";
 
     public override async Task OnConnectedAsync()
     {
         if (IsStaff(Context.User))
             await Groups.AddToGroupAsync(Context.ConnectionId, StaffGroup);
+        if (Email(Context.User) is { Length: > 0 } email)
+            await Groups.AddToGroupAsync(Context.ConnectionId, CandidateGroup(email));
 
         presence.Connect(Context.ConnectionId, UserId(Context.User), DisplayName(Context.User));
         await Clients.All.PresenceChanged(presence.OnlineUsers());
@@ -76,6 +81,9 @@ public sealed class AivesHub(PresenceTracker presence) : Hub<IAivesClient>
 
     public static string UserId(ClaimsPrincipal? user) =>
         user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+    public static string Email(ClaimsPrincipal? user) =>
+        user?.FindFirstValue(ClaimTypes.Email) ?? user?.Identity?.Name ?? string.Empty;
 
     public static string DisplayName(ClaimsPrincipal? user) =>
         user?.Identity?.Name is { Length: > 0 } name ? name : "?";

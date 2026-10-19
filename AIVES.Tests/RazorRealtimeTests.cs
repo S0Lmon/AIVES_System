@@ -128,6 +128,30 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
     }
 
     [Fact]
+    public async Task ExamChangesReachStaffAndTheirCandidatesOnly()
+    {
+        await using var lecturer = await ConnectAsync("exam-lecturer", "gv.exam@fpt.edu.vn", AppRoles.Lecturer);
+        await using var candidate = await ConnectAsync("exam-candidate", "SV.Exam@fpt.edu.vn", AppRoles.Student);
+        await using var other = await ConnectAsync("exam-other", "sv.other@fpt.edu.vn", AppRoles.Student);
+        var lecturerChanges = Listen<RazorHub.EntityChange>(lecturer, "EntityChanged");
+        var candidateChanges = Listen<RazorHub.EntityChange>(candidate, "EntityChanged");
+        var otherChanges = Listen<RazorHub.EntityChange>(other, "EntityChanged");
+
+        using (var scope = app.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<RazorHub.ILiveUpdates>()
+                .ExamChangedAsync(RazorHub.LiveActions.Created, 7, "Vấn đáp Java", ["sv.exam@fpt.edu.vn"]);
+
+        Assert.Equal(7, (await ReadAsync(lecturerChanges)).Id);
+        var change = await ReadAsync(candidateChanges);
+        Assert.Equal("exam", change.Entity);
+        Assert.Equal("created", change.Action);
+
+        // Pages refresh on every exam message, so students of other exams must not get them.
+        await Task.Delay(300);
+        Assert.False(otherChanges.TryRead(out _));
+    }
+
+    [Fact]
     public async Task EveryoneSeesWhoIsOnline()
     {
         await using var first = await ConnectAsync("presence-a", "a@fpt.edu.vn", AppRoles.Lecturer);

@@ -294,8 +294,9 @@ public sealed class CreateModel(
         {
             var result = await Exams.CreateAsync(ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was created and questions were assigned to every candidate."), logger);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Created, result.ExamId, Input.Title);
-            return RedirectToPage("/Exams/Details/", new
+            var created = await Exams.GetAsync(result.ExamId, Actor, cancellationToken);
+            await liveUpdates.ExamChangedAsync(LiveActions.Created, result.ExamId, Input.Title, ExamLive.Emails(created));
+            return RedirectToPage("/Exams/Details", new
             {
                 id = result.ExamId
             });
@@ -372,10 +373,12 @@ public sealed class EditModel(
         }
         try
         {
+            // Candidates removed by this edit must hear about it too.
+            var before = await Exams.GetAsync(Id, Actor, cancellationToken);
             var result = await Exams.UpdateAsync(Id, ToInput(), Actor, cancellationToken);
             SetResult(result, L10n.T("The exam was saved and questions were assigned again."), logger);
             var exam = await Exams.GetAsync(Id, Actor, cancellationToken);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, Id, exam?.Title ?? Input.Title);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? Input.Title, ExamLive.Emails(before).Concat(ExamLive.Emails(exam)));
             return RedirectToPage("Details", new
             {
                 id = Id
@@ -418,7 +421,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             if (result.ConsecutiveOverlaps > 0)
                 TempData["ExamWarning"] = L10n.Format("The question pool is small: consecutive candidates share {0} question(s). Add questions to the subject or lower the number of main questions, then draw again.", result.ConsecutiveOverlaps);
             var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, Id, exam?.Title ?? string.Empty);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? string.Empty, ExamLive.Emails(exam));
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { TempData["ExamError"] = ex.Message; }
@@ -435,7 +438,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             await exams.ResetScheduleAsync(Id, ExamPageActors.From(User), cancellationToken);
             TempData["ExamMessage"] = L10n.T("The schedule was regenerated from the exam settings.");
             var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, Id, exam?.Title ?? string.Empty);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? string.Empty, ExamLive.Emails(exam));
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { TempData["ExamError"] = ex.Message; }
@@ -453,7 +456,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             var title = exam?.Title ?? string.Empty;
             await exams.DeleteAsync(Id, ExamPageActors.From(User), cancellationToken);
             TempData["ExamMessage"] = L10n.T("The exam was deleted.");
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Deleted, Id, title);
+            await liveUpdates.ExamChangedAsync(LiveActions.Deleted, Id, title, ExamLive.Emails(exam));
             return RedirectToPage("./Index");
         }
         catch (KeyNotFoundException) { return RedirectToPage("./Index"); }
@@ -467,7 +470,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             await exams.AdjustSlotAsync(Id, order, timeZone.ToUtc(slotStartLocal), ExamPageActors.From(User), cancellationToken);
             TempData["ExamMessage"] = L10n.Format("Candidate #{0} was moved to a new time.", order);
             var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, Id, exam?.Title ?? string.Empty);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? string.Empty, ExamLive.Emails(exam));
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { TempData["ExamError"] = ex.Message; }
@@ -497,7 +500,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
             await exams.SetCandidateStatusAsync(Id, order, parsed, ExamPageActors.From(User), cancellationToken);
             TempData["ExamMessage"] = parsed is null ? L10n.Format("Candidate #{0} follows the schedule again.", order) : L10n.Format("Candidate #{0} was marked {1}.", order, ViewText.Status(parsed.Value));
             var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-            await liveUpdates.EntityChangedAsync(LiveEntities.Exam, LiveActions.Updated, Id, exam?.Title ?? string.Empty);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? string.Empty, ExamLive.Emails(exam));
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { TempData["ExamError"] = ex.Message; }

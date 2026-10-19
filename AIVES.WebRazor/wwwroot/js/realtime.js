@@ -89,19 +89,15 @@
     connection.on('EditorsChanged', (questionId, editors) =>
         document.dispatchEvent(new CustomEvent('aives:editors', { detail: { questionId, editors } })));
 
-    // ---- Auto-refresh on live data changes --------------------------------
-    document.addEventListener('aives:entity-changed', (event) => {
-        const change = event.detail;
-        if (change.entity !== 'exam' || change.actorId === myUserId) return;
-        // Anything missed while offline is unknown, so reload to show fresh data.
-        location.reload();
+    // ---- Live regions -----------------------------------------------------
+    // A page marks what may change with data-refresh-on-live="exam" (entities, space separated) and an id.
+    // Only that region is swapped for the same region of a fresh copy of the page: a full reload would cut
+    // off a viva in progress or throw away a half-filled form.
+    const refreshLive = (entity) => document.querySelectorAll('[data-refresh-on-live][id]').forEach((region) => {
+        if (!entity || region.dataset.refreshOnLive.split(' ').includes(entity)) window.refreshFromPage(region);
     });
-    document.addEventListener('aives:reconnected', () => {
-        document.querySelectorAll('[data-refresh-on-live]').forEach(region => {
-            const handler = region.dataset.refreshHandler || 'Rows';
-            window.refreshRegion(region, handler);
-        });
-    });
+    document.addEventListener('aives:entity-changed', (event) => refreshLive(event.detail.entity));
+    document.addEventListener('aives:reconnected', () => refreshLive(null));
 
     const ready = connection.start()
         .then(() => setStatus('live', 'Real-time'))
@@ -113,6 +109,18 @@
 
     window.aivesLive = { connection, ready, toast, describe };
 })();
+
+// Swaps a region (matched by id) with the same region of a fresh copy of the current page.
+window.refreshFromPage = async (region) => {
+    const response = await fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' });
+    if (!response.ok || response.redirected) return;
+    const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').getElementById(region.id);
+    if (!fresh) return;
+    region.innerHTML = fresh.innerHTML;
+    region.classList.remove('flash');
+    void region.offsetWidth;
+    region.classList.add('flash');
+};
 
 // Swaps a region with fresh HTML from a page handler, e.g. ?handler=Rows. Used by list
 // pages when another user changes the data they show.
