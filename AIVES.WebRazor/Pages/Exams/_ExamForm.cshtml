@@ -15,7 +15,7 @@
 <div class="page-heading">
     <div><span class="page-kicker">Exams / @(editing ? "Edit" : "New")</span>
         <h1>@title</h1>
-        <p>@L10n.T("Questions are drawn from the active questions of the chosen subject (and topic). Saving assigns a fresh set to every candidate.")</p>
+        <p>@L10n.T("Select a rubric and build the question pool. Questions from that pool are assigned to candidates automatically; you can replace an individual assignment before the exam starts.")</p>
     </div>
 </div>
 <div class="panel form-panel mb-4">
@@ -99,6 +99,32 @@
                                             </div>
                                         </div>
                                         <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label asp-for="Input.RubricId" class="form-label">@L10n.T("Question rubric")</label>
+                                                <select asp-for="Input.RubricId" class="form-select" id="examRubric">
+                                                    <option value="">@L10n.T("Any rubric")</option>
+                                                    @foreach (var rubric in Model.Rubrics)
+                                                    {
+                                                        <option value="@rubric.Id">@rubric.Name</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">@L10n.T("Question bank pool")</label>
+                                                <div id="examQuestionPicker" data-url="?handler=QuestionBank"
+                                                     data-selected-ids="@string.Join(",", Model.Input.SelectedQuestionIds)"
+                                                     data-question-name="Input.SelectedQuestionIds"
+                                                     data-load-error="@L10n.T("Could not load questions. Try again.")"
+                                                     data-select-subject="@L10n.T("Choose a subject to browse its active questions.")"
+                                                     data-no-questions="@L10n.T("No active questions match this subject, topic and rubric.")"
+                                                     data-selected-label="@L10n.T("selected")"
+                                                     data-required-label="@L10n.T("Each candidate needs")">
+                                                    <div class="form-text mb-2">@L10n.T("Only active questions matching the subject, topic and rubric are shown. Select the questions that may be assigned.")</div>
+                                                    <div id="examQuestionCount" class="small text-muted mb-2" role="status" aria-live="polite"></div>
+                                                    <div id="examQuestionStatus" class="form-text mb-2" role="status" aria-live="polite"></div>
+                                                    <div id="examQuestionList" class="exam-question-list"></div>
+                                                </div>
+                                            </div>
                                             <div class="col-md-6"><label asp-for="Input.Strategy" class="form-label">@L10n.T("Question selection strategy")</label><span class="text-danger" asp-validation-for="Input.Strategy"></span><select
                                                 asp-for="Input.Strategy" class="form-select">
                                                 <option value="@QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option>
@@ -229,7 +255,9 @@
                                         </form>
                                     </div>
                                     <partial name="_ValidationScriptsPartial" />
+                                    <script src="~/js/exam-question-picker.js" asp-append-version="true"></script>
                                     <link rel="stylesheet" href="~/css/exam-form.css" asp-append-version="true" />
+                                    <link rel="stylesheet" href="~/css/exam-question-picker.css" asp-append-version="true" />
                                     <script>
                                         (() => {
                                             const subject = document.getElementById('examSubject');

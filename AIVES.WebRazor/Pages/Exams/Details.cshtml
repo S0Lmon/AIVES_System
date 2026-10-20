@@ -60,7 +60,27 @@
     <td><span class="status-label @ViewText.StatusClass(status)">@ViewText.Status(status)</span>@if (candidate.FinalScore is { } score) { <div class="small text-muted">@L10n.Format("Score {0}/10", score.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))</div> }
         <form method="post" asp-page-handler="CandidateStatus" class="d-flex gap-1 mt-1"><input type="hidden" name="order" value="@candidate.Order" /><select name="status" class="form-select form-select-sm status-select" style="min-width:10rem" aria-label="@L10n.T("Status")"><option value="">@L10n.T("Set status…")</option>@foreach (var opt in new[] { ("Absent", CandidateStatus.Absent), ("Cancelled", CandidateStatus.Cancelled), ("RequiresReview", CandidateStatus.RequiresReview), ("NotScheduled", CandidateStatus.NotScheduled) }) { var label = opt.Item1; var value = opt.Item2; var isSelected = candidate.StatusOverride == value; if (isSelected) { <option value="@label" selected>@L10n.T(label)</option> } else { <option value="@label">@L10n.T(label)</option> } }</select><button type="submit" class="btn btn-sm btn-light">@L10n.T("Apply")</button></form>
         @if (candidate.StatusOverride is not null) { <form method="post" asp-page-handler="CandidateStatus" class="mt-1"><input type="hidden" name="order" value="@candidate.Order" /><input type="hidden" name="status" value="" /><button type="submit" class="btn btn-sm btn-link p-0">@L10n.T("Use the schedule again")</button></form> }
-    </td><td><ol class="mb-0 ps-3">@foreach (var question in candidate.Questions) { <li class="mb-1"><span class="badge text-bg-light me-1">@question.BloomLevelName</span>@question.Content</li> }</ol></td>
+    </td><td><ol class="mb-0 ps-3">@foreach (var question in candidate.Questions) {
+        <li class="mb-2">
+            <span class="badge text-bg-light me-1">@question.BloomLevelName</span>@question.Content
+            @if (!Model.Started) {
+                <form method="post" asp-page-handler="ChangeQuestion" class="d-flex gap-1 mt-1">
+                    <input type="hidden" name="order" value="@candidate.Order" />
+                    <input type="hidden" name="questionOrder" value="@question.Order" />
+                    <select name="questionId" class="form-select form-select-sm" aria-label="@L10n.Format("Replace question {0} for {1}", question.Order, candidate.DisplayName ?? candidate.Email)">
+                        @foreach (var option in Model.QuestionPool) {
+                            if (option.Id == question.QuestionId) {
+                                <option value="@option.Id" selected>@option.BloomLevelName — @option.Content</option>
+                            } else {
+                                <option value="@option.Id">@option.BloomLevelName — @option.Content</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-light">@L10n.T("Replace")</button>
+                </form>
+            }
+        </li>
+    } </ol></td>
     <td>@if (candidate.Interview is null) { <span class="small text-muted">@L10n.T("Not started")</span> } else { var record = candidate.Interview;
         <span class="status-label @(record.Status == InterviewStatus.Completed ? "ready" : "warning")">@(record.Status == InterviewStatus.Completed ? L10n.T("Completed") : L10n.T("In progress"))</span>
         <details class="mt-2"><summary class="small">@L10n.Format("Transcript ({0} turns)", record.Turns.Count)</summary><ol class="small mt-2 ps-3 mb-0">@foreach (var turn in record.Turns) {

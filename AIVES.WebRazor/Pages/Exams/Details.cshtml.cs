@@ -21,6 +21,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         get; set;
     }
     public ExamDetailsDto Exam { get; private set; } = null!;
+    public IReadOnlyList<ExamPoolQuestion> QuestionPool { get; private set; } = [];
     public DateTime NowUtc
     {
         get; private set;
@@ -64,6 +65,21 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         {
             id = Id
         });
+    }
+
+    public async Task<IActionResult> OnPostChangeQuestionAsync(
+        int order, int questionOrder, int questionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await exams.UpdateCandidateQuestionAsync(Id, order, questionOrder, questionId, ExamPageActors.From(User), cancellationToken);
+            TempData["ExamMessage"] = L10n.Format("Candidate #{0}, question {1} was updated.", order, questionOrder);
+            var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
+            await liveUpdates.ExamChangedAsync(LiveActions.Updated, Id, exam?.Title ?? string.Empty, ExamLive.Emails(exam));
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { TempData["ExamError"] = ex.Message; }
+        return RedirectToPage(new { id = Id });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(CancellationToken cancellationToken)
@@ -135,6 +151,14 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         if (exam is null)
             return false;
         Exam = exam;
+        if (exam.SubjectId is int subjectId)
+        {
+            var selectedIds = (exam.SelectedQuestionIds ?? []).ToHashSet();
+            QuestionPool = (await exams.GetQuestionBankAsync(subjectId, exam.TopicId, exam.RubricId,
+                    ExamPageActors.From(User), cancellationToken))
+                .Where(question => selectedIds.Contains(question.Id))
+                .ToList();
+        }
         return true;
     }
 }

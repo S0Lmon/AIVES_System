@@ -1,4 +1,5 @@
 using AIVES.BLL.Services.Accounts;
+using AIVES.BLL.Services;
 using AIVES.BLL.Services.Catalog;
 using AIVES.BLL.Services.Exams;
 using AIVES.BLL.Services.Operations;
@@ -38,6 +39,11 @@ public sealed class ExamInputModel
     {
         get; set;
     }
+    public int? RubricId
+    {
+        get; set;
+    }
+    public List<int> SelectedQuestionIds { get; set; } = [];
     [Required]
     public DateTime? StartsAtLocal
     {
@@ -104,6 +110,7 @@ public abstract class ExamFormPageModel(
     IExamService exams,
     ICatalogService catalog,
     ISubjectAccessService subjectAccess,
+    IRubricService rubrics,
     ISystemSettingsService settings,
     DisplayTimeZone timeZone) : PageModel
 {
@@ -111,6 +118,7 @@ public abstract class ExamFormPageModel(
     public ExamInputModel Input { get; set; } = new();
     public IReadOnlyList<ExamSubjectOption> Subjects { get; private set; } = [];
     public IReadOnlyList<ExamTopicOption> Topics { get; private set; } = [];
+    public IReadOnlyList<RubricDto> Rubrics { get; private set; } = [];
     public IReadOnlyList<AppLanguage> Languages { get; private set; } = [];
     public IReadOnlyList<UserSummaryDto> Students { get; protected set; } = [];
     public string TimeZoneLabel => timeZone.OffsetLabel;
@@ -126,6 +134,7 @@ public abstract class ExamFormPageModel(
         Subjects = visibleSubjects.Select(subject => new ExamSubjectOption(subject.Id, subject.Name)).ToList();
         Topics = (await catalog.GetTopicsAsync(cancellationToken: cancellationToken))
             .Select(topic => new ExamTopicOption(topic.Id, topic.SubjectId, topic.Name)).ToList();
+        Rubrics = (await rubrics.GetAllRubricsAsync()).OrderBy(rubric => rubric.Name).ToList();
         var speech = await settings.GetSpeechAsync(cancellationToken);
         Languages = speech.EnabledLanguages.Contains(Input.Language)
             ? speech.EnabledLanguages
@@ -155,7 +164,30 @@ public abstract class ExamFormPageModel(
         Input.Term,
         Input.ExamType,
         Input.Instructions,
-        Input.ScheduleOverflowAllowed);
+        Input.ScheduleOverflowAllowed,
+        Input.RubricId,
+        Input.SelectedQuestionIds);
+
+    protected async Task<IActionResult> QuestionBankAsync(
+        int? subjectId, int? topicId, int? rubricId, CancellationToken cancellationToken)
+    {
+        if (subjectId is not int selectedSubjectId)
+            return new JsonResult(Array.Empty<object>());
+        try
+        {
+            var questions = await Exams.GetQuestionBankAsync(selectedSubjectId, topicId, rubricId, Actor, cancellationToken);
+            return new JsonResult(questions.Select(question => new
+            {
+                question.Id,
+                question.Content,
+                question.BloomLevelName
+            }));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 
     protected void SetResult(ExamSaveResult result, string message, ILogger logger)
     {
@@ -175,6 +207,8 @@ public abstract class ExamFormPageModel(
         Title = exam.Title,
         SubjectId = exam.SubjectId ?? 0,
         TopicId = exam.TopicId,
+        RubricId = exam.RubricId,
+        SelectedQuestionIds = exam.SelectedQuestionIds?.ToList() ?? [],
         StartsAtLocal = timeZone.ToLocal(exam.StartsAtUtc),
         EndsAtLocal = timeZone.ToLocal(exam.EndsAtUtc),
         SlotMinutes = exam.SlotMinutes,
