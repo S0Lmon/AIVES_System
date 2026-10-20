@@ -56,7 +56,9 @@ public sealed record ExamInput(
     string? Term = null,
     string? ExamType = null,
     string? Instructions = null,
-    bool ScheduleOverflowAllowed = false);
+    bool ScheduleOverflowAllowed = false,
+    int? RubricId = null,
+    IReadOnlyList<int>? SelectedQuestionIds = null);
 
 /// <summary>Limits shared by validation and the form.</summary>
 public static class ExamLimits
@@ -81,7 +83,7 @@ public static class ExamLimits
 }
 
 /// <summary>An active question that may be drawn for an exam.</summary>
-public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer, string? RubricJson = null);
+public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer, string? RubricJson = null, int? RubricId = null);
 
 /// <summary>A question handed to one candidate; the text is a snapshot taken when it was assigned.</summary>
 public sealed record ExamAssignedQuestion(int Order, int? QuestionId, string Content, string ExpectedAnswer, string BloomLevelName, string? RubricJson = null);
@@ -113,7 +115,9 @@ public sealed record ExamDraft(
     QuestionSelectionStrategy Strategy = QuestionSelectionStrategy.Balanced,
     string? Term = null,
     string? ExamType = null,
-    string? Instructions = null);
+    string? Instructions = null,
+    int? RubricId = null,
+    IReadOnlyList<int>? SelectedQuestionIds = null);
 
 public sealed record ExamSummaryDto(
     int Id,
@@ -185,7 +189,9 @@ public sealed record ExamDetailsDto(
     string? Term = null,
     string? ExamType = null,
     string? Instructions = null,
-    DateTime? ScheduleEndsAtUtc = null)
+    DateTime? ScheduleEndsAtUtc = null,
+    int? RubricId = null,
+    IReadOnlyList<int>? SelectedQuestionIds = null)
 {
     public bool HasStarted(DateTime nowUtc) => nowUtc >= StartsAtUtc;
 }

@@ -64,6 +64,10 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<ExamQuestionPool> ExamQuestionPools
+        {
+            get; set;
+        }
         public DbSet<ExamAttempt> ExamAttempts
         {
             get; set;
@@ -197,7 +201,6 @@ namespace AIVES.DAL.Data
                     .WithMany()
                     .HasForeignKey(e => e.TopicId)
                     .OnDelete(DeleteBehavior.SetNull);
-
                 // SQL Server allows only one cascading path into a table, and Subjects already
                 // reaches Questions through Topics. So the direct link is NO ACTION and
                 // SubjectRepository clears it before deleting.
@@ -342,6 +345,10 @@ namespace AIVES.DAL.Data
                     .WithMany()
                     .HasForeignKey(e => e.TopicId)
                     .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne<Rubric>()
+                    .WithMany()
+                    .HasForeignKey(e => e.RubricId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
             modelBuilder.Entity<ExamCandidate>(entity =>
             {
@@ -369,6 +376,18 @@ namespace AIVES.DAL.Data
                     .WithMany()
                     .HasForeignKey(e => e.QuestionId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+            modelBuilder.Entity<ExamQuestionPool>(entity =>
+            {
+                entity.HasKey(e => new { e.ExamId, e.QuestionId });
+                entity.HasOne(e => e.Exam)
+                    .WithMany(e => e.QuestionPool)
+                    .HasForeignKey(e => e.ExamId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Question)
+                    .WithMany()
+                    .HasForeignKey(e => e.QuestionId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<ExamAttempt>(entity =>
             {

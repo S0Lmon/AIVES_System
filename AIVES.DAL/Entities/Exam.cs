@@ -20,6 +20,10 @@ namespace AIVES.DAL.Entities
         {
             get; set;
         }
+        public int? RubricId
+        {
+            get; set;
+        }
         public string? TopicName
         {
             get; set;
@@ -106,6 +110,7 @@ namespace AIVES.DAL.Entities
         {
             get; set;
         }
+        public virtual ICollection<ExamQuestionPool> QuestionPool { get; set; } = new List<ExamQuestionPool>();
         public virtual ICollection<ExamCandidate> Candidates { get; set; } = new List<ExamCandidate>();
     }
 }

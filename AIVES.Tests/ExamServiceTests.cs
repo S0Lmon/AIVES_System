@@ -78,6 +78,63 @@ public sealed class ExamServiceTests
     }
 
     [Fact]
+    public async Task CreatingWithARubricAndSelectedPoolLimitsAssignmentsAndAllowsCandidateReplacement()
+    {
+        var (service, db, _, subjectId, topicId, _) = Build(questions: 8);
+        var rubric = new Rubric { Name = "Oral assessment" };
+        db.Rubrics.Add(rubric);
+        db.SaveChanges();
+        var selected = db.Questions.Where(question => question.SubjectId == subjectId)
+            .OrderBy(question => question.Id).Take(4).ToList();
+        foreach (var question in selected)
+            question.RubricId = rubric.Id;
+        db.SaveChanges();
+        var poolIds = selected.Select(question => question.Id).ToList();
+        var rubricQuestions = await service.GetQuestionBankAsync(subjectId, topicId, rubric.Id, Lecturer);
+        Assert.Equal(poolIds.Order(), rubricQuestions.Select(question => question.Id).Order());
+
+        var input = Input(subjectId, topicId) with
+        {
+            RubricId = rubric.Id,
+            SelectedQuestionIds = poolIds
+        };
+        var result = await service.CreateAsync(input, Lecturer);
+        var exam = (await service.GetAsync(result.ExamId, Lecturer))!;
+
+        Assert.Equal(rubric.Id, exam.RubricId);
+        Assert.Equal(poolIds.Order(), exam.SelectedQuestionIds!.Order());
+        Assert.All(exam.Candidates, candidate =>
+            Assert.All(candidate.Questions, question => Assert.Contains(question.QuestionId!.Value, poolIds)));
+
+        var candidate = exam.Candidates[0];
+        var replacementId = poolIds.Except(candidate.Questions.Select(question => question.QuestionId!.Value)).Single();
+        await service.UpdateCandidateQuestionAsync(exam.Id, candidate.Order, questionOrder: 1, replacementId, Lecturer);
+
+        var updated = (await service.GetAsync(exam.Id, Lecturer))!.Candidates[0].Questions[0];
+        Assert.Equal(replacementId, updated.QuestionId);
+        Assert.Equal(db.Questions.Single(question => question.Id == replacementId).Content, updated.Content);
+    }
+
+    [Fact]
+    public async Task CandidateQuestionCanOnlyBeChangedToAQuestionInTheSelectedPool()
+    {
+        var (service, _, clock, subjectId, topicId, _) = Build(questions: 8);
+        var poolIds = Enumerable.Range(1, 4).ToList();
+        var result = await service.CreateAsync(Input(subjectId, topicId) with
+        {
+            SelectedQuestionIds = poolIds
+        }, Lecturer);
+        var examId = result.ExamId;
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateCandidateQuestionAsync(examId, candidateOrder: 1, questionOrder: 1, questionId: 8, Lecturer));
+
+        clock.Current = Now.AddDays(1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateCandidateQuestionAsync(examId, candidateOrder: 1, questionOrder: 1, questionId: poolIds[0], Lecturer));
+    }
+
+    [Fact]
     public async Task CandidateEmailsAreNormalisedAndInvalidOnesAreListed()
     {
         var (service, _, _, subjectId, _, _) = Build();
