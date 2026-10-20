@@ -4,10 +4,10 @@
 
 | Project | Vai trò | Thành phần |
 |---|---|---|
-| `AIVES.WebMVC` | Presentation / GUI | Controllers, Razor Views, ViewModels, wwwroot, HTTP pipeline, MVC/cookie/Google OAuth configuration |
-| `AIVES.BLL` | Business Logic / BLL | QuestionService, RubricService, BloomLevelService, AccountService, EmailVerificationService, Gemini và SMTP services |
+| `AIVES.WebMVC` | Presentation / GUI | Controllers, Razor Views, ViewModels, wwwroot, HTTP pipeline, MVC/cookie/Google OAuth; Hub và Realtime là hai thành phần đề xuất cùng thuộc Presentation |
+| `AIVES.BLL` | Business Logic / BLL | Question/Bloom, Rubric, Catalog, Exam, Interview, Account/UserAdmin, EmailVerification, AI generators và Diagnostics |
 | `AIVES.DAL` | Data Access / DAL | Repositories, IdentityAccountStore, ApplicationDbContext, Entities, Migrations, database initialization |
-| `AIVES.DTO` | Dữ liệu trao đổi, không phải lớp xử lý thứ tư | QuestionDto, RubricDto, BloomLevelDto, EmailVerificationCodeDto, UserDto, RegisterRequest, AccountResult, ExternalLoginDto, GeneratedVivaQuestion |
+| `AIVES.DTO` | Dữ liệu trao đổi, không phải lớp xử lý thứ tư | Question/Bloom/Rubric, CatalogDtos, ExamDtos, InterviewDtos, AccountDtos, GeneratedVivaQuestion, GeneratedRubric, localization |
 | `AIVES.Tests` | Kiểm thử | Ranh giới assembly, CRUD, validation, OTP, tài khoản và SQL Server integration |
 
 ```mermaid
@@ -22,6 +22,23 @@ flowchart TB
     DTO -.-> BLL
     DTO -.-> DAL
 ```
+
+## Đối chiếu source ngày 20/10/2026 và thiết kế SignalR
+
+Checkout hiện tại chưa có lớp kế thừa `Hub`, `IHubContext`, thư mục `Hubs`/`Realtime`, hay lời gọi `AddSignalR`/`MapHub`. `Program.cs` hiện ánh xạ MVC, static assets và `/health`; `PresentationDependencyInjection.cs` đăng ký MVC, cookie, OAuth và authorization. `wwwroot/js/interview.js` đang trao đổi với controller qua HTTP và sử dụng Web Speech cho STT/TTS.
+
+Theo yêu cầu, sơ đồ PNG/SVG/draw.io bổ sung **hai khối riêng cùng nằm trong Presentation**:
+
+| Thành phần đề xuất | Vị trí | Trách nhiệm |
+|---|---|---|
+| Hub | `AIVES.WebMVC/Hubs/` | Endpoint SignalR: nhận lời gọi client, quản lý kết nối/nhóm, gọi service BLL qua DTO khi cần xử lý nghiệp vụ |
+| Realtime | `AIVES.WebMVC/Realtime/` | Adapter gửi sự kiện tới client thông qua `IHubContext<THub>`; không chứa nghiệp vụ hoặc truy vấn database |
+
+`Hubs/` và `Realtime/` là hai nhóm trách nhiệm trong cùng một tầng, không phải hai tầng bổ sung. Đây là vị trí thiết kế, chưa phải tên lớp đã tồn tại. Nghiệp vụ tiếp tục thuộc BLL; lưu trữ thuộc DAL. Nếu BLL cần phát thông báo, có thể khai báo abstraction thông báo ở BLL và cài đặt adapter tại Presentation qua DI, tránh cho BLL phụ thuộc vào Hub của WebMVC. Cơ chế này cũng chưa được triển khai trong checkout hiện tại.
+
+Trong ảnh, viền đứt màu xanh phân biệt hai khối đề xuất với các thành phần đã có. Mũi tên Realtime → Hub biểu thị luồng gửi qua hạ tầng SignalR / `IHubContext`, không biểu thị việc tự tạo Hub hay gọi trực tiếp instance Hub. Mermaid phía trên chỉ tóm tắt các tầng hiện có; sơ đồ chi tiết bên dưới bao gồm phần SignalR đề xuất.
+
+Lần cập nhật này chỉ sửa sơ đồ, tài liệu và script xuất ảnh; không bổ sung SignalR vào ứng dụng.
 
 ## Sơ đồ hệ thống
 
@@ -68,7 +85,7 @@ SQL integration test chỉ chạy khi có biến môi trường `AIVES_TEST_SQL_
 
 ## EF Core migrations
 
-Entities, DbContext và toàn bộ migration nằm trong DAL. Giữ nguyên ba migration ID và cấu trúc bảng; chỉ chuyển namespace/assembly. `ApplicationDbContextFactory` cho phép tooling đọc model mà không chạy web startup hay seed dữ liệu.
+Entities, DbContext và toàn bộ migration nằm trong DAL. Checkout được đối chiếu có 10 migration, từ `20260929175943_InitialSqlServer` đến `20261003112619_AddInterviews`. `ApplicationDbContextFactory` cho phép tooling đọc model mà không chạy web startup hay seed dữ liệu.
 
 ```powershell
 dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebMVC
@@ -78,11 +95,9 @@ dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebMVC
 
 Không cần tạo migration riêng cho việc tách layer. Ứng dụng tiếp tục tự áp dụng migration khi khởi động như trước.
 
-## Sơ đồ
+## Xuất lại sơ đồ
 
-![AIVES 3 Layer](AIVES-3-Layer-Architecture.png)
-
-File `AIVES-3-Layer-Architecture.drawio` là bản có thể chỉnh sửa.
+Chạy `python scripts/render_architecture.py` từ thư mục gốc (cần Pillow và font Segoe UI trên Windows). Script sinh đồng thời PNG 2400 × 1770, SVG và draw.io, kiểm tra độ rộng nội dung trong khối và parse XML của hai định dạng chỉnh sửa. Bản draw.io giữ khối, nhãn và đường nối dưới dạng đối tượng chỉnh sửa được.
 
 ## Kiểm tra lại theo yêu cầu ngày 01/10/2026
 

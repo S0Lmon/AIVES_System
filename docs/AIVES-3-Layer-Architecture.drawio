@@ -1,144 +1,543 @@
 <?xml version='1.0' encoding='utf-8'?>
 <mxfile host="app.diagrams.net">
-  <diagram name="AIVES – 3 Layer + DTO" id="aives">
-    <mxGraphModel page="1" pageWidth="2400" pageHeight="1580" background="#111111">
+  <diagram name="AIVES Architecture" id="aives-architecture">
+    <mxGraphModel page="1" pageWidth="2400" pageHeight="1770" background="#101318">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="2" value="AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP" style="text;fontColor=#c5ccdb;fontSize=42;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="300" y="15" width="1800" height="85" />
+        <mxCell id="2" value="AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=42;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="816.5" y="24" width="767" height="54" as="geometry" />
         </mxCell>
-        <mxCell id="3" value="" style="rounded=1;fillColor=#14191f;strokeColor=#558dff;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="140" width="1580" height="300" />
+        <mxCell id="3" value="ASP.NET Core MVC / .NET 10 · Đối chiếu source ngày 20/10/2026" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="857.5" y="86" width="685" height="35" as="geometry" />
         </mxCell>
-        <mxCell id="4" value="1. PRESENTATION LAYER – AIVES.WebMVC" style="text;html=1;fontColor=#558dff;fontSize=28;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="140" width="1580" height="65" />
+        <mxCell id="4" value="Khối viền liền: đã có trong code · Khối viền đứt màu xanh: SignalR bổ sung theo yêu cầu" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=21;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="775.5" y="122" width="849" height="33" as="geometry" />
         </mxCell>
-        <mxCell id="5" value="&lt;b&gt;Razor Views&lt;/b&gt;&lt;br/&gt;Home · Account · Question&lt;br/&gt;AiExamRoom / QuestionGenerator" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="425" y="245" width="460" height="150" />
+        <mxCell id="5" value="" style="rounded=1;arcSize=8;fillColor=#111e34;strokeColor=#689bff;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="360" y="185" width="1600" height="420" as="geometry" />
         </mxCell>
-        <mxCell id="6" value="&lt;b&gt;Controllers&lt;/b&gt;&lt;br/&gt;Home · Account&lt;br/&gt;Question · AiExamRoom" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="940" y="245" width="460" height="150" />
+        <mxCell id="6" value="1. PRESENTATION LAYER – AIVES.WebMVC" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=29;fontColor=#689bff;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="850.0" y="200" width="620" height="41" as="geometry" />
         </mxCell>
-        <mxCell id="7" value="&lt;b&gt;ViewModels / HTTP&lt;/b&gt;&lt;br/&gt;Account · Question · Rubric · AI&lt;br/&gt;MVC · cookie · Google OAuth" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#558dff;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1455" y="245" width="460" height="150" />
+        <mxCell id="7" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#689bff;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="390" y="250" width="490" height="150" as="geometry" />
         </mxCell>
-        <mxCell id="8" value="&lt;b&gt;Giảng viên / Người dùng&lt;/b&gt;&lt;br/&gt;Trình duyệt web" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#242a34;strokeColor=#c6cedf;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="35" y="230" width="285" height="110" />
+        <mxCell id="8" value="Razor Views" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="554.5" y="263" width="161" height="35" as="geometry" />
         </mxCell>
-        <mxCell id="9" value="HTTP" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="320" y="285" />
-            <mxPoint as="targetPoint" x="380" y="285" />
-            <Array as="points" />
+        <mxCell id="9" value="Home · Account · Admin · Catalog" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="472.5" y="301" width="325" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="Question · Rubric · Exam · MyExams" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="466.5" y="331" width="337" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="Interview · Profile · Shared layout" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="476.5" y="361" width="317" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#689bff;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="915" y="250" width="490" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="Controllers" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1084.5" y="263" width="151" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="Account · Admin · AiExamRoom · Catalog" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="965.5" y="301" width="389" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="Exam · Home · Interview · MyExams" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="992.5" y="331" width="335" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="Profile · Question · Rubric" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1034.5" y="361" width="251" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#689bff;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1440" y="250" width="490" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="ViewModels / Client JS" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1546.5" y="263" width="277" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="19" value="Models/ViewModels · wwwroot/js" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1522.0" y="301" width="326" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="20" value="interview.js: Web Speech STT / TTS" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1519.5" y="331" width="331" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="MVC · cookie · Google OAuth · policy" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1508.0" y="361" width="354" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="" style="rounded=1;arcSize=8;fillColor=#141c2a;strokeColor=#689bff;strokeWidth=2;dashed=1;" parent="1" vertex="1">
+          <mxGeometry x="540" y="430" width="575" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="Hub · SignalR endpoint" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="686.5" y="443" width="282" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="Nhận lời gọi / quản lý kết nối, nhóm" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="654.0" y="481" width="347" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="Gọi BLL qua service + DTO" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="696.5" y="511" width="262" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="Đề xuất: Hubs/" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="747.5" y="541" width="160" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="" style="rounded=1;arcSize=8;fillColor=#141c2a;strokeColor=#689bff;strokeWidth=2;dashed=1;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="430" width="575" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="28" value="Realtime · SignalR adapter" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1380.0" y="443" width="315" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="29" value="IHubContext&lt;Hub&gt; → đẩy sự kiện tới client" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1331.0" y="481" width="413" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="Điều phối gửi cập nhật qua Hub" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1382.0" y="511" width="311" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="Đề xuất: Realtime/" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1442.0" y="541" width="191" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="" style="endArrow=block;endFill=1;strokeColor=#689bff;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1250" y="498" as="sourcePoint" />
+            <mxPoint x="1115" y="498" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="10" value="&lt;b&gt;Google OAuth&lt;/b&gt;&lt;br/&gt;/signin-google" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#271f30;strokeColor=#a97fcb;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="2040" y="235" width="315" height="115" />
+        <mxCell id="33" value="push" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=18;fontColor=#689bff;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1146.5" y="459" width="71" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="11" value="OAuth 2.0" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1960" y="292" />
-            <mxPoint as="targetPoint" x="2040" y="292" />
-            <Array as="points" />
+        <mxCell id="34" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="25" y="260" width="285" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="Người dùng" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="86.5" y="273" width="162" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="36" value="Giảng viên · Sinh viên · Admin" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="22.5" y="311" width="290" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="37" value="Trình duyệt Chrome / Edge" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="34.0" y="341" width="267" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="38" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="310" y="315" as="sourcePoint" />
+            <mxPoint x="360" y="315" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="12" value="" style="rounded=1;fillColor=#121b16;strokeColor=#4eaa87;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="515" width="1580" height="330" />
-        </mxCell>
-        <mxCell id="13" value="2. BUSINESS LOGIC LAYER – AIVES.BLL" style="text;html=1;fontColor=#4eaa87;fontSize=28;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="515" width="1580" height="65" />
-        </mxCell>
-        <mxCell id="14" value="&lt;b&gt;QuestionService&lt;/b&gt;&lt;br/&gt;BloomLevelService&lt;br/&gt;Validation / lọc / CRUD" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#4eaa87;fontColor=#eeeeef;fontSize=21;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="410" y="625" width="285" height="165" />
-        </mxCell>
-        <mxCell id="15" value="&lt;b&gt;RubricService&lt;/b&gt;&lt;br/&gt;Validation rubric&lt;br/&gt;Tên / mô tả / tổng điểm" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#4eaa87;fontColor=#eeeeef;fontSize=21;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="715" y="625" width="285" height="165" />
-        </mxCell>
-        <mxCell id="16" value="&lt;b&gt;AccountService&lt;/b&gt;&lt;br/&gt;Đăng ký / xác minh&lt;br/&gt;Liên kết Google / chính sách" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#4eaa87;fontColor=#eeeeef;fontSize=20;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1020" y="625" width="285" height="165" />
-        </mxCell>
-        <mxCell id="17" value="&lt;b&gt;GeminiQuestionGenerator&lt;/b&gt;&lt;br/&gt;1–10 câu hỏi / Bloom&lt;br/&gt;Đáp án / 2 câu đào sâu" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#4eaa87;fontColor=#eeeeef;fontSize=20;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1325" y="625" width="285" height="165" />
-        </mxCell>
-        <mxCell id="18" value="&lt;b&gt;Email services&lt;/b&gt;&lt;br/&gt;EmailVerificationService&lt;br/&gt;GmailSmtpEmailSender" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#4eaa87;fontColor=#eeeeef;fontSize=20;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1630" y="625" width="300" height="165" />
-        </mxCell>
-        <mxCell id="19" value="Gọi service BLL · DTO" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1170" y="440" />
-            <mxPoint as="targetPoint" x="1170" y="515" />
-            <Array as="points" />
+        <mxCell id="39" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="360" y="350" as="sourcePoint" />
+            <mxPoint x="310" y="350" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="20" value="&lt;b&gt;Google Gemini API&lt;/b&gt;&lt;br/&gt;HTTPS / JSON" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#271f30;strokeColor=#a97fcb;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="2040" y="590" width="315" height="115" />
+        <mxCell id="40" value="HTTP/HTML/JSON: đã có" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=18;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="53.5" y="430" width="229" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="21" value="HTTPS / JSON" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1467" y="625" />
-            <mxPoint as="targetPoint" x="2040" y="647" />
-            <Array>
-              <mxPoint x="1467" y="590" />
-              <mxPoint x="1980" y="590" />
-              <mxPoint x="1980" y="647" />
-            </Array>
+        <mxCell id="41" value="SignalR client: đề xuất" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=18;fontColor=#689bff;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="66.0" y="459" width="204" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="2010" y="260" width="365" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="43" value="Google OAuth" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="2100.0" y="273" width="185" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="44" value="/signin-google" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2111.0" y="311" width="163" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="45" value="OAuth 2.0" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2132.5" y="341" width="120" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="46" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1960" y="310" as="sourcePoint" />
+            <mxPoint x="2010" y="310" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="22" value="&lt;b&gt;Gmail SMTP&lt;/b&gt;&lt;br/&gt;STARTTLS / port 587" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#271f30;strokeColor=#a97fcb;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="2040" y="755" width="315" height="115" />
-        </mxCell>
-        <mxCell id="23" value="SMTP" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1930" y="755" />
-            <mxPoint as="targetPoint" x="2040" y="812" />
-            <Array as="points">
-              <mxPoint x="1995" y="755" />
-              <mxPoint x="1995" y="812" />
-            </Array>
+        <mxCell id="47" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="2010" y="345" as="sourcePoint" />
+            <mxPoint x="1960" y="345" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="24" value="&lt;b&gt;AIVES.DTO&lt;/b&gt;&lt;br/&gt;QuestionDto · RubricDto&lt;br/&gt;BloomLevelDto · UserDto&lt;br/&gt;EmailVerificationCodeDto&lt;br/&gt;RegisterRequest / AccountResult&lt;br/&gt;ExternalLogin / SignInResult&lt;br/&gt;GeneratedVivaQuestion" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#211b29;strokeColor=#ad88d3;fontColor=#eeeeef;fontSize=19;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="30" y="535" width="300" height="285" />
-        </mxCell>
-        <mxCell id="25" value="DTO" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=none;dashed=1;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="330" y="675" />
-            <mxPoint as="targetPoint" x="380" y="675" />
-            <Array as="points" />
+        <mxCell id="48" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1125" y="605" as="sourcePoint" />
+            <mxPoint x="1125" y="705" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="26" value="" style="rounded=1;fillColor=#1b160e;strokeColor=#bf811f;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="925" width="1580" height="315" />
-        </mxCell>
-        <mxCell id="27" value="3. DATA ACCESS LAYER – AIVES.DAL" style="text;html=1;fontColor=#bf811f;fontSize=28;fontStyle=1;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="380" y="925" width="1580" height="65" />
-        </mxCell>
-        <mxCell id="28" value="&lt;b&gt;Repositories / interfaces&lt;/b&gt;&lt;br/&gt;Question · Rubric · BloomLevel&lt;br/&gt;EmailVerification · DTO mapping" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#bf811f;fontColor=#eeeeef;fontSize=22;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="425" y="1025" width="460" height="175" />
-        </mxCell>
-        <mxCell id="29" value="&lt;b&gt;IdentityAccountStore / DbContext&lt;/b&gt;&lt;br/&gt;ApplicationDbContext&lt;br/&gt;EF Core · ASP.NET Core Identity" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#bf811f;fontColor=#eeeeef;fontSize=21;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="940" y="1025" width="460" height="175" />
-        </mxCell>
-        <mxCell id="30" value="&lt;b&gt;Entities / Migrations&lt;/b&gt;&lt;br/&gt;Question · Rubric · RubricCriterion&lt;br/&gt;BloomLevel · ApplicationUser · OTP" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#111111;strokeColor=#bf811f;fontColor=#eeeeef;fontSize=20;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1455" y="1025" width="460" height="175" />
-        </mxCell>
-        <mxCell id="31" value="Repository / AccountStore · DTO" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1170" y="845" />
-            <mxPoint as="targetPoint" x="1170" y="925" />
-            <Array as="points" />
+        <mxCell id="49" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1195" y="705" as="sourcePoint" />
+            <mxPoint x="1195" y="605" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="32" value="&lt;b&gt;SQL Server 2022&lt;/b&gt;&lt;br/&gt;Docker volume: aives-sql-data&lt;br/&gt;LocalDB khi phát triển Windows" style="rounded=1;arcSize=12;html=1;whiteSpace=wrap;fillColor=#271f30;strokeColor=#ad88d3;fontColor=#eeeeef;fontSize=23;align=center;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="940" y="1320" width="460" height="120" />
+        <mxCell id="50" value="Request: service BLL + DTO" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="726.5" y="641.0" width="267" height="32" as="geometry" />
         </mxCell>
-        <mxCell id="33" value="EF Core / SQL" style="edgeStyle=none;html=1;strokeColor=#eeeeef;fontColor=#eeeeef;fontSize=20;endArrow=block;startArrow=block;dashed=0;" edge="1" parent="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1170" y="1240" />
-            <mxPoint as="targetPoint" x="1170" y="1320" />
-            <Array as="points" />
+        <mxCell id="51" value="Response: DTO → ViewModel" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1346.0" y="641.0" width="288" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="" style="rounded=1;arcSize=8;fillColor=#10231e;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="360" y="705" width="1600" height="395" as="geometry" />
+        </mxCell>
+        <mxCell id="53" value="2. BUSINESS LOGIC LAYER – AIVES.BLL" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=29;fontColor=#48c59b;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="882.5" y="720" width="555" height="41" as="geometry" />
+        </mxCell>
+        <mxCell id="54" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="390" y="775" width="365" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="55" value="Question / Bloom" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="461.5" y="788" width="222" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="56" value="QuestionService · BloomLevelService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="397.0" y="826" width="351" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="57" value="Validation · taxonomy · lọc · CRUD" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="408.0" y="856" width="329" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="58" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="780" y="775" width="365" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="59" value="RubricService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="873.0" y="788" width="179" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="60" value="Tiêu chí · thang điểm · ma trận" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="816.0" y="826" width="293" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="61" value="Validation · tổng điểm · CRUD" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="816.5" y="856" width="292" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="62" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="775" width="365" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="63" value="CatalogService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1257.0" y="788" width="191" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="64" value="Môn học · chủ đề · tài liệu" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1225.5" y="826" width="254" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="65" value="Import tài liệu · kiểm tra ràng buộc" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1185.5" y="856" width="334" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="66" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1560" y="775" width="370" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="67" value="ExamService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1661.5" y="788" width="167" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="68" value="Tạo kỳ thi · lịch / slot" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1639.5" y="826" width="211" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="69" value="ExamQuestionAllocator" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1626.5" y="856" width="237" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="70" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="390" y="940" width="365" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="71" value="InterviewService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="468.0" y="953" width="209" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="72" value="Phiên vấn đáp · lượt hỏi / đáp" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="427.5" y="991" width="290" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="73" value="Follow-up AI · timeout · giới hạn" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="416.5" y="1021" width="312" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="74" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="780" y="940" width="365" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="75" value="AI generators" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="874.5" y="953" width="176" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="76" value="Gemini · Ollama (tùy chọn)" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="831.0" y="991" width="263" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="77" value="Question / Rubric Router · Retry" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="807.5" y="1021" width="310" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="78" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="940" width="365" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="79" value="Account services" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1247.0" y="953" width="211" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="80" value="AccountService · UserAdminService" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1182.5" y="991" width="340" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="81" value="Đăng ký · xác minh · phân quyền" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1196.5" y="1021" width="312" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="82" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#48c59b;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1560" y="940" width="370" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="83" value="Email / Diagnostics" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1626.0" y="953" width="238" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="84" value="EmailVerification · Gmail SMTP" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1596.0" y="991" width="298" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="85" value="SystemCheckService · /health" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1602.0" y="1021" width="286" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="86" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="25" y="760" width="285" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="87" value="AIVES.DTO" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="93.5" y="773" width="148" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="88" value="Question · Bloom · Rubric" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="41.5" y="811" width="252" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="89" value="RubricCriterion / Level" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="54.5" y="841" width="226" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="90" value="CatalogDtos · ExamDtos" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="46.5" y="871" width="242" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="91" value="InterviewDtos · AccountDtos" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="27.5" y="901" width="280" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="92" value="GeneratedQuestion / Rubric" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="29.5" y="931" width="276" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="93" value="AppRoles · L10n" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="81.5" y="961" width="172" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="94" value="AppLanguage" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="90.5" y="991" width="154" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="95" value="DTO dùng chung Web / BLL / DAL" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=17;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="20.5" y="1078" width="295" height="29" as="geometry" />
+        </mxCell>
+        <mxCell id="96" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="310" y="900" as="sourcePoint" />
+            <mxPoint x="360" y="900" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="97" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="2010" y="760" width="365" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="98" value="Google Gemini API" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="2075.0" y="773" width="235" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="99" value="Sinh câu hỏi · rubric · hỏi xoáy" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2047.0" y="811" width="291" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="100" value="HTTPS / JSON" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2115.5" y="841" width="154" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="101" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="2010" y="920" width="365" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="102" value="Ollama (tùy chọn)" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="2080.5" y="933" width="224" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="103" value="Model cục bộ · HTTP / JSON" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2054.0" y="971" width="277" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="104" value="Bật bằng OLLAMA_ENABLED" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2051.5" y="1001" width="282" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="105" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1960" y="800" as="sourcePoint" />
+            <mxPoint x="2010" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="106" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="2010" y="830" as="sourcePoint" />
+            <mxPoint x="1960" y="830" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="107" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1960" y="960" as="sourcePoint" />
+            <mxPoint x="2010" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="108" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="2010" y="990" as="sourcePoint" />
+            <mxPoint x="1960" y="990" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="109" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="2010" y="1100" width="365" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="110" value="Gmail SMTP" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="2111.0" y="1113" width="163" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="111" value="STARTTLS / port 587" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2086.5" y="1151" width="212" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="112" value="Gửi mã xác minh email" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="2078.0" y="1181" width="229" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="113" value="" style="endArrow=none;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1960" y="1070" as="sourcePoint" />
+            <mxPoint x="1990" y="1070" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="114" value="" style="endArrow=none;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1990" y="1070" as="sourcePoint" />
+            <mxPoint x="1990" y="1140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="115" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1990" y="1140" as="sourcePoint" />
+            <mxPoint x="2010" y="1140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="116" value="" style="endArrow=none;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="2010" y="1180" as="sourcePoint" />
+            <mxPoint x="1980" y="1180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="117" value="" style="endArrow=none;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1980" y="1180" as="sourcePoint" />
+            <mxPoint x="1980" y="1088" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="118" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1980" y="1088" as="sourcePoint" />
+            <mxPoint x="1960" y="1088" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="119" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1125" y="1100" as="sourcePoint" />
+            <mxPoint x="1125" y="1200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="120" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1195" y="1200" as="sourcePoint" />
+            <mxPoint x="1195" y="1100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="121" value="Request: Repository / AccountStore + DTO" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="657.0" y="1136.0" width="406" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="122" value="Response: DTO / kết quả" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1367.0" y="1136.0" width="246" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="123" value="" style="rounded=1;arcSize=8;fillColor=#241e10;strokeColor=#edb340;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="360" y="1200" width="1600" height="265" as="geometry" />
+        </mxCell>
+        <mxCell id="124" value="3. DATA ACCESS LAYER – AIVES.DAL" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=29;fontColor=#edb340;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="898.5" y="1215" width="523" height="41" as="geometry" />
+        </mxCell>
+        <mxCell id="125" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#edb340;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="390" y="1270" width="490" height="165" as="geometry" />
+        </mxCell>
+        <mxCell id="126" value="Repositories / interfaces" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="489.0" y="1283" width="292" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="127" value="Question · Rubric · BloomLevel" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="487.0" y="1321" width="296" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="128" value="Subject · Topic · Material · Exam" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="482.5" y="1351" width="305" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="129" value="Interview · EmailVerification · Diagnostics" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="442.0" y="1381" width="386" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="130" value="DtoMapping: Entity ↔ DTO" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="500.0" y="1411" width="270" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="131" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#edb340;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="915" y="1270" width="490" height="165" as="geometry" />
+        </mxCell>
+        <mxCell id="132" value="Identity / DbContext" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1033.0" y="1283" width="254" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="133" value="IdentityAccountStore · ApplicationDbContext" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="946.5" y="1321" width="427" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="134" value="EF Core · ASP.NET Core Identity" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1008.0" y="1351" width="304" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="135" value="DataProtection keys · AdminRoleSeeder" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="971.0" y="1381" width="378" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="136" value="DevelopmentDataSeeder · migrations" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="980.5" y="1411" width="359" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="137" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#edb340;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="1440" y="1270" width="490" height="165" as="geometry" />
+        </mxCell>
+        <mxCell id="138" value="Entities / Migrations" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1559.0" y="1283" width="252" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="139" value="Question · Rubric · Criterion / Level / Matrix" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1481.5" y="1321" width="407" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="140" value="Subject · Topic · Material · BloomLevel" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1505.0" y="1351" width="360" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="141" value="Exam · Candidate / Question · Attempt / Turn" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1474.0" y="1381" width="422" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="142" value="ApplicationUser · EmailVerificationCode" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1496.0" y="1411" width="378" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="143" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1125" y="1465" as="sourcePoint" />
+            <mxPoint x="1125" y="1565" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="144" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="1195" y="1565" as="sourcePoint" />
+            <mxPoint x="1195" y="1465" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="145" value="Request: EF Core / SQL" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="745.0" y="1501.0" width="230" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="146" value="Response: kết quả truy vấn" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="1357.5" y="1501.0" width="265" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="147" value="" style="rounded=1;arcSize=8;fillColor=#101318;strokeColor=#b58cfa;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="915" y="1565" width="490" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="148" value="SQL Server 2022" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=23;fontColor=#edf1f7;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1057.0" y="1578" width="206" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="149" value="Docker: aives-sql-data · Windows: LocalDB" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="959.5" y="1616" width="401" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="150" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=0;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="30" y="1575" as="sourcePoint" />
+            <mxPoint x="120" y="1575" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="151" value="Request" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="159.0" y="1558" width="102" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="152" value="" style="endArrow=block;endFill=1;strokeColor=#edf1f7;strokeWidth=2;dashed=1;" parent="1" edge="1">
+          <mxGeometry x="0" y="0" width="0" height="0" as="geometry" relative="1">
+            <mxPoint x="30" y="1620" as="sourcePoint" />
+            <mxPoint x="120" y="1620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="153" value="Response / sự kiện" style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#b4bece;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="113.0" y="1603" width="194" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="154" value="Hub và Realtime thuộc Presentation; nghiệp vụ thuộc BLL; DAL là tầng duy nhất truy cập database." style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=22;fontColor=#edf1f7;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="712.0" y="1698" width="976" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="155" value="SignalR là thiết kế bổ sung: checkout hiện tại chưa có Hub, Realtime, AddSignalR hoặc MapHub." style="text;html=0;align=center;verticalAlign=top;whiteSpace=wrap;overflow=hidden;fontFamily=Segoe UI;fontSize=20;fontColor=#689bff;fontStyle=0;" parent="1" vertex="1">
+          <mxGeometry x="767.0" y="1734" width="866" height="32" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
