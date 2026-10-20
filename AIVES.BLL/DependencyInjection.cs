@@ -85,9 +85,9 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(150);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
         services.AddHostedService<GradingWorker>();
-        // Role changes bump the security stamp; re-check it every minute so a demoted lecturer
-        // loses access promptly instead of after the 30 minute default.
-        services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(1));
+        // Check every authenticated HTTP request so disabling an account also invalidates open
+        // sessions immediately; role changes use the same security stamp mechanism.
+        services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IRubricService, RubricService>();
         services.AddScoped<ISystemCheckService, SystemCheckService>();

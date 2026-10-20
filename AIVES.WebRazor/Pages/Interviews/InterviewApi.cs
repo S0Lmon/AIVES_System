@@ -74,6 +74,7 @@ public sealed class InterviewApiModel(
             return new JsonResult(await action(), JsonOptions);
         }
         catch (KeyNotFoundException) { return NotFound(); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
         catch (InvalidOperationException ex) { return StatusCode(StatusCodes.Status409Conflict, new { error = ex.Message }); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

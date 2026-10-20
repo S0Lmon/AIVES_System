@@ -254,4 +254,108 @@ public sealed class InterviewServiceTests
         Assert.Empty(h.Ai.Requests);
         Assert.Equal(FollowUpReason.AiUnavailable, h.Db.ExamTurns.Single().Decision);
     }
+
+    [Fact]
+    public async Task PollingAfterAnAnswerDeadlineClosesTheTurnAndMovesOn()
+    {
+        var h = Build();
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        h.Clock.Current = Now.AddSeconds(76);
+        var state = await h.Service.GetStateAsync(h.CandidateId, Email);
+        Assert.Equal(2, state.CurrentTurn!.MainIndex);
+        var expired = h.Db.ExamTurns.Single(turn => turn.Id == first.CurrentTurn!.TurnId);
+        Assert.True(expired.TimedOut);
+        Assert.Equal(string.Empty, expired.Answer);
+        Assert.Empty(h.Ai.Requests);
+        Assert.Equal(state.CurrentTurn.TurnId, (await h.Service.GetStateAsync(h.CandidateId, Email)).CurrentTurn!.TurnId);
+    }
+
+    [Fact]
+    public async Task RecoveringAfterTheSlotEndsPreservesTheAnswerAndFinishes()
+    {
+        var h = Build();
+        await h.Service.StartAsync(h.CandidateId, Email);
+        var turn = h.Db.ExamTurns.Single();
+        turn.Answer = "Already submitted";
+        turn.AnsweredAtUtc = Now;
+        await h.Db.SaveChangesAsync();
+        h.Clock.Current = Now.AddMinutes(30);
+        var state = await h.Service.GetStateAsync(h.CandidateId, Email);
+        Assert.Equal(InterviewStatus.Completed, state.Status);
+        Assert.Null(state.CurrentTurn);
+        Assert.Equal("Already submitted", turn.Answer);
+        Assert.Single(h.Db.ExamTurns);
+        Assert.Contains(h.Db.AuditEntries, entry => entry.Action == AuditActions.InterviewCompleted);
+    }
+
+    [Fact]
+    public async Task AiReturningAfterTheSlotEndsCannotAskAFollowUp()
+    {
+        var h = Build();
+        h.Ai.Script.Enqueue(_ =>
+        {
+            h.Clock.Current = Now.AddMinutes(30);
+            return Task.FromResult(new FollowUpDecision(true, FollowUpReason.Missing, "Too late?"));
+        });
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        var state = await Answer(h, first, "An answer");
+        Assert.Equal(InterviewStatus.Completed, state.Status);
+        Assert.Null(state.CurrentTurn);
+        Assert.Single(h.Db.ExamTurns);
+        Assert.Equal("An answer", h.Db.ExamTurns.Single().Answer);
+    }
+
+    [Fact]
+    public async Task TheNextAnswerTimerStartsWhenTheAiFinishes()
+    {
+        var h = Build();
+        h.Ai.Script.Enqueue(_ =>
+        {
+            h.Clock.Current = Now.AddSeconds(10);
+            return Task.FromResult(new FollowUpDecision(false, FollowUpReason.Sufficient, null));
+        });
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        var state = await Answer(h, first, "An answer");
+        Assert.Equal(Now.AddSeconds(10), state.CurrentTurn!.AskedAtUtc);
+    }
+
+    [Fact]
+    public async Task AnAnswerSubmittedAfterTheSlotGraceCannotBeAdded()
+    {
+        var h = Build();
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        h.Clock.Current = Now.AddMinutes(30);
+        var state = await Answer(h, first, "Submitted after the slot closed");
+        Assert.Equal(InterviewStatus.Completed, state.Status);
+        Assert.Equal(string.Empty, h.Db.ExamTurns.Single().Answer);
+        Assert.Empty(h.Ai.Requests);
+    }
+
+    [Fact]
+    public async Task InvalidAnswerModesCannotBeStored()
+    {
+        var h = Build();
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        await Assert.ThrowsAsync<ArgumentException>(() => Answer(h, first, "x", (AnswerInputMode)99));
+        Assert.Null(h.Db.ExamTurns.Single().AnsweredAtUtc);
+    }
+
+    [Fact]
+    public async Task AProviderIgnoringCancellationStillCannotStallTheViva()
+    {
+        var h = Build(questions: 1, aiTimeoutSeconds: 1);
+        var pending = new TaskCompletionSource<FollowUpDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Ai.Script.Enqueue(_ => pending.Task);
+        var first = await h.Service.StartAsync(h.CandidateId, Email);
+        try
+        {
+            var state = await Answer(h, first, "An answer").WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(InterviewStatus.Completed, state.Status);
+            Assert.Equal(FollowUpReason.AiUnavailable, h.Db.ExamTurns.Single().Decision);
+        }
+        finally
+        {
+            pending.TrySetResult(new FollowUpDecision(false, FollowUpReason.Sufficient, null));
+        }
+    }
 }

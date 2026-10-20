@@ -71,6 +71,8 @@ public sealed class RecordingService(
 
         var turn = await recordings.GetTurnAsync(candidateId, turnId, cancellationToken)
             ?? throw new KeyNotFoundException(L10n.T("This exam slot was not found."));
+        if (!turn.Answered)
+            throw new InvalidOperationException(L10n.T("Submit the answer before uploading its recording."));
         // One recording per answer, uploaded once the answer has been submitted.
         if (turn.HasRecording)
             return;

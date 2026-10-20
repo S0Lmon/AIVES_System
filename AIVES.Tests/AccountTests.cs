@@ -44,6 +44,8 @@ public sealed class AccountTests
     [InlineData("user@gmail.com.example.org")]
     [InlineData("user@mail.fpt.edu.vn")]
     [InlineData("fpt.edu.vn")]
+    [InlineData("user@@gmail.com")]
+    [InlineData("Test <user@gmail.com>")]
     public async Task LookalikeDomainsAreRejected(string email)
     {
         var store = new FakeStore();
@@ -56,9 +58,9 @@ public sealed class AccountTests
     }
 
     [Fact]
-    public void AllowedDomainsAcceptACommaSeparatedValueAndDefaultToGmail()
+    public void AllowedDomainsAcceptACommaSeparatedValueAndDefaultToGmailAndFpt()
     {
-        Assert.Equal(["gmail.com"], Service(new(), new()).AllowedEmailDomains);
+        Assert.Equal(["gmail.com", "fpt.edu.vn"], Service(new(), new()).AllowedEmailDomains);
         Assert.Equal(["fpt.edu.vn", "gmail.com"], Service(new(), new(), new()
         {
             ["Registration:AllowedEmailDomains"] = " FPT.edu.vn ,@gmail.com,,fpt.edu.vn"

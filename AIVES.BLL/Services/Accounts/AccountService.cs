@@ -5,6 +5,7 @@ using AIVES.DTO.Localization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Mail;
 namespace AIVES.BLL.Services.Accounts;
 
 public sealed class AccountService(IAccountStore store, IEmailVerificationService verification,
@@ -78,6 +79,9 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
         var user = await store.FindByEmailAsync(email);
         if (user is null)
         {
+            if (!IsAllowedEmailDomain(email))
+                return AccountResult.Failure(L10n.Format("Please use an email address ending in {0}.",
+                    string.Join(", ", AllowedEmailDomains.Select(domain => "@" + domain))));
             var created = await store.CreateAsync(new(email, string.Empty, info.DisplayName ?? email.Split('@')[0]), confirmed: true);
             if (!created.Succeeded)
                 return created;
@@ -96,13 +100,14 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
     // "user@gmail.com.example.org" never pass for "gmail.com".
     private bool IsAllowedEmailDomain(string email)
     {
-        var at = email.LastIndexOf('@');
-        return at > 0 && AllowedEmailDomains.Contains(email[(at + 1)..], StringComparer.OrdinalIgnoreCase);
+        return MailAddress.TryCreate(email, out var address)
+            && string.Equals(address.Address, email, StringComparison.Ordinal)
+            && AllowedEmailDomains.Contains(address.Host, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
     /// Registration:AllowedEmailDomains as an array (appsettings, or env vars ending in __0, __1)
-    /// or one comma-separated value; falls back to gmail.com when nothing is configured.
+    /// or one comma-separated value; falls back to Gmail and FPT when nothing is configured.
     /// </summary>
     private static IReadOnlyList<string> ReadAllowedEmailDomains(IConfiguration configuration)
     {
@@ -113,6 +118,6 @@ public sealed class AccountService(IAccountStore store, IEmailVerificationServic
             .Where(domain => domain.Length > 0)
             .Distinct()
             .ToList();
-        return domains.Count > 0 ? domains : ["gmail.com"];
+        return domains.Count > 0 ? domains : ["gmail.com", "fpt.edu.vn"];
     }
 }

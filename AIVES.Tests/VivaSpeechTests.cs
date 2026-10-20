@@ -45,7 +45,7 @@ public sealed class LiveTranscriberTests
 
     private static float[] Silence(double seconds) => new float[(int)(seconds * Audio.SampleRate)];
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task PreviewIsRefreshedOnlyAfterEnoughNewAudio()
     {
         var speech = new FakeSpeechToText();
@@ -62,7 +62,7 @@ public sealed class LiveTranscriberTests
         Assert.All(speech.Calls, call => Assert.Equal("prompt", call.Prompt));
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task LongAnswersAreCommittedAtAPauseSoEachCallStaysShort()
     {
         var speech = new FakeSpeechToText();
@@ -80,7 +80,7 @@ public sealed class LiveTranscriberTests
         Assert.All(speech.Calls, call => Assert.True(call.Samples <= Options.MaxWindowSeconds * Audio.SampleRate));
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task FinishTranscribesTheRestWithTheFullModelAndJoinsTheWindows()
     {
         var speech = new FakeSpeechToText();
@@ -96,7 +96,7 @@ public sealed class LiveTranscriberTests
         Assert.Equal(final, transcriber.Text);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task SilenceProducesNoText()
     {
         var transcriber = new LiveTranscriber(new FakeSpeechToText(), Options, AppLanguage.Vi, null, 60);
@@ -105,7 +105,7 @@ public sealed class LiveTranscriberTests
         Assert.Equal(string.Empty, await transcriber.FinishAsync());
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void AudioPastTheTimeLimitIsIgnored()
     {
         var transcriber = new LiveTranscriber(new FakeSpeechToText(), Options, AppLanguage.Vi, null, maxSeconds: 2);
@@ -119,7 +119,7 @@ public sealed class LiveTranscriberTests
 
 public sealed class AudioTests
 {
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void WavHeaderDescribesMono16BitPcm()
     {
         var wav = Audio.ToWav([0f, 0.5f, -0.5f, 1f], 16000);
@@ -133,7 +133,7 @@ public sealed class AudioTests
         Assert.Equal(44 + 8, wav.Length);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void Pcm16RoundTripsThroughFloats()
     {
         var bytes = new byte[] { 0x00, 0x40, 0x00, 0xC0 };
@@ -142,7 +142,7 @@ public sealed class AudioTests
         Assert.Equal([0.5f, -0.5f], samples);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void ResampleKeepsTheDuration()
     {
         var resampled = Audio.Resample(new float[22050], 22050, 16000);
@@ -158,7 +158,7 @@ public sealed class AudioTests
     public void KnownWhisperHallucinationsAreDropped(string text, bool hallucination) =>
         Assert.Equal(hallucination, WhisperSpeechToText.IsHallucination(text));
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void CleanRemovesTagsAndExtraSpaces() =>
         Assert.Equal("xin chào thầy", WhisperSpeechToText.Clean("  [âm nhạc] xin   chào (nhạc nền) thầy "));
 }
@@ -183,7 +183,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         app.Answers.Enabled = false;
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task SpokenAnswerIsTranscribedLiveAndSubmittedAsSpeech()
     {
         await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
@@ -213,7 +213,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         Assert.Equal(1, next.CurrentTurn.MainIndex);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task EditedTranscriptIsRecordedAsTyped()
     {
         await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
@@ -228,7 +228,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         Assert.Equal(AnswerInputMode.Typed, Assert.Single(app.Interviews.Answers).InputMode);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task GeminiTranscriptReplacesWhispersAndCountsAsSpeech()
     {
         app.Answers.Enabled = true;
@@ -253,7 +253,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         Assert.Equal(AnswerInputMode.Speech, Assert.Single(app.Interviews.Answers).InputMode);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task WhisperTranscriptIsKeptWhenGeminiGivesNothing()
     {
         app.Answers.Enabled = true;
@@ -268,11 +268,11 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         Assert.StartsWith("đoạn", await ReadAsync(finals.Reader));
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public void VocabularyIsTheGlossaryOnly() =>
         Assert.Equal(["Razor Pages", "SignalR"], RazorRealtime.InterviewHub.Vocabulary(["Razor Pages", "SignalR", "signalr", " "]));
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task StreamingForAQuestionThatIsNotOpenIsRefused()
     {
         await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
@@ -281,7 +281,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         await Assert.ThrowsAsync<HubException>(() => student.InvokeAsync("StreamAnswer", CandidateId, 999, Chunks(0.5)));
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task OtherPeopleCannotDriveSomeoneElsesViva()
     {
         await using var stranger = await ConnectAsync("u-other", "nguoikhac@fpt.edu.vn", AppRoles.Student);
@@ -289,7 +289,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         await Assert.ThrowsAsync<HubException>(() => stranger.InvokeAsync<InterviewStateDto>("Start", CandidateId, false));
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task LecturerWatchingTheExamSeesQuestionsAnswersAndFollowUps()
     {
         await using var lecturer = await ConnectAsync("u-lecturer", "gv@fpt.edu.vn", AppRoles.Lecturer);
@@ -311,7 +311,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         Assert.Equal(FakeInterviewService.FollowUpText, followUp.Text);
     }
 
-    [Fact(Skip="Temporary skip")]
+    [Fact]
     public async Task StudentsCannotWatchAnExam()
     {
         await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);

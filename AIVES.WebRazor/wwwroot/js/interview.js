@@ -204,32 +204,53 @@
             });
         } catch (e) { recorder = null; return; }
         chunks = [];
-        recorder.ondataavailable = function (event) { if (event.data && event.data.size) chunks.push(event.data); };
+        var recordedChunks = chunks;
+        recorder.ondataavailable = function (event) { if (event.data && event.data.size) recordedChunks.push(event.data); };
         recorder.start(1000);
         recLabel.hidden = false;
     }
 
-    // Stops the recorder and uploads what it captured for the given turn. Never blocks the viva.
+    // Stop capture now, but upload only once the server has accepted this answer.
+    // Keep the captured blob if submission fails so a retry does not lose the evidence.
+    var pendingRecordings = new Map();
     function finishRecording(turnId) {
+        if (pendingRecordings.has(turnId)) return pendingRecordings.get(turnId);
         var active = recorder;
+        var recordedChunks = chunks;
         recorder = null;
         recLabel.hidden = true;
-        if (!active) return;
-        active.onstop = function () {
-            if (!chunks.length) return;
-            var type = (active.mimeType || chunks[0].type || 'audio/webm').split(';')[0];
-            var blob = new Blob(chunks, { type: type });
-            chunks = [];
+        if (!active) return Promise.resolve(null);
+        var recording = new Promise(function (resolve) {
+            active.onstop = function () {
+                var type = (active.mimeType || (recordedChunks[0] && recordedChunks[0].type) || 'audio/webm').split(';')[0];
+                resolve(recordedChunks.length ? new Blob(recordedChunks, { type: type }) : null);
+            };
+            try { active.stop(); } catch (e) { resolve(null); }
+        });
+        pendingRecordings.set(turnId, recording);
+        return recording;
+    }
+
+    function uploadRecording(turnId, recording) {
+        recording.then(function (blob) {
+            if (!blob) { pendingRecordings.delete(turnId); return; }
+            var type = blob.type;
             var form = new FormData();
             form.append('file', blob, 'answer-' + turnId + (type.indexOf('mp4') >= 0 ? '.mp4' : '.webm'));
             var upload = function (attempt) {
                 fetch(baseUrl + '/Recording/' + turnId, { method: 'POST', body: form, headers: { 'RequestVerificationToken': token }, credentials: 'same-origin' })
-                    .then(function (response) { if (!response.ok && response.status >= 500 && attempt < 3) setTimeout(function () { upload(attempt + 1); }, 2000 * attempt); })
-                    .catch(function () { if (attempt < 3) setTimeout(function () { upload(attempt + 1); }, 2000 * attempt); });
+                    .then(function (response) {
+                        if (response.ok) pendingRecordings.delete(turnId);
+                        else if (response.status >= 500 && attempt < 3) setTimeout(function () { upload(attempt + 1); }, 2000 * attempt);
+                        else showError(text.textRecordError);
+                    })
+                    .catch(function () {
+                        if (attempt < 3) setTimeout(function () { upload(attempt + 1); }, 2000 * attempt);
+                        else showError(text.textRecordError);
+                    });
             };
             upload(1);
-        };
-        try { active.stop(); } catch (e) { /* already stopped */ }
+        });
     }
 
     function stopMedia() {
@@ -316,7 +337,7 @@
         show('processing');
         clearError();
         var answeredTurn = turn.turnId;
-        finishRecording(answeredTurn);
+        var recording = finishRecording(answeredTurn);
         var body = {
             turnId: answeredTurn,
             transcript: answerBox.value,
@@ -325,7 +346,10 @@
             speakingMs: firstWordAt && lastWordAt > firstWordAt ? lastWordAt - firstWordAt : null
         };
         request('POST', '/Answer', body)
-            .then(render)
+            .then(function (next) {
+                uploadRecording(answeredTurn, recording);
+                render(next);
+            })
             .catch(function (error) {
                 showError(error.message);
                 // Let the candidate try again on the same question.

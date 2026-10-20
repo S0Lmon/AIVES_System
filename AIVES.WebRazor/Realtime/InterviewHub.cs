@@ -187,7 +187,7 @@ public sealed class InterviewHub(
         return state;
     }
 
-    /// <summary>Lecturers join any exam's group; students join only their own exam's group.</summary>
+    /// <summary>Only the exam's lecturer or an administrator may observe candidates' transcripts.</summary>
     public async Task WatchExam(int examId)
     {
         var user = Context.User;
@@ -200,13 +200,9 @@ public sealed class InterviewHub(
             return;
         }
 
-        // A student may watch only an exam they are a candidate of.
-        var email = Context.User?.FindFirstValue(ClaimTypes.Email) ?? Context.User?.Identity?.Name ?? string.Empty;
-        var candidate = (await exams.ListForCandidateAsync(email, Context.ConnectionAborted))
-            .FirstOrDefault(item => item.ExamId == examId);
-        if (candidate is null)
-            throw new HubException("Not allowed.");
-        await Groups.AddToGroupAsync(Context.ConnectionId, ExamGroup(examId));
+        // Exam groups include other candidates' questions and answers. Being listed as
+        // a candidate must never grant access to this monitoring feed.
+        throw new HubException("Not allowed.");
     }
 
     private async Task SaveRecordingAsync(int candidateId, int turnId, float[] audio)

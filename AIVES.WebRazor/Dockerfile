@@ -14,7 +14,7 @@ RUN dotnet publish AIVES.WebRazor/AIVES.WebRazor.csproj --configuration Release 
 FROM build AS publish-cuda
 RUN dotnet publish AIVES.WebRazor/AIVES.WebRazor.csproj --configuration Release --output /app/publish /p:UseAppHost=false /p:WhisperCuda=true
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS base
 # Whisper.net's Linux libraries need OpenMP; without it the native load fails and whisper.cpp aborts
 # the process. With no GPU runtime in the container it falls back to the CPU build on its own.
 RUN apt-get update \

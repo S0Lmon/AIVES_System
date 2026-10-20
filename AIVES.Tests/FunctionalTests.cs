@@ -34,6 +34,55 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.SignInAsync(user.Id));
     }
     private const string Password = "Functional123!";
+
+    [SqlFact]
+    public async Task VideoCandidatesAreRoutedToTheRoomWithCameraSupport()
+    {
+        using var student = app.Browser();
+        var email = await SignIn(student, AppRoles.Student);
+        int candidateId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var candidate = new AIVES.DAL.Entities.ExamCandidate { Order = 1, Email = email };
+            db.Exams.Add(new AIVES.DAL.Entities.Exam
+            {
+                Title = "Camera routing test", SubjectName = "Testing", CreatedById = "lecturer",
+                StartsAtUtc = DateTime.UtcNow.AddMinutes(5), SlotMinutes = 10,
+                RecordAudio = true, RecordVideo = true, Candidates = { candidate }
+            });
+            await db.SaveChangesAsync();
+            candidateId = candidate.Id;
+        }
+        var response = await student.GetAsync($"/Interviews/Room/{candidateId}");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal($"/Interview/{candidateId}", response.Headers.Location!.OriginalString);
+        using var other = app.Browser();
+        await SignIn(other, AppRoles.Student);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/Interviews/Room/{candidateId}")).StatusCode);
+    }
+
+    [SqlTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DisablingOrDemotingALecturerInvalidatesTheirExistingCookie(bool disable)
+    {
+        using var browser = app.Browser();
+        var email = await SignIn(browser);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/Questions")).StatusCode);
+        using (var scope = app.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            var user = (await store.FindByEmailAsync(email))!;
+            var result = disable
+                ? await store.SetDisabledAsync(user.Id, true)
+                : await store.SetAssignableRoleAsync(user.Id, AppRoles.Student);
+            Assert.True(result.Succeeded);
+        }
+        var response = await browser.GetAsync("/Questions");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith("/Account/Login", response.Headers.Location!.PathAndQuery);
+    }
     // The bank page answers on /Question and /Questions; generated links use the /Questions alias.
     private const string QuestionBankLink = "href=\"/Questions?tab=bank\"";
     private static string Email() => "aives.test." + Guid.NewGuid().ToString("N") + "@gmail.com";
@@ -255,8 +304,10 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             Assert.Equal([AppRoles.Lecturer], (await store.GetProfileAsync(studentId))!.Roles);
         }
 
-        // A fresh sign-in carries the new role (an open session picks it up at the next stamp check).
-        await Post(student, "/", "/Account/Logout", new());
+        // The role change invalidates the old session on its next request.
+        var invalidated = await student.GetAsync("/");
+        Assert.Equal(HttpStatusCode.Redirect, invalidated.StatusCode);
+        Assert.StartsWith("/Account/Login", invalidated.Headers.Location!.PathAndQuery);
         var login = await Post(student, "/Account/Login", "/Account/Login", new()
         {
             ["Email"] = studentEmail,

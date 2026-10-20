@@ -11,6 +11,8 @@ internal static class AppText
     private static readonly Dictionary<string, string> Vietnamese = new(StringComparer.OrdinalIgnoreCase)
     {
         // Navigation and layout
+        ["Choose how to answer the question."] = "Chọn cách trả lời câu hỏi.",
+        ["Submit the answer before uploading its recording."] = "Nộp câu trả lời trước khi tải bản ghi lên.",
         ["Work space"] = "Không gian làm việc",
         ["System"] = "Hệ thống",
         ["Overview"] = "Tổng quan",

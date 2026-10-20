@@ -60,6 +60,32 @@ public sealed class GoogleAccountTests
         Assert.False(store.SignedIn);
     }
     [Theory]
+    [InlineData("student@example.com")]
+    [InlineData("student@gmail.com.example.org")]
+    [InlineData("student@mail.fpt.edu.vn")]
+    public async Task NewGoogleAccountsMustUseAnAllowedDomain(string email)
+    {
+        var store = new Store { Info = new("Google", "key", email, "Student") };
+        Assert.False((await Service(store).CompleteGoogleLoginAsync()).Succeeded);
+        Assert.False(store.Created);
+        Assert.False(store.Linked);
+        Assert.False(store.SignedIn);
+    }
+
+    [Fact]
+    public async Task ExistingAccountCanStillLinkGoogleAfterTheDomainPolicyChanges()
+    {
+        var store = new Store
+        {
+            Info = new("Google", "key", "existing@example.com", "Existing"),
+            User = new("user", "existing@example.com", "Existing", true)
+        };
+        Assert.True((await Service(store).CompleteGoogleLoginAsync()).Succeeded);
+        Assert.False(store.Created);
+        Assert.True(store.Linked);
+        Assert.True(store.SignedIn);
+    }
+    [Theory]
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]
     [InlineData(false, false, true)]

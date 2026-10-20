@@ -36,6 +36,10 @@ public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech
         try
         {
             State = await interviews.GetStateAsync(id, Email, cancellationToken);
+            // The browser room supports MediaRecorder with camera capture; do not leave
+            // audio/video candidates on a page that has no Start button.
+            if (State.Recording == RecordingMode.AudioVideo)
+                return RedirectToPage("Interview", new { id });
         }
         catch (KeyNotFoundException)
         {

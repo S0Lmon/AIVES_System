@@ -30,19 +30,31 @@ public sealed class InterviewService(
         if (context.Record is { Status: InterviewStatus.InProgress } record)
         {
             var last = record.Turns[^1];
-            if (last.AnsweredAtUtc is { } answeredAt && Now - answeredAt > RecoveryDelay)
+            if (Now >= context.SlotEndsAtUtc + Grace)
+            {
+                // Close the slot first, including answers whose AI request was interrupted.
+                // SaveAnswerAsync only fills an unanswered turn, preserving submitted evidence.
+                await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
+                if (await interviews.AdvanceAsync(last.TurnId, last.Decision ?? FollowUpReason.LimitReached, null, Now, cancellationToken))
+                    await AuditCompletedAsync(context, "slot ended", cancellationToken);
+                context = await LoadAsync(candidateId, email, cancellationToken);
+            }
+            else if (last.AnsweredAtUtc is { } answeredAt && Now - answeredAt > RecoveryDelay)
             {
                 // Answered but never advanced (the request died mid-way): move on without a follow-up.
                 // Waiting past the AI timeout first keeps this from racing an answer still being processed.
-                await interviews.AdvanceAsync(last.TurnId, last.Decision ?? FollowUpReason.AiUnavailable, NextMainTurn(context, last.MainIndex), Now, cancellationToken);
+                var next = Now >= context.SlotEndsAtUtc ? null : NextMainTurn(context, last.MainIndex);
+                if (await interviews.AdvanceAsync(last.TurnId, last.Decision ?? FollowUpReason.AiUnavailable, next, Now, cancellationToken))
+                    await AuditCompletedAsync(context, "recovered interrupted answer", cancellationToken);
                 context = await LoadAsync(candidateId, email, cancellationToken);
             }
-            else if (Now >= context.SlotEndsAtUtc + Grace)
+            else if (last.AnsweredAtUtc is null && Now > last.AskedAtUtc.AddSeconds(context.AnswerTimeLimitSeconds) + Grace)
             {
-                // The slot is over: close the open question unanswered and finish.
+                // Enforce the answer timer on the server too, even if the browser was suspended.
                 await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
-                if (await interviews.AdvanceAsync(last.TurnId, FollowUpReason.LimitReached, null, Now, cancellationToken))
-                    await AuditCompletedAsync(context, "slot ended", cancellationToken);
+                var next = Now >= context.SlotEndsAtUtc ? null : NextMainTurn(context, last.MainIndex);
+                if (await interviews.AdvanceAsync(last.TurnId, FollowUpReason.NoAnswer, next, Now, cancellationToken))
+                    await AuditCompletedAsync(context, "answer time expired", cancellationToken);
                 context = await LoadAsync(candidateId, email, cancellationToken);
             }
         }
@@ -90,6 +102,11 @@ public sealed class InterviewService(
         if (current.TurnId != input.TurnId || current.AnsweredAtUtc is not null)
             return await GetStateAsync(candidateId, email, cancellationToken);
 
+        if (Now >= context.SlotEndsAtUtc + Grace)
+            return await GetStateAsync(candidateId, email, cancellationToken);
+        if (!Enum.IsDefined(input.InputMode))
+            throw new ArgumentException(L10n.T("Choose how to answer the question."));
+
         var raw = (input.Transcript ?? string.Empty).Trim();
         if (raw.Length > MaxTranscriptLength)
             raw = raw[..MaxTranscriptLength];
@@ -108,6 +125,12 @@ public sealed class InterviewService(
 
         var stopwatch = Stopwatch.StartNew();
         var (decision, next) = await DecideAsync(context, record, current, transcript, now, terms, cancellationToken);
+        // An AI call can cross the slot boundary. Never issue a fresh question after it ends,
+        // and start the next answer's timer after the AI finishes, not before the call.
+        if (Now >= context.SlotEndsAtUtc)
+            (decision, next) = (FollowUpReason.LimitReached, null);
+        else if (next is not null)
+            next = next with { AskedAtUtc = Now };
         var latency = (int)stopwatch.ElapsedMilliseconds;
         if (await interviews.AdvanceAsync(current.TurnId, decision, next, Now, cancellationToken, latency))
             await AuditCompletedAsync(context, "all questions asked", cancellationToken);
@@ -152,7 +175,7 @@ public sealed class InterviewService(
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, options.Value.AiTimeoutSeconds)));
-            var decision = await followUps.DecideAsync(request, timeout.Token);
+            var decision = await followUps.DecideAsync(request, timeout.Token).WaitAsync(timeout.Token);
             if (!decision.NeedsFollowUp || string.IsNullOrWhiteSpace(decision.FollowUpQuestion))
                 return (decision.Reason, moveOn);
             return (decision.Reason, new NewInterviewTurn(TurnKind.FollowUp, current.MainIndex, followUpsHere + 1, decision.FollowUpQuestion, Now));

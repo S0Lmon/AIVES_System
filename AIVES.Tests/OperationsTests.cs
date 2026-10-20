@@ -124,6 +124,10 @@ public sealed class RecordingAndInterviewTests
             recordings.SaveAsync(candidateId, "other@fpt.edu.vn", state.CurrentTurn!.TurnId, new MemoryStream(audio), "audio/webm"));
         await Assert.ThrowsAsync<ArgumentException>(() =>
             recordings.SaveAsync(candidateId, Email, state.CurrentTurn!.TurnId, new MemoryStream(audio), "video/webm"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            recordings.SaveAsync(candidateId, Email, state.CurrentTurn!.TurnId, new MemoryStream(audio), "audio/webm"));
+        Assert.Empty(store.Files);
+        await service.AnswerAsync(candidateId, Email, new InterviewAnswerInput(state.CurrentTurn!.TurnId, "SQL is a query language", AnswerInputMode.Speech));
         await recordings.SaveAsync(candidateId, Email, state.CurrentTurn!.TurnId, new MemoryStream(audio), "audio/webm;codecs=opus");
 
         var stored = Assert.Single(store.Files).Value;
