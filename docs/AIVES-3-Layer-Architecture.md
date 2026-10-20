@@ -4,8 +4,8 @@
 
 | Project | Vai trò | Thành phần |
 |---|---|---|
-| `AIVES.WebRazor` | Presentation / GUI | Razor Pages, PageModels, page view models, wwwroot, HTTP pipeline, Razor Pages/cookie/Google OAuth/SignalR configuration |
-| `AIVES.BLL` | Business Logic / BLL | QuestionService, RubricService, BloomLevelService, AccountService, EmailVerificationService, Gemini và SMTP services |
+| `AIVES.WebRazor` | Presentation / GUI | Razor Pages, PageModels, page view models, wwwroot, HTTP/auth pipeline; hai nhóm Hub và Realtime cùng thuộc Presentation |
+| `AIVES.BLL` | Business Logic / BLL | Question/Bloom, Rubric, Catalog, Exam, Interview, Speech, Recording, Grading, Account, Dashboard, Operations, AI, Email và Diagnostics |
 | `AIVES.DAL` | Data Access / DAL | Repositories, IdentityAccountStore, ApplicationDbContext, Entities, Migrations, database initialization |
 | `AIVES.DTO` | Dữ liệu trao đổi, không phải lớp xử lý thứ tư | QuestionDto, RubricDto, BloomLevelDto, EmailVerificationCodeDto, UserDto, RegisterRequest, AccountResult, ExternalLoginDto, GeneratedVivaQuestion |
 | `AIVES.Tests` | Kiểm thử | Ranh giới assembly, CRUD, validation, OTP, tài khoản và SQL Server integration |
@@ -22,6 +22,21 @@ flowchart TB
     DTO -.-> BLL
     DTO -.-> DAL
 ```
+
+## Hub và Realtime trong Presentation — đối chiếu main ngày 20/10/2026
+
+`main` hiện dùng `AIVES.WebRazor` (Razor Pages), đã có SignalR. `RazorPresentation.cs` gọi `AddSignalR`; `Program.cs` ánh xạ `AivesHub` và `InterviewHub`. Sơ đồ cập nhật theo source này thay cho bản WebMVC cũ.
+
+| Nhóm trách nhiệm | Thành phần hiện có | Vai trò |
+|---|---|---|
+| Hub | `Realtime/AivesHub.cs`, `Realtime/InterviewHub.cs` | Endpoint SignalR, quản lý kết nối/nhóm và trao đổi audio, transcript, sự kiện; InterviewHub gọi service BLL cho nghiệp vụ |
+| Realtime services | `Realtime/LiveUpdates.cs`, `PresenceTracker.cs`, `ExamExpiryService.cs` | Phát cập nhật qua `IHubContext`, theo dõi presence và thông báo kỳ thi kết thúc |
+
+Hai khối **Hub** và **Realtime** được tách riêng trên sơ đồ nhưng cùng nằm trong tầng Presentation. Trong source hiện tại, các file cùng thuộc thư mục/namespace `AIVES.WebRazor.Realtime`; sơ đồ không ngụ ý đã chuyển Hub sang thư mục `Hubs/`.
+
+PageModel gọi BLL để lưu thay đổi, sau đó gọi `ILiveUpdates` gửi thông báo. `LiveUpdates` dùng `IHubContext<AivesHub, IAivesClient>` để gửi tới các nhóm được phép; thay đổi kỳ thi được gửi tới staff và ứng viên liên quan. `InterviewHub` gọi các service Interview/Speech/Recording của BLL. BLL không phụ thuộc vào Hub của Presentation, DAL tiếp tục chịu trách nhiệm truy cập database.
+
+Mũi tên Realtime → Hub trên hình biểu thị gửi qua hạ tầng SignalR / `IHubContext`, không phải tự tạo hoặc gọi trực tiếp instance Hub. Cập nhật này chỉ thay đổi tài liệu, sơ đồ và script xuất ảnh; không sửa source ứng dụng.
 
 ## Sơ đồ hệ thống
 
@@ -68,7 +83,7 @@ SQL integration test chỉ chạy khi có biến môi trường `AIVES_TEST_SQL_
 
 ## EF Core migrations
 
-Entities, DbContext và toàn bộ migration nằm trong DAL. Giữ nguyên ba migration ID và cấu trúc bảng; chỉ chuyển namespace/assembly. `ApplicationDbContextFactory` cho phép tooling đọc model mà không chạy web startup hay seed dữ liệu.
+Entities, DbContext và toàn bộ migration nằm trong DAL. Source được đối chiếu có 12 migration, từ `20260929175943_InitialSqlServer` đến `20261006141103_ExamSchedulingAndStatus`. `ApplicationDbContextFactory` cho phép tooling đọc model mà không chạy web startup hay seed dữ liệu.
 
 ```powershell
 dotnet ef migrations has-pending-model-changes --project AIVES.DAL --startup-project AIVES.WebRazor
@@ -78,11 +93,9 @@ dotnet ef database update --project AIVES.DAL --startup-project AIVES.WebRazor
 
 Không cần tạo migration riêng cho việc tách layer. Ứng dụng tiếp tục tự áp dụng migration khi khởi động như trước.
 
-## Sơ đồ
+## Xuất lại sơ đồ
 
-![AIVES 3 Layer](AIVES-3-Layer-Architecture.png)
-
-File `AIVES-3-Layer-Architecture.drawio` là bản có thể chỉnh sửa.
+Chạy `python scripts/render_architecture.py` từ thư mục gốc (cần Pillow và font Segoe UI trên Windows). Script sinh PNG 2400 × 1770, SVG và draw.io, kiểm tra độ rộng nội dung trong khối và parse XML của hai định dạng chỉnh sửa. File draw.io giữ khối, nhãn và đường nối dưới dạng đối tượng chỉnh sửa được.
 
 ## Kiểm tra lại theo yêu cầu ngày 01/10/2026
 

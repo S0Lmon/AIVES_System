@@ -1,165 +1,177 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1420" viewBox="0 0 2000 1420" font-family="Inter, 'DejaVu Sans', Arial, sans-serif">
-<defs>
-<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f2f2f2"/></marker>
-</defs>
-<rect width="2000" height="1420" fill="#111111"/>
-<text x="1000" y="50" font-size="36" fill="#cfd6e4" font-weight="bold" text-anchor="middle">AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP</text>
-<text x="1000" y="82" font-size="16" fill="#a9b0bd" font-weight="normal" text-anchor="middle">Theo codebase hiện tại · ASP.NET Core Razor Pages / .NET 10 · DTO dùng chung · mũi tên nét liền = request, nét đứt = response</text>
-<rect x="350" y="118" width="1280" height="227" rx="22" fill="#0f1a30" stroke="#5b8def" stroke-width="1.8"/>
-<line x1="350" y1="172" x2="1630" y2="172" stroke="#5b8def" stroke-width="1.4"/>
-<text x="990" y="154" font-size="23" fill="#6ea0ff" font-weight="bold" text-anchor="middle">1. PRESENTATION LAYER – AIVES.WebRazor</text>
-<rect x="385" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="580.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Razor Pages</text>
-<text x="580.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Home · Account · Admin · Catalog</text>
-<text x="580.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Question · Rubric · Exam · MyExams</text>
-<text x="580.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Interview · Profile · Shared layout</text>
-<rect x="795" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="990.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">PageModels / handlers</text>
-<text x="990.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Account · Admin · Catalog · Exam</text>
-<text x="990.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Grading · Interview · MyExams</text>
-<text x="990.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Profile · Question · Reports · Rubric</text>
-<rect x="1205" y="190" width="390" height="130" rx="16" fill="#0a0a0a" stroke="#5b8def" stroke-width="1.6"/>
-<text x="1400.0" y="220" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Page models / Client JS</text>
-<text x="1400.0" y="247" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">ViewModels · Policy Staff / Admin</text>
-<text x="1400.0" y="272" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">interview.js: Web Speech STT / TTS</text>
-<text x="1400.0" y="297" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Razor Pages · cookie · Google OAuth</text>
-<rect x="350" y="430" width="1280" height="348" rx="22" fill="#0e1f18" stroke="#4cb58a" stroke-width="1.8"/>
-<line x1="350" y1="484" x2="1630" y2="484" stroke="#4cb58a" stroke-width="1.4"/>
-<text x="990" y="466" font-size="23" fill="#4cb58a" font-weight="bold" text-anchor="middle">2. BUSINESS LOGIC LAYER – AIVES.BLL</text>
-<rect x="385" y="502" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="528.5" y="532" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">QuestionService</text>
-<text x="528.5" y="559" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">BloomLevelService · Taxonomy</text>
-<text x="528.5" y="584" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Validation · lọc · CRUD</text>
-<text x="528.5" y="609" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Duyệt câu hỏi AI sinh ra</text>
-<rect x="692" y="502" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="835.5" y="532" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">RubricService</text>
-<text x="835.5" y="559" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Tiêu chí · thang điểm · mức</text>
-<text x="835.5" y="584" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Validation · tổng điểm</text>
-<text x="835.5" y="609" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Duyệt rubric AI trước khi lưu</text>
-<rect x="999" y="502" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="1142.5" y="532" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">CatalogService</text>
-<text x="1142.5" y="559" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Môn học · Chủ đề · Tài liệu</text>
-<text x="1142.5" y="584" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Import tài liệu (nguồn RAG)</text>
-<text x="1142.5" y="609" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">CRUD + kiểm tra ràng buộc</text>
-<rect x="1306" y="502" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="1449.5" y="532" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">ExamService</text>
-<text x="1449.5" y="559" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Tạo kỳ thi · lịch theo slot</text>
-<text x="1449.5" y="584" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">ExamQuestionAllocator</text>
-<text x="1449.5" y="609" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Chọn câu hỏi không trùng</text>
-<rect x="385" y="636" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="528.5" y="666" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">InterviewService</text>
-<text x="528.5" y="693" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Phiên vấn đáp · lượt hỏi / đáp</text>
-<text x="528.5" y="718" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">GeminiFollowUpGenerator</text>
-<text x="528.5" y="743" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Giới hạn hỏi xoáy · timeout</text>
-<rect x="692" y="636" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="835.5" y="666" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">AI generators</text>
-<text x="835.5" y="693" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Gemini · Ollama (tùy chọn)</text>
-<text x="835.5" y="718" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Question / Rubric Router</text>
-<text x="835.5" y="743" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">TransientRetryHandler</text>
-<rect x="999" y="636" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="1142.5" y="666" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">AccountService</text>
-<text x="1142.5" y="693" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Đăng ký · xác minh · Google</text>
-<text x="1142.5" y="718" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">UserAdminService (phân quyền)</text>
-<text x="1142.5" y="743" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Chính sách mật khẩu</text>
-<rect x="1306" y="636" width="287" height="118" rx="16" fill="#0a0a0a" stroke="#4cb58a" stroke-width="1.6"/>
-<text x="1449.5" y="666" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Email &amp; Diagnostics</text>
-<text x="1449.5" y="693" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">EmailVerificationService</text>
-<text x="1449.5" y="718" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">GmailSmtpEmailSender</text>
-<text x="1449.5" y="743" font-size="14.5" fill="#b9bfc9" font-weight="normal" text-anchor="middle">SystemCheckService (/health)</text>
-<rect x="350" y="863" width="1280" height="247" rx="22" fill="#1d1608" stroke="#e0a030" stroke-width="1.8"/>
-<line x1="350" y1="917" x2="1630" y2="917" stroke="#e0a030" stroke-width="1.4"/>
-<text x="990" y="899" font-size="23" fill="#e0a030" font-weight="bold" text-anchor="middle">3. DATA ACCESS LAYER – AIVES.DAL</text>
-<rect x="385" y="935" width="390" height="150" rx="16" fill="#0a0a0a" stroke="#e0a030" stroke-width="1.6"/>
-<text x="580.0" y="965" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Repositories / interfaces</text>
-<text x="580.0" y="992" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Question · Rubric · BloomLevel</text>
-<text x="580.0" y="1017" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Subject · Topic · Material · Exam</text>
-<text x="580.0" y="1042" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Interview · EmailVerification</text>
-<text x="580.0" y="1067" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Diagnostics · DtoMapping (Entity → DTO)</text>
-<rect x="795" y="935" width="390" height="150" rx="16" fill="#0a0a0a" stroke="#e0a030" stroke-width="1.6"/>
-<text x="990.0" y="965" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">IdentityAccountStore / DbContext</text>
-<text x="990.0" y="992" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">ApplicationDbContext</text>
-<text x="990.0" y="1017" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">EF Core · ASP.NET Core Identity</text>
-<text x="990.0" y="1042" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">DataProtection keys · AdminRoleSeeder</text>
-<text x="990.0" y="1067" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">DevelopmentDataSeeder</text>
-<rect x="1205" y="935" width="390" height="150" rx="16" fill="#0a0a0a" stroke="#e0a030" stroke-width="1.6"/>
-<text x="1400.0" y="965" font-size="17" fill="#ffffff" font-weight="bold" text-anchor="middle">Entities / Migrations</text>
-<text x="1400.0" y="992" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Question · Rubric · RubricCriterion</text>
-<text x="1400.0" y="1017" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Subject · Topic · Material · BloomLevel</text>
-<text x="1400.0" y="1042" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">Exam · ExamCandidate · ExamAttempt</text>
-<text x="1400.0" y="1067" font-size="14" fill="#b9bfc9" font-weight="normal" text-anchor="middle">ApplicationUser · EmailVerificationCode</text>
-<rect x="795" y="1190" width="390" height="100" rx="16" fill="#20152f" stroke="#a678e0" stroke-width="1.6"/>
-<text x="990" y="1222" font-size="19" fill="#ffffff" font-weight="bold" text-anchor="middle">SQL Server 2022</text>
-<text x="990" y="1250" font-size="15" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Docker volume: aives-sql-data</text>
-<text x="990" y="1274" font-size="15" fill="#c4c9d4" font-weight="normal" text-anchor="middle">LocalDB khi phát triển Windows</text>
-<line x1="960" y1="347" x2="960" y2="428" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1020" y1="428" x2="1020" y2="347" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="940" y="392.5" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="end">Request: gọi service BLL · truyền DTO</text>
-<text x="1040" y="392.5" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="start">Response: DTO / kết quả → ViewModel</text>
-<line x1="960" y1="780" x2="960" y2="861" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1020" y1="861" x2="1020" y2="780" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="940" y="825.5" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="end">Request: Repository / AccountStore · DTO</text>
-<text x="1040" y="825.5" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="start">Response: Entity → DTO / kết quả</text>
-<line x1="960" y1="1112" x2="960" y2="1188" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1020" y1="1188" x2="1020" y2="1112" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="940" y="1155.0" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="end">Request: EF Core / SQL</text>
-<text x="1040" y="1155.0" font-size="14.5" fill="#e6e6e6" font-weight="normal" text-anchor="start">Response: result set</text>
-<rect x="24" y="160" width="240" height="92" rx="18" fill="#1e2630" stroke="#cfd6e4" stroke-width="1.6"/>
-<text x="144" y="192" font-size="19" fill="#ffffff" font-weight="bold" text-anchor="middle">Người dùng</text>
-<text x="144" y="218" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Giảng viên · Sinh viên · Admin</text>
-<text x="144" y="240" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Trình duyệt (Chrome / Edge)</text>
-<line x1="266" y1="198" x2="348" y2="198" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="348" y1="214" x2="266" y2="214" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="307.0" y="190" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">HTTPS</text>
-<text x="307.0" y="234" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">HTML/JSON</text>
-<rect x="1716" y="160" width="260" height="92" rx="16" fill="#20152f" stroke="#a678e0" stroke-width="1.6"/>
-<text x="1846" y="190" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle">Google OAuth</text>
-<text x="1846" y="216" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">/signin-google</text>
-<text x="1846" y="238" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">OAuth 2.0</text>
-<line x1="1632" y1="198" x2="1714" y2="198" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1714" y1="214" x2="1632" y2="214" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="1673.0" y="190" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">OAuth</text>
-<text x="1673.0" y="234" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">token</text>
-<rect x="1716" y="455" width="260" height="92" rx="16" fill="#20152f" stroke="#a678e0" stroke-width="1.6"/>
-<text x="1846" y="485" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle">Google Gemini API</text>
-<text x="1846" y="511" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Sinh câu hỏi · rubric · hỏi xoáy</text>
-<text x="1846" y="533" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">HTTPS / JSON</text>
-<line x1="1632" y1="493" x2="1714" y2="493" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1714" y1="509" x2="1632" y2="509" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="1673.0" y="485" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">HTTPS</text>
-<text x="1673.0" y="529" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">JSON</text>
-<rect x="1716" y="575" width="260" height="92" rx="16" fill="#20152f" stroke="#a678e0" stroke-width="1.6" stroke-dasharray="7 5"/>
-<text x="1846" y="605" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle">Ollama (tùy chọn)</text>
-<text x="1846" y="631" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Model cục bộ · HTTP</text>
-<text x="1846" y="653" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Bật bằng OLLAMA_ENABLED</text>
-<line x1="1632" y1="613" x2="1714" y2="613" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1714" y1="629" x2="1632" y2="629" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="1673.0" y="605" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">HTTP</text>
-<text x="1673.0" y="649" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">JSON</text>
-<rect x="1716" y="695" width="260" height="92" rx="16" fill="#20152f" stroke="#a678e0" stroke-width="1.6"/>
-<text x="1846" y="725" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle">Gmail SMTP</text>
-<text x="1846" y="751" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">STARTTLS / port 587</text>
-<text x="1846" y="773" font-size="14" fill="#c4c9d4" font-weight="normal" text-anchor="middle">Mã xác minh email</text>
-<line x1="1632" y1="733" x2="1714" y2="733" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="1714" y1="749" x2="1632" y2="749" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="1673.0" y="725" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">SMTP</text>
-<text x="1673.0" y="769" font-size="12.5" fill="#e6e6e6" font-weight="normal" text-anchor="middle">status</text>
-<rect x="24" y="430" width="240" height="330" rx="18" fill="#20152f" stroke="#a678e0" stroke-width="1.6"/>
-<text x="144" y="462" font-size="18" fill="#ffffff" font-weight="bold" text-anchor="middle">AIVES.DTO</text>
-<text x="144" y="494" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">QuestionDto · RubricDto</text>
-<text x="144" y="524" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">BloomLevelDto · CatalogDtos</text>
-<text x="144" y="554" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">ExamDtos · InterviewDtos</text>
-<text x="144" y="584" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">AccountDtos · AppRoles</text>
-<text x="144" y="614" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">GeneratedVivaQuestion</text>
-<text x="144" y="644" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">GeneratedRubric</text>
-<text x="144" y="674" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">RubricCriterion/Level Dto</text>
-<text x="144" y="704" font-size="13.5" fill="#c4c9d4" font-weight="normal" text-anchor="middle">AppLanguage · L10n (i18n)</text>
-<line x1="266" y1="595" x2="348" y2="595" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<text x="307" y="583" font-size="13" fill="#e6e6e6" font-weight="normal" text-anchor="middle">DTO</text>
-<text x="144" y="792" font-size="14" fill="#a9b0bd" font-weight="normal" text-anchor="middle">DTO dùng chung UI / BLL / DAL</text>
-<line x1="30" y1="1200" x2="110" y2="1200" stroke="#f2f2f2" stroke-width="2" marker-end="url(#ah)"/>
-<text x="125" y="1205" font-size="15" fill="#e6e6e6" font-weight="normal" text-anchor="start">Request</text>
-<line x1="30" y1="1230" x2="110" y2="1230" stroke="#f2f2f2" stroke-width="2" stroke-dasharray="8 6" marker-end="url(#ah)"/>
-<text x="125" y="1235" font-size="15" fill="#e6e6e6" font-weight="normal" text-anchor="start">Response</text>
-<text x="1000" y="1345" font-size="15" fill="#b0b6c2" font-weight="normal" text-anchor="middle">DAL là tầng duy nhất truy cập database. Entity ở DAL; DTO vận chuyển dữ liệu giữa các lớp. Triển khai: Caddy / Cloudflare Tunnel → web × N → SQL Server (Docker Compose).</text>
-<text x="1000" y="1375" font-size="15" fill="#b0b6c2" font-weight="normal" text-anchor="middle">AIVES.Tests: unit / HTTP / Identity / SQL integration · Chấm điểm AI, ghi âm / ghi hình và báo cáo thống kê: roadmap.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1770" viewBox="0 0 2400 1770">
+<rect width="2400" height="1770" fill="#101318"/>
+<text x="1200" y="68" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="42" font-weight="700" fill="#edf1f7">AIVES – KIẾN TRÚC HỆ THỐNG 3 LỚP</text>
+<text x="1200" y="111" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="400" fill="#b4bece">ASP.NET Core Razor Pages / .NET 10 · Đối chiếu main ngày 20/10/2026</text>
+<text x="1200" y="145" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="21" font-weight="400" fill="#b4bece">Hub và Realtime: hai nhóm trách nhiệm riêng trong Presentation · Đã có trong source</text>
+<rect x="360" y="185" width="1600" height="420" rx="20" fill="#111e34" stroke="#689bff" stroke-width="2"/>
+<text x="1160" y="231" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="29" font-weight="700" fill="#689bff">1. PRESENTATION LAYER – AIVES.WebRazor</text>
+<rect x="390" y="250" width="490" height="150" rx="20" fill="#101318" stroke="#689bff" stroke-width="2"/>
+<text x="635.0" y="288" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Razor Pages</text>
+<text x="635.0" y="323" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Account · Admin · Subjects · Topics</text>
+<text x="635.0" y="353" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Questions · Rubrics · Exams · MyExams</text>
+<text x="635.0" y="383" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Interview · Grading · Dashboard · Profile</text>
+<rect x="915" y="250" width="490" height="150" rx="20" fill="#101318" stroke="#689bff" stroke-width="2"/>
+<text x="1160.0" y="288" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">PageModels</text>
+<text x="1160.0" y="323" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">HTTP / form · binding · ModelState</text>
+<text x="1160.0" y="353" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Gọi BLL qua service + DTO</text>
+<text x="1160.0" y="383" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Gọi ILiveUpdates sau khi lưu thành công</text>
+<rect x="1440" y="250" width="490" height="150" rx="20" fill="#101318" stroke="#689bff" stroke-width="2"/>
+<text x="1685.0" y="288" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Page view models / Client JS</text>
+<text x="1685.0" y="323" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">wwwroot/js: realtime.js · interview.js</text>
+<text x="1685.0" y="353" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">SignalR client · audio / transcript</text>
+<text x="1685.0" y="383" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Razor Pages · cookie · Google OAuth</text>
+<rect x="540" y="430" width="575" height="145" rx="20" fill="#101318" stroke="#689bff" stroke-width="2"/>
+<text x="827.5" y="468" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Hub · SignalR endpoints</text>
+<text x="827.5" y="503" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">AivesHub: /hubs/aives · presence / groups</text>
+<text x="827.5" y="533" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">InterviewHub: /hubs/interview · audio / transcript</text>
+<text x="827.5" y="563" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Source: Realtime/AivesHub.cs · InterviewHub.cs</text>
+<rect x="1250" y="430" width="575" height="145" rx="20" fill="#101318" stroke="#689bff" stroke-width="2"/>
+<text x="1537.5" y="468" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Realtime · SignalR services</text>
+<text x="1537.5" y="503" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">ILiveUpdates / LiveUpdates · IHubContext</text>
+<text x="1537.5" y="533" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">PresenceTracker · ExamExpiryService</text>
+<text x="1537.5" y="563" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Source: AIVES.WebRazor/Realtime/</text>
+<path d="M1250,498 L1115,498" fill="none" stroke="#689bff" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1115,498 1132.0,489.0 1132.0,507.0" fill="#689bff"/>
+<text x="1182" y="479" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="400" fill="#689bff">push</text>
+<rect x="25" y="260" width="285" height="150" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="167.5" y="298" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Người dùng</text>
+<text x="167.5" y="333" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Giảng viên · Sinh viên · Admin</text>
+<text x="167.5" y="363" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Trình duyệt Chrome / Edge</text>
+<path d="M310,315 L360,315" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="360,315 343.0,324.0 343.0,306.0" fill="#edf1f7"/>
+<path d="M360,350 L310,350" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="310,350 327.0,341.0 327.0,359.0" fill="#edf1f7"/>
+<text x="168" y="450" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="400" fill="#b4bece">HTTPS · HTML / JSON</text>
+<text x="168" y="479" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="400" fill="#689bff">SignalR · audio / sự kiện</text>
+<rect x="2010" y="260" width="365" height="135" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="2192.5" y="298" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Google OAuth</text>
+<text x="2192.5" y="333" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">/signin-google</text>
+<text x="2192.5" y="363" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">OAuth 2.0</text>
+<path d="M1960,310 L2010,310" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="2010,310 1993.0,319.0 1993.0,301.0" fill="#edf1f7"/>
+<path d="M2010,345 L1960,345" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1960,345 1977.0,336.0 1977.0,354.0" fill="#edf1f7"/>
+<path d="M1125,605 L1125,705" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="1125,705 1116.0,688.0 1134.0,688.0" fill="#edf1f7"/>
+<path d="M1195,705 L1195,605" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1195,605 1204.0,622.0 1186.0,622.0" fill="#edf1f7"/>
+<text x="860" y="663.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Request: service BLL + DTO</text>
+<text x="1490" y="663.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Response: DTO → PageModel</text>
+<rect x="360" y="705" width="1600" height="395" rx="20" fill="#10231e" stroke="#48c59b" stroke-width="2"/>
+<text x="1160" y="751" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="29" font-weight="700" fill="#48c59b">2. BUSINESS LOGIC LAYER – AIVES.BLL</text>
+<rect x="390" y="775" width="365" height="140" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="572.5" y="813" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Question / Bloom</text>
+<text x="572.5" y="848" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">QuestionService · BloomLevelService</text>
+<text x="572.5" y="878" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Validation · taxonomy · lọc · CRUD</text>
+<rect x="780" y="775" width="365" height="140" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="962.5" y="813" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">RubricService</text>
+<text x="962.5" y="848" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Tiêu chí · thang điểm · ma trận</text>
+<text x="962.5" y="878" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Validation · tổng điểm · CRUD</text>
+<rect x="1170" y="775" width="365" height="140" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="1352.5" y="813" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">CatalogService</text>
+<text x="1352.5" y="848" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Môn học · chủ đề · tài liệu</text>
+<text x="1352.5" y="878" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Import tài liệu · kiểm tra ràng buộc</text>
+<rect x="1560" y="775" width="370" height="140" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="1745.0" y="813" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">ExamService</text>
+<text x="1745.0" y="848" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Tạo kỳ thi · lịch / slot</text>
+<text x="1745.0" y="878" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">ExamQuestionAllocator</text>
+<rect x="390" y="940" width="365" height="135" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="572.5" y="978" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Interview / Speech</text>
+<text x="572.5" y="1013" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">InterviewService · STT / TTS</text>
+<text x="572.5" y="1043" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Recording · Gemini / Whisper / Sherpa</text>
+<rect x="780" y="940" width="365" height="135" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="962.5" y="978" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">AI / Grading</text>
+<text x="962.5" y="1013" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Gemini · Ollama · Router · Retry</text>
+<text x="962.5" y="1043" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">GradingService · GradingWorker</text>
+<rect x="1170" y="940" width="365" height="135" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="1352.5" y="978" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Account / Operations</text>
+<text x="1352.5" y="1013" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">AccountService · UserAdminService</text>
+<text x="1352.5" y="1043" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Dashboard · Audit · Backup / Restore</text>
+<rect x="1560" y="940" width="370" height="135" rx="20" fill="#101318" stroke="#48c59b" stroke-width="2"/>
+<text x="1745.0" y="978" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Email / Diagnostics</text>
+<text x="1745.0" y="1013" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">EmailVerification · Gmail SMTP</text>
+<text x="1745.0" y="1043" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">SystemCheckService · Import parsers</text>
+<rect x="25" y="760" width="285" height="300" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="167.5" y="798" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">AIVES.DTO</text>
+<text x="167.5" y="833" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Question · Bloom · Rubric</text>
+<text x="167.5" y="863" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Catalog · Exam · Interview</text>
+<text x="167.5" y="893" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Account · Grading</text>
+<text x="167.5" y="923" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Dashboard · Operations</text>
+<text x="167.5" y="953" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">GeneratedQuestion / Rubric</text>
+<text x="167.5" y="983" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">AppRoles · L10n</text>
+<text x="167.5" y="1013" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">AppLanguage</text>
+<text x="168" y="1097" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="400" fill="#b4bece">DTO dùng chung Web / BLL / DAL</text>
+<path d="M310,900 L360,900" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="360,900 343.0,909.0 343.0,891.0" fill="#edf1f7"/>
+<rect x="2010" y="760" width="365" height="125" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="2192.5" y="798" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Google Gemini API</text>
+<text x="2192.5" y="833" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Sinh câu hỏi · rubric · hỏi xoáy</text>
+<text x="2192.5" y="863" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">HTTPS / JSON</text>
+<rect x="2010" y="920" width="365" height="125" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="2192.5" y="958" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Ollama (tùy chọn)</text>
+<text x="2192.5" y="993" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Model cục bộ · HTTP / JSON</text>
+<text x="2192.5" y="1023" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Bật bằng OLLAMA_ENABLED</text>
+<path d="M1960,800 L2010,800" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="2010,800 1993.0,809.0 1993.0,791.0" fill="#edf1f7"/>
+<path d="M2010,830 L1960,830" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1960,830 1977.0,821.0 1977.0,839.0" fill="#edf1f7"/>
+<path d="M1960,960 L2010,960" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="2010,960 1993.0,969.0 1993.0,951.0" fill="#edf1f7"/>
+<path d="M2010,990 L1960,990" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1960,990 1977.0,981.0 1977.0,999.0" fill="#edf1f7"/>
+<rect x="2010" y="1100" width="365" height="125" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="2192.5" y="1138" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Gmail SMTP</text>
+<text x="2192.5" y="1173" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">STARTTLS / port 587</text>
+<text x="2192.5" y="1203" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Gửi mã xác minh email</text>
+<path d="M1960,1070 L1990,1070" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<path d="M1990,1070 L1990,1140" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<path d="M1990,1140 L2010,1140" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="2010,1140 1993.0,1149.0 1993.0,1131.0" fill="#edf1f7"/>
+<path d="M2010,1180 L1980,1180" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<path d="M1980,1180 L1980,1088" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<path d="M1980,1088 L1960,1088" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1960,1088 1977.0,1079.0 1977.0,1097.0" fill="#edf1f7"/>
+<path d="M1125,1100 L1125,1200" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="1125,1200 1116.0,1183.0 1134.0,1183.0" fill="#edf1f7"/>
+<path d="M1195,1200 L1195,1100" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1195,1100 1204.0,1117.0 1186.0,1117.0" fill="#edf1f7"/>
+<text x="860" y="1158.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Request: Repository / AccountStore + DTO</text>
+<text x="1490" y="1158.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Response: DTO / kết quả</text>
+<rect x="360" y="1200" width="1600" height="265" rx="20" fill="#241e10" stroke="#edb340" stroke-width="2"/>
+<text x="1160" y="1246" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="29" font-weight="700" fill="#edb340">3. DATA ACCESS LAYER – AIVES.DAL</text>
+<rect x="390" y="1270" width="490" height="165" rx="20" fill="#101318" stroke="#edb340" stroke-width="2"/>
+<text x="635.0" y="1308" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Repositories / interfaces</text>
+<text x="635.0" y="1343" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Question · Rubric · BloomLevel · Catalog</text>
+<text x="635.0" y="1373" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Exam · Interview · Grading · Recording</text>
+<text x="635.0" y="1403" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Account · Audit · Settings · Diagnostics</text>
+<text x="635.0" y="1433" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">DtoMapping: Entity ↔ DTO</text>
+<rect x="915" y="1270" width="490" height="165" rx="20" fill="#101318" stroke="#edb340" stroke-width="2"/>
+<text x="1160.0" y="1308" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Identity / DbContext</text>
+<text x="1160.0" y="1343" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">IdentityAccountStore · ApplicationDbContext</text>
+<text x="1160.0" y="1373" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">EF Core · ASP.NET Core Identity</text>
+<text x="1160.0" y="1403" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">DataProtection keys · AdminRoleSeeder</text>
+<text x="1160.0" y="1433" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">DevelopmentDataSeeder · migrations</text>
+<rect x="1440" y="1270" width="490" height="165" rx="20" fill="#101318" stroke="#edb340" stroke-width="2"/>
+<text x="1685.0" y="1308" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">Entities / Migrations</text>
+<text x="1685.0" y="1343" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Question · Rubric · Criterion / Level / Matrix</text>
+<text x="1685.0" y="1373" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Subject · Topic · Material · BloomLevel</text>
+<text x="1685.0" y="1403" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Exam · Candidate / Question · Attempt / Turn</text>
+<text x="1685.0" y="1433" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">ApplicationUser · EmailVerificationCode</text>
+<path d="M1125,1465 L1125,1565" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="1125,1565 1116.0,1548.0 1134.0,1548.0" fill="#edf1f7"/>
+<path d="M1195,1565 L1195,1465" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="1195,1465 1204.0,1482.0 1186.0,1482.0" fill="#edf1f7"/>
+<text x="860" y="1523.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Request: EF Core / SQL</text>
+<text x="1490" y="1523.0" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Response: kết quả truy vấn</text>
+<rect x="915" y="1565" width="490" height="110" rx="20" fill="#101318" stroke="#b58cfa" stroke-width="2"/>
+<text x="1160.0" y="1603" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="700" fill="#edf1f7">SQL Server 2022</text>
+<text x="1160.0" y="1638" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Docker: aives-sql-data · Windows: LocalDB</text>
+<path d="M30,1575 L120,1575" fill="none" stroke="#edf1f7" stroke-width="2"/>
+<polygon points="120,1575 103.0,1584.0 103.0,1566.0" fill="#edf1f7"/>
+<text x="210" y="1580" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Request</text>
+<path d="M30,1620 L120,1620" fill="none" stroke="#edf1f7" stroke-width="2" stroke-dasharray="10 8"/>
+<polygon points="120,1620 103.0,1629.0 103.0,1611.0" fill="#edf1f7"/>
+<text x="210" y="1625" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#b4bece">Response / sự kiện</text>
+<text x="1200" y="1722" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#edf1f7">Hub và Realtime thuộc Presentation; nghiệp vụ thuộc BLL; DAL là tầng duy nhất truy cập database.</text>
+<text x="1200" y="1756" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#689bff">Hub và dịch vụ Realtime hiện cùng ở thư mục Realtime/; sơ đồ tách trách nhiệm, không thay đổi source ứng dụng.</text>
 </svg>
