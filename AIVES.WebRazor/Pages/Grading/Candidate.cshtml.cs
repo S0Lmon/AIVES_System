@@ -13,31 +13,6 @@ using System.Globalization;
 
 namespace AIVES.WebRazor.Pages.Grading;
 
-public sealed class GradingIndexModel(IExamService exams) : PageModel
-{
-    public IReadOnlyList<ExamSummaryDto> Exams { get; private set; } = [];
-    public async Task OnGetAsync(CancellationToken cancellationToken) =>
-        Exams = await exams.ListAsync(ExamPageActors.From(User), cancellationToken);
-}
-
-public sealed class ExamModel(IGradingService grading) : PageModel
-{
-    [BindProperty(SupportsGet = true)]
-    public int Id
-    {
-        get; set;
-    }
-    public ExamGradingDto Exam { get; private set; } = null!;
-    public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
-    {
-        var exam = await grading.GetExamAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null)
-            return NotFound();
-        Exam = exam;
-        return Page();
-    }
-}
-
 public sealed class GradeQuestionInput
 {
     public int Id
@@ -53,7 +28,6 @@ public sealed class GradeQuestionInput
         get; set;
     }
 }
-
 public sealed class GradeFormInput
 {
     public List<GradeQuestionInput> Questions { get; set; } = [];
@@ -66,7 +40,6 @@ public sealed class GradeFormInput
         get; set;
     }
 }
-
 public sealed class CandidateModel(
     IGradingService grading,
     IRecordingService recordings,
@@ -170,64 +143,4 @@ public sealed class CandidateModel(
 
     private static decimal ParseScore(string text) =>
         decimal.Parse(text.Trim().Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture);
-}
-
-public sealed class AuditModel(
-    IExamService exams,
-    IAuditService audit,
-    DisplayTimeZone timeZone) : PageModel
-{
-    [BindProperty(SupportsGet = true)]
-    public int Id
-    {
-        get; set;
-    }
-    public string Title { get; private set; } = string.Empty;
-    public IReadOnlyList<AuditEntryDto> Entries { get; private set; } = [];
-    public DisplayTimeZone TimeZone { get; } = timeZone;
-
-    public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
-    {
-        var exam = await exams.GetAsync(Id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null)
-            return NotFound();
-        Title = exam.Title;
-        Entries = await audit.QueryAsync(new AuditQuery(ExamId: Id, Take: 1000), cancellationToken);
-        return Page();
-    }
-}
-
-public abstract class GradeExportPage(IGradingService grading, IAuditService audit, IOptions<ReportOptions> options, DisplayTimeZone timeZone, ILogger logger) : PageModel
-{
-    protected async Task<IActionResult> ExportAsync(int id, CancellationToken cancellationToken)
-    {
-        var exam = await grading.GetExamAsync(id, ExamPageActors.From(User), cancellationToken);
-        if (exam is null)
-            return NotFound();
-        var content = GradeSheetBuilder.Build(exam, options.Value, timeZone.ToLocal);
-        var actor = ExamPageActors.From(User);
-        await audit.WriteAsync(new AuditEntryInput(AuditActions.GradeSheetExported, actor.UserId, actor.Email, id, null,
-            L10n.Format("{0} of {1} grades confirmed", exam.Rows.Count(row => row.FinalizedAtUtc is not null), exam.Rows.Count)), cancellationToken);
-        logger.LogInformation("User {UserId} exported the grade sheet of exam {ExamId}", actor.UserId, id);
-        var slug = string.Join('-', new string(exam.SubjectName.Normalize(System.Text.NormalizationForm.FormD)
-            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            .Select(c => c == 'đ' || c == 'Đ' ? 'd' : char.IsLetterOrDigit(c) && c < 128 ? char.ToLowerInvariant(c) : '-').ToArray())
-            .Split('-', StringSplitOptions.RemoveEmptyEntries));
-        if (slug.Length == 0)
-            slug = "exam";
-        slug = slug[..Math.Min(40, slug.Length)];
-        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"grades-{slug}-{timeZone.ToLocal(exam.StartsAtUtc):yyyyMMdd}-{id}.xlsx");
-    }
-}
-
-public sealed class ExportModel(IGradingService grading, IAuditService audit, IOptions<ReportOptions> options, DisplayTimeZone timeZone, ILogger<ExportModel> logger)
-    : GradeExportPage(grading, audit, options, timeZone, logger)
-{
-    public Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken) => ExportAsync(id, cancellationToken);
-}
-
-public sealed class ReportAliasModel : PageModel
-{
-    public IActionResult OnGet(int id) => RedirectToPage("/Reports/Exam", new { id });
 }
