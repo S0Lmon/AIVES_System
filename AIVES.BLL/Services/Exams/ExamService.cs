@@ -29,6 +29,22 @@ public sealed class ExamService(
         return exam is not null && CanManage(exam.CreatedById, actor) ? exam : null;
     }
 
+    public async Task<IReadOnlyList<ExamPoolQuestion>> GetQuestionBankAsync(
+        int subjectId, int? topicId, int? rubricId, ExamActor actor, CancellationToken cancellationToken = default)
+    {
+        var subject = await subjects.GetByIdAsync(subjectId, cancellationToken)
+            ?? throw new ArgumentException(L10n.T("Pick a subject from the catalogue."));
+        if (!await access.CanUseAsync(subjectId, actor, cancellationToken))
+            throw new ArgumentException(L10n.T("You are not assigned to this subject. Ask an administrator to assign you."));
+        if (topicId is int id)
+        {
+            var topic = await topics.GetByIdAsync(id, cancellationToken);
+            if (topic is null || topic.SubjectId != subjectId)
+                throw new ArgumentException(L10n.T("That topic does not belong to the chosen subject."));
+        }
+        return await exams.GetPoolAsync(subjectId, topicId, rubricId, cancellationToken);
+    }
+
     public async Task<ExamSaveResult> CreateAsync(ExamInput input, ExamActor actor, CancellationToken cancellationToken = default)
     {
         var (draft, overlaps) = await BuildDraftAsync(input, actor.UserId, actor, cancellationToken);
@@ -59,12 +75,42 @@ public sealed class ExamService(
             existing.EndsAtUtc, existing.BufferMinutes, existing.BreakMinutes, existing.BreakEveryCount, existing.Strategy,
             existing.Term, existing.ExamType, existing.Instructions,
             // A redone schedule must not fail a window an earlier save already let run past its end.
-            ScheduleOverflowAllowed: existing.ScheduleEndsAtUtc > existing.EndsAtUtc);
+            ScheduleOverflowAllowed: existing.ScheduleEndsAtUtc > existing.EndsAtUtc,
+            RubricId: existing.RubricId,
+            SelectedQuestionIds: existing.SelectedQuestionIds);
         var (draft, overlaps) = await BuildDraftAsync(input, existing.CreatedById, actor, cancellationToken);
         await exams.UpdateAsync(id, draft, cancellationToken);
         logger.LogInformation("User {UserId} redrew the questions of exam {ExamId}", actor.UserId, id);
         await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamQuestionsRedrawn, actor.UserId, actor.Email, id, null, Describe(draft)), cancellationToken);
         return new ExamSaveResult(id, overlaps);
+    }
+
+    public async Task UpdateCandidateQuestionAsync(
+        int id, int candidateOrder, int questionOrder, int questionId, ExamActor actor, CancellationToken cancellationToken = default)
+    {
+        var existing = await GetEditableAsync(id, actor, cancellationToken);
+        var candidate = existing.Candidates.FirstOrDefault(item => item.Order == candidateOrder)
+            ?? throw new KeyNotFoundException(L10n.T("That candidate is not on this exam."));
+        var assigned = candidate.Questions.FirstOrDefault(item => item.Order == questionOrder)
+            ?? throw new KeyNotFoundException(L10n.T("That question is not assigned to this candidate."));
+        var selectedIds = existing.SelectedQuestionIds ?? [];
+        if (!selectedIds.Contains(questionId))
+            throw new ArgumentException(L10n.T("Choose a question from this exam's selected question pool."));
+        if (candidate.Questions.Any(item => item.Order != questionOrder && item.QuestionId == questionId))
+            throw new ArgumentException(L10n.T("A candidate cannot receive the same main question twice."));
+        if (existing.SubjectId is not int subjectId)
+            throw new InvalidOperationException(L10n.T("The subject of this exam was deleted, so questions cannot be changed."));
+        var question = (await exams.GetPoolAsync(subjectId, existing.TopicId, existing.RubricId, cancellationToken))
+            .FirstOrDefault(item => item.Id == questionId)
+            ?? throw new ArgumentException(L10n.T("That question is no longer active in the selected subject, topic and rubric."));
+
+        await exams.UpdateCandidateQuestionAsync(id, candidateOrder, questionOrder,
+            new ExamAssignedQuestion(assigned.Order, question.Id, question.Content, question.ExpectedAnswer, question.BloomLevelName, question.RubricJson),
+            cancellationToken);
+        logger.LogInformation("User {UserId} changed exam {ExamId} question {QuestionOrder} for candidate #{CandidateOrder}",
+            actor.UserId, id, questionOrder, candidateOrder);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.ExamCandidateQuestionChanged, actor.UserId, actor.Email, id, null,
+            $"Candidate #{candidateOrder}, question {questionOrder}: {assigned.QuestionId} → {question.Id}"), cancellationToken);
     }
 
     public async Task AdjustSlotAsync(int id, int order, DateTime newStartsAtUtc, ExamActor actor, CancellationToken cancellationToken = default)
@@ -131,8 +177,8 @@ public sealed class ExamService(
             $"{exam.Title} ({exam.SubjectName}), {exam.Candidates.Count} candidate(s)"), cancellationToken);
     }
 
-    public async Task<int> CountPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default) =>
-        (await exams.GetPoolAsync(subjectId, topicId, cancellationToken)).Count;
+    public async Task<int> CountPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default) =>
+        (await exams.GetPoolAsync(subjectId, topicId, rubricId, cancellationToken)).Count;
 
     public Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default) =>
         string.IsNullOrWhiteSpace(email) ? Task.FromResult<IReadOnlyList<StudentExamDto>>([]) : exams.ListForCandidateAsync(email, cancellationToken);
@@ -233,9 +279,19 @@ public sealed class ExamService(
                 throw new ArgumentException(L10n.T("That topic does not belong to the chosen subject."));
         }
 
-        var pool = await exams.GetPoolAsync(subject.Id, topic?.Id, cancellationToken);
+        var pool = await exams.GetPoolAsync(subject.Id, topic?.Id, input.RubricId, cancellationToken);
+        if (input.SelectedQuestionIds is { } selectedQuestionIds)
+        {
+            var selected = selectedQuestionIds.Distinct().ToHashSet();
+            if (selected.Count != selectedQuestionIds.Count)
+                throw new ArgumentException(L10n.T("A question can only be selected once."));
+            var available = pool.ToDictionary(question => question.Id);
+            if (selected.Any(questionId => !available.ContainsKey(questionId)))
+                throw new ArgumentException(L10n.T("One or more selected questions are not active in the chosen subject, topic and rubric."));
+            pool = selectedQuestionIds.Select(questionId => available[questionId]).ToList();
+        }
         if (pool.Count < input.MainQuestionCount)
-            throw new ArgumentException(L10n.Format("Only {0} active questions match this subject and topic, but each candidate needs {1}. Add questions or lower the number.", pool.Count, input.MainQuestionCount));
+            throw new ArgumentException(L10n.Format("Only {0} active questions match the selected subject, topic and rubric, but each candidate needs {1}. Select more questions or lower the number.", pool.Count, input.MainQuestionCount));
 
         // Build the schedule (plan §6). It must fit the chosen window unless the lecturer allows the
         // schedule to run past the end time (plan §14); without an end time the schedule defines the window.
@@ -259,7 +315,8 @@ public sealed class ExamService(
             input.MainQuestionCount, input.MaxFollowUpQuestions, ownerId, candidates,
             input.AnswerTimeLimitSeconds, input.MaxFollowUpsPerQuestion, input.Language, input.Recording,
             windowEndsAt, input.BufferMinutes, input.BreakMinutes, input.BreakEveryCount, input.Strategy,
-            input.Term?.Trim(), input.ExamType?.Trim(), input.Instructions?.Trim());
+            input.Term?.Trim(), input.ExamType?.Trim(), input.Instructions?.Trim(), input.RubricId,
+            pool.Select(question => question.Id).ToList());
         return (draft, allocation.ConsecutiveOverlaps);
     }
 

@@ -480,16 +480,18 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
             Task.FromResult<ExamDetailsDto?>(id == ExamId && actor.UserId == "u-lecturer"
                 ? new ExamDetailsDto(ExamId, "Kỳ thi thử", 1, "PRN222", null, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 15, 2, 4, "u-lecturer", [])
                 : null);
+        public Task<IReadOnlyList<ExamPoolQuestion>> GetQuestionBankAsync(int subjectId, int? topicId, int? rubricId, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ExamSummaryDto>> ListAsync(ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ExamSaveResult> CreateAsync(ExamInput input, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ExamSaveResult> UpdateAsync(int id, ExamInput input, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ExamSaveResult> ReassignQuestionsAsync(int id, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateCandidateQuestionAsync(int id, int candidateOrder, int questionOrder, int questionId, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AdjustSlotAsync(int id, int order, DateTime newStartsAtUtc, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ResetScheduleAsync(int id, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task SetCandidateStatusAsync(int id, int order, CandidateStatus? status, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteAsync(int id, ExamActor actor, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<int> CountPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<int> CountPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public IReadOnlyList<string> ParseCandidateEmails(string? text) => throw new NotSupportedException();
     }
 

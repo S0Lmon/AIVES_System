@@ -13,10 +13,13 @@ public interface IExamService
 {
     Task<IReadOnlyList<ExamSummaryDto>> ListAsync(ExamActor actor, CancellationToken cancellationToken = default);
     Task<ExamDetailsDto?> GetAsync(int id, ExamActor actor, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ExamPoolQuestion>> GetQuestionBankAsync(int subjectId, int? topicId, int? rubricId, ExamActor actor, CancellationToken cancellationToken = default);
     Task<ExamSaveResult> CreateAsync(ExamInput input, ExamActor actor, CancellationToken cancellationToken = default);
     Task<ExamSaveResult> UpdateAsync(int id, ExamInput input, ExamActor actor, CancellationToken cancellationToken = default);
     /// <summary>Draws a fresh question set for every candidate, keeping settings and candidates.</summary>
     Task<ExamSaveResult> ReassignQuestionsAsync(int id, ExamActor actor, CancellationToken cancellationToken = default);
+    /// <summary>Replaces one candidate's assigned question with another question in this exam's selected pool.</summary>
+    Task UpdateCandidateQuestionAsync(int id, int candidateOrder, int questionOrder, int questionId, ExamActor actor, CancellationToken cancellationToken = default);
     /// <summary>
     /// Moves one candidate's slot to a new start time (plan §6, manual adjustment). The new slot must
     /// not overlap any other candidate's slot. Blocked once the exam has started.
@@ -32,7 +35,7 @@ public interface IExamService
     Task SetCandidateStatusAsync(int id, int order, CandidateStatus? status, ExamActor actor, CancellationToken cancellationToken = default);
     Task DeleteAsync(int id, ExamActor actor, CancellationToken cancellationToken = default);
     /// <summary>Active questions available for a subject (and topic), for the form's hint.</summary>
-    Task<int> CountPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default);
+    Task<int> CountPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default);
     /// <summary>Exams the given email sits, with that candidate's own slot.</summary>
     Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default);
     /// <summary>Splits pasted text (lines, commas or semicolons) into trimmed, lower-case, de-duplicated emails.</summary>

@@ -5,10 +5,12 @@ namespace AIVES.DAL.Data.Repositories;
 
 public sealed class ExamRepository(ApplicationDbContext context) : IExamRepository
 {
-    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default)
     {
         var questions = await context.Questions.AsNoTracking()
-            .Where(question => question.IsActive && question.SubjectId == subjectId && (topicId == null || question.TopicId == topicId))
+            .Where(question => question.IsActive && question.SubjectId == subjectId
+                && (topicId == null || question.TopicId == topicId)
+                && (rubricId == null || question.RubricId == rubricId))
             .OrderBy(question => question.Id)
             .Select(question => new { question.Id, question.BloomLevelId, BloomName = question.BloomLevel.Name, question.Content, question.ExpectedAnswer, question.RubricId })
             .ToListAsync(cancellationToken);
@@ -23,7 +25,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 .ToListAsync(cancellationToken))
                 .ToDictionary(rubric => rubric.Id, rubric => Snapshot(rubric)?.ToJson());
         return questions.Select(question => new ExamPoolQuestion(question.Id, question.BloomLevelId, question.BloomName, question.Content, question.ExpectedAnswer,
-            question.RubricId is { } rubricId ? rubrics.GetValueOrDefault(rubricId) : null)).ToList();
+            question.RubricId is { } questionRubricId ? rubrics.GetValueOrDefault(questionRubricId) : null, question.RubricId)).ToList();
     }
 
     /// <summary>Freezes a rubric matrix as it is now; null when it has nothing to grade against.</summary>
@@ -54,6 +56,8 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         Apply(draft, exam);
         foreach (var candidate in draft.Candidates)
             exam.Candidates.Add(ToEntity(candidate));
+        foreach (var questionId in draft.SelectedQuestionIds ?? [])
+            exam.QuestionPool.Add(new ExamQuestionPool { QuestionId = questionId });
         context.Exams.Add(exam);
         await context.SaveChangesAsync(cancellationToken);
         return exam.Id;
@@ -62,6 +66,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     public async Task UpdateAsync(int id, ExamDraft draft, CancellationToken cancellationToken = default)
     {
         var exam = await context.Exams.Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
+            .Include(item => item.QuestionPool)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new KeyNotFoundException($"Exam {id} was not found.");
 
@@ -69,11 +74,15 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         // unique (ExamId, Order) and (ExamId, Email) values.
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         context.ExamCandidates.RemoveRange(exam.Candidates);
+        context.ExamQuestionPools.RemoveRange(exam.QuestionPool);
+        exam.QuestionPool.Clear();
         Apply(draft, exam);
         exam.ModifiedAtUtc = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         foreach (var candidate in draft.Candidates)
             exam.Candidates.Add(ToEntity(candidate));
+        foreach (var questionId in draft.SelectedQuestionIds ?? [])
+            exam.QuestionPool.Add(new ExamQuestionPool { ExamId = id, QuestionId = questionId });
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
@@ -84,6 +93,21 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         if (exam is null)
             return;
         context.Exams.Remove(exam);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateCandidateQuestionAsync(int examId, int candidateOrder, int questionOrder, ExamAssignedQuestion question, CancellationToken cancellationToken = default)
+    {
+        var assigned = await context.ExamCandidateQuestions
+            .Include(item => item.Candidate)
+            .FirstOrDefaultAsync(item => item.Candidate.ExamId == examId
+                && item.Candidate.Order == candidateOrder && item.Order == questionOrder, cancellationToken)
+            ?? throw new KeyNotFoundException($"Question {questionOrder} for candidate {candidateOrder} was not found.");
+        assigned.QuestionId = question.QuestionId;
+        assigned.Content = question.Content;
+        assigned.ExpectedAnswer = question.ExpectedAnswer;
+        assigned.BloomLevelName = question.BloomLevelName;
+        assigned.RubricJson = question.RubricJson;
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -102,6 +126,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     {
         var exam = await context.Exams.AsNoTracking()
             .Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
+            .Include(item => item.QuestionPool)
             .Include(item => item.Candidates).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns).ThenInclude(turn => turn.Recording)
             .AsSplitQuery()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
@@ -135,7 +160,11 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
             exam.MainQuestionCount, exam.MaxFollowUpQuestions, exam.CreatedById, candidates,
             exam.AnswerTimeLimitSeconds, exam.MaxFollowUpsPerQuestion, exam.Language.ToLanguage(), RecordingOf(exam),
             exam.BufferMinutes, exam.BreakMinutes, exam.BreakEveryCount, exam.Strategy,
-            exam.Term, exam.ExamType, exam.Instructions, scheduleEndsAt);
+            exam.Term, exam.ExamType, exam.Instructions, scheduleEndsAt, exam.RubricId,
+            exam.QuestionPool.Count > 0
+                ? exam.QuestionPool.Select(item => item.QuestionId).Order().ToList()
+                : candidates.SelectMany(candidate => candidate.Questions).Where(question => question.QuestionId is not null)
+                    .Select(question => question.QuestionId!.Value).Distinct().Order().ToList());
     }
 
     internal static RecordingMode RecordingOf(Exam exam) =>
@@ -220,6 +249,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         exam.SubjectName = draft.SubjectName;
         exam.TopicId = draft.TopicId;
         exam.TopicName = draft.TopicName;
+        exam.RubricId = draft.RubricId;
         exam.StartsAtUtc = draft.StartsAtUtc;
         exam.EndsAtUtc = draft.EndsAtUtc;
         exam.SlotMinutes = draft.SlotMinutes;

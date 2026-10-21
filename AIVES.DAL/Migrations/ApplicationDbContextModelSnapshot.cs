@@ -17,7 +17,7 @@ namespace AIVES.DAL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -319,6 +319,9 @@ namespace AIVES.DAL.Migrations
                     b.Property<bool>("RecordVideo")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("RubricId")
+                        .HasColumnType("int");
+
                     b.Property<int>("SlotMinutes")
                         .HasColumnType("int");
 
@@ -354,6 +357,8 @@ namespace AIVES.DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("RubricId");
 
                     b.HasIndex("StartsAtUtc");
 
@@ -502,6 +507,21 @@ namespace AIVES.DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("ExamCandidateQuestions");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.ExamQuestionPool", b =>
+                {
+                    b.Property<int>("ExamId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ExamId", "QuestionId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("ExamQuestionPools");
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.ExamTurn", b =>
@@ -1218,6 +1238,11 @@ namespace AIVES.DAL.Migrations
 
             modelBuilder.Entity("AIVES.DAL.Entities.Exam", b =>
                 {
+                    b.HasOne("AIVES.DAL.Entities.Rubric", null)
+                        .WithMany()
+                        .HasForeignKey("RubricId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AIVES.DAL.Entities.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
@@ -1269,6 +1294,25 @@ namespace AIVES.DAL.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Candidate");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("AIVES.DAL.Entities.ExamQuestionPool", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.Exam", "Exam")
+                        .WithMany("QuestionPool")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIVES.DAL.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
 
                     b.Navigation("Question");
                 });
@@ -1488,6 +1532,8 @@ namespace AIVES.DAL.Migrations
             modelBuilder.Entity("AIVES.DAL.Entities.Exam", b =>
                 {
                     b.Navigation("Candidates");
+
+                    b.Navigation("QuestionPool");
                 });
 
             modelBuilder.Entity("AIVES.DAL.Entities.ExamAttempt", b =>

@@ -4,7 +4,7 @@ namespace AIVES.DAL.Data.Repositories;
 public interface IExamRepository
 {
     /// <summary>Active questions of a subject, narrowed to one topic when given.</summary>
-    Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default);
     Task<int> AddAsync(ExamDraft draft, CancellationToken cancellationToken = default);
     /// <summary>Replaces the settings and the whole candidate list (with their questions).</summary>
     Task UpdateAsync(int id, ExamDraft draft, CancellationToken cancellationToken = default);
@@ -19,4 +19,5 @@ public interface IExamRepository
     Task UpdateScheduleAsync(int id, IReadOnlyList<DateTime> slotStartsAtUtc, CancellationToken cancellationToken = default);
     /// <summary>Sets or clears the lecturer's status override for one candidate (plan §5).</summary>
     Task UpdateCandidateStatusAsync(int examId, int order, CandidateStatus? status, CancellationToken cancellationToken = default);
+    Task UpdateCandidateQuestionAsync(int examId, int candidateOrder, int questionOrder, ExamAssignedQuestion question, CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,32 @@
+.exam-question-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: .5rem;
+    max-height: 22rem;
+    overflow: auto;
+    padding: .25rem;
+}
+
+.exam-question-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    gap: .35rem .6rem;
+    padding: .65rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    cursor: pointer;
+}
+
+.exam-question-option input {
+    margin-top: .25rem;
+}
+
+.exam-question-option span {
+    white-space: pre-wrap;
+}
+
+.exam-question-option small {
+    grid-column: 2;
+    color: var(--bs-secondary-color);
+}
