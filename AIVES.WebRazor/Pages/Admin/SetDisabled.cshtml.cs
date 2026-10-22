@@ -1,12 +1,13 @@
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO.Localization;
+using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 
 namespace AIVES.WebRazor.Pages.Admin;
 
-public sealed class SetDisabledModel(IUserAdminService users, ILogger<SetDisabledModel> logger) : PageModel
+public sealed class SetDisabledModel(IUserAdminService users, ILiveUpdates live, ILogger<SetDisabledModel> logger) : PageModel
 {
     private string? ActingEmail => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
 
@@ -19,7 +20,10 @@ public sealed class SetDisabledModel(IUserAdminService users, ILogger<SetDisable
         {
             var result = await users.SetDisabledAsync(userId, disabled, currentUserId, ActingEmail);
             if (result.Succeeded)
+            {
+                await live.UserChangedAsync(disabled ? UserLiveActions.Disabled : UserLiveActions.Enabled, userId, result.User?.Email ?? string.Empty);
                 TempData["UserMessage"] = L10n.Format(disabled ? "{0} can no longer sign in." : "{0} can sign in again.", result.User?.Email ?? userId);
+            }
             else
                 TempData["UserError"] = string.Join(" ", result.Errors);
         }

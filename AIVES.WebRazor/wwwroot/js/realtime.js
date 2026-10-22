@@ -86,6 +86,17 @@
         document.dispatchEvent(new CustomEvent('aives:entity-changed', { detail: change }));
     });
 
+    // Admins get every account change; everyone else only hears about their own account.
+    connection.on('UserChanged', (change) => {
+        if (change.actorId !== myUserId) {
+            if (change.userId === myUserId)
+                toast(text['user.self'], text[`user.self.${change.action}`] || '', change.action === 'disabled' ? 'danger' : 'info');
+            else
+                toast(fill(text[`user.${change.action}`] || '{0}', change.actorName, change.email), change.email);
+        }
+        document.dispatchEvent(new CustomEvent('aives:user-changed', { detail: change }));
+    });
+
     connection.on('EditorsChanged', (questionId, editors) =>
         document.dispatchEvent(new CustomEvent('aives:editors', { detail: { questionId, editors } })));
 

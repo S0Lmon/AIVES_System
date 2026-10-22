@@ -14,24 +14,30 @@ public sealed record OnlineUser(string UserId, string Name, int Connections);
 /// </summary>
 public sealed record EntityChange(string Entity, string Action, int Id, string Title, string ActorId, string ActorName, DateTime AtUtc);
 
+/// <summary>One change to an account. Admins refresh the Users page; the account's owner is told it changed.</summary>
+public sealed record UserChange(string Action, string UserId, string Email, string ActorId, string ActorName, DateTime AtUtc);
+
 /// <summary>Messages the server pushes to browsers. Method names are what realtime.js listens for.</summary>
 public interface IAivesClient
 {
     Task PresenceChanged(IReadOnlyList<OnlineUser> users);
     Task EntityChanged(EntityChange change);
     Task EditorsChanged(int questionId, IReadOnlyList<string> editors);
+    Task UserChanged(UserChange change);
 }
 
 /// <summary>
 /// The single SignalR hub. Everyone signed in gets presence; only staff join the group that
 /// receives question/catalogue changes, because question content must not reach students. Exam changes go to
-/// staff and to the candidate group of each listed email, never to everyone.
+/// staff and to the candidate group of each listed email, never to everyone. Account changes carry
+/// emails, so they go to administrators and to the account's own connections only.
 /// </summary>
 [Authorize]
 public sealed class AivesHub(PresenceTracker presence) : Hub<IAivesClient>
 {
     public const string Path = "/hubs/aives";
     public const string StaffGroup = "staff";
+    public const string AdminGroup = "admins";
 
     public static string QuestionGroup(int questionId) => $"question-{questionId}";
     /// <summary>Every connection of one signed-in email; candidates are listed by email, so exam changes reach them here.</summary>
@@ -41,6 +47,8 @@ public sealed class AivesHub(PresenceTracker presence) : Hub<IAivesClient>
     {
         if (IsStaff(Context.User))
             await Groups.AddToGroupAsync(Context.ConnectionId, StaffGroup);
+        if (Context.User?.IsInRole(AppRoles.Admin) == true)
+            await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroup);
         if (Email(Context.User) is { Length: > 0 } email)
             await Groups.AddToGroupAsync(Context.ConnectionId, CandidateGroup(email));
 
