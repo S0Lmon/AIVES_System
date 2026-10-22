@@ -1,6 +1,7 @@
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 
@@ -23,6 +24,20 @@ public sealed class UsersModel(IUserAdminService users) : PageModel
 
     public async Task OnGetAsync()
     {
+        await LoadAsync();
+        Message = TempData["UserMessage"] as string;
+        Error = TempData["UserError"] as string;
+    }
+
+    /// <summary>GET ?handler=Rows — refreshed when SignalR reports an account change.</summary>
+    public async Task<PartialViewResult> OnGetRowsAsync()
+    {
+        await LoadAsync();
+        return Partial("_UserRows", this);
+    }
+
+    private async Task LoadAsync()
+    {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Users = (await users.ListUsersAsync()).Select(user => new UserRow(
             user.Id, user.Email, user.DisplayName, user.EmailConfirmed, user.CreatedAtUtc,
@@ -30,8 +45,6 @@ public sealed class UsersModel(IUserAdminService users) : PageModel
             user.Roles.FirstOrDefault(role => AppRoles.Assignable.Contains(role)),
             user.Id == currentUserId,
             user.IsDisabled)).ToList();
-        Message = TempData["UserMessage"] as string;
-        Error = TempData["UserError"] as string;
     }
 
     public static string RoleLabel(string? role) => role switch

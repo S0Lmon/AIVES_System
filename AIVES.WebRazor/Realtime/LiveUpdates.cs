@@ -26,6 +26,15 @@ public static class LiveActions
     public const string Ended = "ended";
 }
 
+public static class UserLiveActions
+{
+    public const string Registered = "registered";
+    public const string Verified = "verified";
+    public const string RoleChanged = "role-changed";
+    public const string Disabled = "disabled";
+    public const string Enabled = "enabled";
+}
+
 /// <summary>
 /// Page models call this after the BLL has saved a change. Broadcasting is a presentation
 /// concern, so the BLL stays unaware of SignalR.
@@ -35,6 +44,8 @@ public interface ILiveUpdates
     Task EntityChangedAsync(string entity, string action, int id, string title);
     /// <summary>Tells staff and the exam's candidates (old and new, on an edit) that an exam changed.</summary>
     Task ExamChangedAsync(string action, int examId, string title, IEnumerable<string> candidateEmails);
+    /// <summary>Tells administrators, and every open tab of that account, that an account changed.</summary>
+    Task UserChangedAsync(string action, string userId, string email);
 }
 
 public sealed class LiveUpdates(IHubContext<AivesHub, IAivesClient> hub, IHttpContextAccessor http,
@@ -70,6 +81,21 @@ public sealed class LiveUpdates(IHubContext<AivesHub, IAivesClient> hub, IHttpCo
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Could not broadcast exam {Action} {Id}", action, examId);
+        }
+    }
+
+    public async Task UserChangedAsync(string action, string userId, string email)
+    {
+        var user = http.HttpContext?.User;
+        var change = new UserChange(action, userId, email, AivesHub.UserId(user), AivesHub.DisplayName(user), clock.GetUtcNow().UtcDateTime);
+        try
+        {
+            await hub.Clients.Group(AivesHub.AdminGroup).UserChanged(change);
+            await hub.Clients.User(userId).UserChanged(change);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not broadcast user {Action} {UserId}", action, userId);
         }
     }
 

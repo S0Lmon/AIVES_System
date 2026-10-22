@@ -152,6 +152,31 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
     }
 
     [Fact]
+    public async Task UserChangesReachAdminsAndTheAccountOnly()
+    {
+        await using var admin = await ConnectAsync("users-admin", "admin@fpt.edu.vn", AppRoles.Admin);
+        await using var target = await ConnectAsync("users-target", "sv.target@fpt.edu.vn", AppRoles.Student);
+        await using var lecturer = await ConnectAsync("users-lecturer", "gv.users@fpt.edu.vn", AppRoles.Lecturer);
+        var adminChanges = Listen<RazorHub.UserChange>(admin, "UserChanged");
+        var targetChanges = Listen<RazorHub.UserChange>(target, "UserChanged");
+        var lecturerChanges = Listen<RazorHub.UserChange>(lecturer, "UserChanged");
+
+        using (var scope = app.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<RazorHub.ILiveUpdates>()
+                .UserChangedAsync(RazorHub.UserLiveActions.RoleChanged, "users-target", "sv.target@fpt.edu.vn");
+
+        var change = await ReadAsync(adminChanges);
+        Assert.Equal("role-changed", change.Action);
+        Assert.Equal("users-target", change.UserId);
+        Assert.Equal("sv.target@fpt.edu.vn", change.Email);
+        Assert.Equal("users-target", (await ReadAsync(targetChanges)).UserId);
+
+        // Account changes carry emails, so other staff must not get them.
+        await Task.Delay(300);
+        Assert.False(lecturerChanges.TryRead(out _));
+    }
+
+    [Fact]
     public async Task EveryoneSeesWhoIsOnline()
     {
         await using var first = await ConnectAsync("presence-a", "a@fpt.edu.vn", AppRoles.Lecturer);

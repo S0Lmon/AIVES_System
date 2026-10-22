@@ -1,13 +1,14 @@
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
+using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Account;
 
-public sealed class RegisterModel(IAccountService accounts, ILogger<RegisterModel> logger) : PageModel
+public sealed class RegisterModel(IAccountService accounts, ILiveUpdates live, ILogger<RegisterModel> logger) : PageModel
 {
     [BindProperty]
     public RegisterInput Input { get; set; } = new();
@@ -50,10 +51,13 @@ public sealed class RegisterModel(IAccountService accounts, ILogger<RegisterMode
             var result = await accounts.RegisterAsync(
                 new RegisterRequest(Input.Email, Input.Password, Input.DisplayName), cancellationToken);
             if (result.Succeeded)
+            {
+                await live.UserChangedAsync(UserLiveActions.Registered, result.User!.Id, result.User.Email);
                 return RedirectToPage("/Account/VerifyEmail", new
                 {
-                    email = result.User!.Email
+                    email = result.User.Email
                 });
+            }
 
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, L10n.T(error));

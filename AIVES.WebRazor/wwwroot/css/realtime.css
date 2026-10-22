@@ -61,3 +61,4 @@
 @media(max-width:575.98px){.monitor-grid{grid-template-columns:1fr}.viva-timer{align-items:flex-start}}
 
 .status-select{min-width:12rem}
+.user-online{display:inline-block;vertical-align:middle}.user-online[hidden]{display:none}

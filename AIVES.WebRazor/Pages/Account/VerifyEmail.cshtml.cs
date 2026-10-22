@@ -1,12 +1,13 @@
 using AIVES.BLL.Services.Accounts;
 using AIVES.DTO.Localization;
+using AIVES.WebRazor.Realtime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
 
 namespace AIVES.WebRazor.Pages.Account;
 
-public sealed class VerifyEmailModel(IAccountService accounts, ILogger<VerifyEmailModel> logger) : PageModel
+public sealed class VerifyEmailModel(IAccountService accounts, ILiveUpdates live, ILogger<VerifyEmailModel> logger) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     [Required]
@@ -28,7 +29,11 @@ public sealed class VerifyEmailModel(IAccountService accounts, ILogger<VerifyEma
         {
             var result = await accounts.VerifyEmailAsync(Email, Code, cancellationToken);
             if (result.Succeeded)
+            {
+                if (result.User is { } user)
+                    await live.UserChangedAsync(UserLiveActions.Verified, user.Id, user.Email);
                 return RedirectToPage("/Index");
+            }
 
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, L10n.T(error));
