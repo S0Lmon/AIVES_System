@@ -1,5 +1,6 @@
 using AIVES.DTO.Localization;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace AIVES.Tests;
 
@@ -17,6 +18,34 @@ public sealed class LocalizationTests
         var collisions = table.Keys.Where(key => !seen.Add(key)).ToList();
 
         Assert.Empty(collisions);
+    }
+
+    [Fact]
+    public void EveryTextThePresentationLayerTranslatesHasAVietnameseEntry()
+    {
+        // A key that is wrapped in L10n but missing from the table renders in English for
+        // Vietnamese users without any error, which is how whole pages slipped through before.
+        var web = Path.Combine(RepositoryRoot(), "AIVES.WebRazor");
+        var call = new Regex(@"L10n\.(?:T|Format)\(\s*""((?:[^""\\]|\\.)*)""");
+        var missing = Directory.EnumerateFiles(web, "*.*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".cshtml", StringComparison.Ordinal) || path.EndsWith(".cs", StringComparison.Ordinal))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .SelectMany(path => call.Matches(File.ReadAllText(path)).Select(match =>
+                (File: Path.GetRelativePath(web, path), Key: match.Groups[1].Value.Replace("\\\"", "\"").Replace("\\\\", "\\"))))
+            .Where(item => !AppText.VietnameseEntries.ContainsKey(item.Key))
+            .Select(item => $"{item.File}: {item.Key}")
+            .Distinct()
+            .ToList();
+
+        Assert.Empty(missing);
+    }
+
+    private static string RepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+            if (File.Exists(Path.Combine(directory.FullName, "AIVES_System.slnx")))
+                return directory.FullName;
+        throw new InvalidOperationException("AIVES_System.slnx was not found above the test output folder.");
     }
 
     [Fact]

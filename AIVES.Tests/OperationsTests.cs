@@ -256,6 +256,25 @@ public sealed class QuestionImportTests
     [Fact]
     public void AFileWithoutTheRequiredColumnsIsRejected() =>
         Assert.Throws<ArgumentException>(() => QuestionImportParser.Parse(new MemoryStream(Encoding.UTF8.GetBytes("a,b\n1,2\n")), "q.csv"));
+
+    [Theory]
+    [InlineData(AppLanguage.Vi, ".csv")]
+    [InlineData(AppLanguage.Vi, ".xlsx")]
+    [InlineData(AppLanguage.En, ".csv")]
+    [InlineData(AppLanguage.En, ".xlsx")]
+    public void TheDownloadableTemplateImportsWithoutProblems(AppLanguage language, string extension)
+    {
+        var bytes = extension == ".csv" ? QuestionImportTemplate.Csv(language) : QuestionImportTemplate.Xlsx(language);
+
+        var result = QuestionImportParser.Parse(new MemoryStream(bytes), QuestionImportTemplate.FileName(extension));
+
+        Assert.Empty(result.Problems);
+        Assert.Equal(2, result.Questions.Count);
+        Assert.Equal(["Understand", "Analyze"], result.Questions.Select(question => question.BloomLevel));
+        Assert.Equal(["Basic", "Intermediate"], result.Questions.Select(question => question.Difficulty));
+        Assert.Equal([1, 2], result.Questions.Select(question => question.FollowUpQuestions.Count));
+        Assert.All(result.Questions, question => Assert.NotEmpty(question.ExpectedAnswer));
+    }
 }
 
 public sealed class MaterialRetrievalTests

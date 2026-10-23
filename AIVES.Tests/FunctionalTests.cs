@@ -693,7 +693,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
 
         // Times are entered in Vietnam time (UTC+7) and shown the same way.
         var day = DateTime.UtcNow.AddDays(2).Date;
-        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", WithPool(await QuestionIds(subjectId), new()
         {
             ["Input.Title"] = "Viva schedule test",
             ["Input.SubjectId"] = subjectId.ToString(),
@@ -703,7 +703,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Input.MainQuestionCount"] = "2",
             ["Input.MaxFollowUpQuestions"] = "1",
             ["Input.CandidateEmails"] = studentEmail.ToUpperInvariant() + "\nnot.registered@fpt.edu.vn"
-        });
+        }));
         Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
         var detailsUrl = created.Headers.Location!.OriginalString;
         Assert.Matches(@"^/Exam/Details/\d+$", detailsUrl);
@@ -717,7 +717,9 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("No account yet", details);
         Assert.Contains("Students", details);                 // the instructor dashboard (plan §13)
         Assert.Contains("Set status", details);               // the per-candidate status control (plan §5)
-        Assert.Equal(4, contents.Count(content => details.Contains(content)));
+        // Each assignment is the selected option of its "replace question" picker, which also lists the rest of the pool.
+        var assigned = Regex.Matches(details, "<option value=\"\\d+\" selected>([^<]*)</option>").Select(match => match.Groups[1].Value).ToList();
+        Assert.Equal(4, contents.Count(content => assigned.Any(option => option.Contains(content))));
         Assert.Contains("Viva schedule test", await Html(await lecturer.GetAsync("/Exam")));
 
         // The lecturer moves candidate #2 into a free gap by hand (plan §6).
@@ -770,7 +772,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         var (subjectId, topicId) = await CreateCatalogTopic("Small pool");
         await AddQuestions(subjectId, topicId, 2);
 
-        var response = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        var response = await Post(lecturer, "/Exam/Create", "/Exam/Create", WithPool(await QuestionIds(subjectId), new()
         {
             ["Input.Title"] = "Too many questions",
             ["Input.SubjectId"] = subjectId.ToString(),
@@ -780,11 +782,11 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Input.MainQuestionCount"] = "3",
             ["Input.MaxFollowUpQuestions"] = "2",
             ["Input.CandidateEmails"] = "a@fpt.edu.vn"
-        });
+        }));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var html = await Html(response);
-        Assert.Contains("Only 2 active questions match this subject and topic, but each candidate needs 3.", html);
+        Assert.Contains("Only 2 active questions match the selected subject, topic and rubric, but each candidate needs 3.", html);
         Assert.Contains("value=\"Too many questions\"", html); // the form keeps what was typed
     }
 
@@ -798,7 +800,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         var (subjectId, topicId) = await CreateCatalogTopic("Viva topic");
         await AddQuestions(subjectId, topicId, 4);
 
-        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", new()
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", WithPool(await QuestionIds(subjectId), new()
         {
             ["Input.Title"] = "AI viva flow",
             ["Input.SubjectId"] = subjectId.ToString(),
@@ -812,7 +814,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             ["Input.Language"] = "En",
             ["Input.Recording"] = "Audio",
             ["Input.CandidateEmails"] = studentEmail
-        });
+        }));
         var detailsUrl = created.Headers.Location!.OriginalString;
         int candidateId;
         using (var scope = app.Services.CreateScope())
@@ -1000,6 +1002,21 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             db.Questions.Add(new AIVES.DAL.Entities.Question { Content = content, ExpectedAnswer = "Answer", BloomLevelId = index % 4 + 1, SubjectId = subjectId, TopicId = topicId });
         await db.SaveChangesAsync();
         return contents;
+    }
+
+    private async Task<List<int>> QuestionIds(int subjectId)
+    {
+        using var scope = app.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions
+            .Where(question => question.SubjectId == subjectId).OrderBy(question => question.Id).Select(question => question.Id).ToListAsync();
+    }
+
+    /// <summary>Ticks these questions in the exam form's question pool, which the form requires.</summary>
+    private static Dictionary<string, string> WithPool(IReadOnlyList<int> questionIds, Dictionary<string, string> form)
+    {
+        for (var i = 0; i < questionIds.Count; i++)
+            form[$"Input.SelectedQuestionIds[{i}]"] = questionIds[i].ToString();
+        return form;
     }
 
     private async Task<(int SubjectId, int TopicId)> CreateCatalogTopic(string topicName)

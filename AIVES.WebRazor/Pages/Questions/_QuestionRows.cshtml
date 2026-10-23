@@ -30,7 +30,7 @@ else
                         <td><span class="status-badge @(question.IsActive ? "active" : "inactive")">@(question.IsActive ? L10n.T("Active") : L10n.T("Hidden"))</span></td>
                         <td>
                             <div class="action-group">
-                                <a asp-page="/Questions/Details" asp-route-id="@question.Id" class="btn btn-sm btn-light">Xem</a>
+                                <a asp-page="/Questions/Details" asp-route-id="@question.Id" class="btn btn-sm btn-light">@L10n.T("View")</a>
                                 <a asp-page="/Questions/Edit" asp-route-id="@question.Id" class="btn btn-sm btn-info">@L10n.T("Edit")</a>
                                 <a asp-page="/Questions/Delete" asp-route-id="@question.Id" class="btn btn-sm btn-warning">@L10n.T("Delete")</a>
                             </div>
