@@ -233,6 +233,12 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
         return Page();
     }
 
+    /// <summary>GET ?handler=Template&amp;format=xlsx|csv — a sample file in the current UI language.</summary>
+    public FileContentResult OnGetTemplate(string? format) =>
+        string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase)
+            ? File(QuestionImportTemplate.Csv(L10n.Current), QuestionImportTemplate.CsvContentType, QuestionImportTemplate.FileName(".csv"))
+            : File(QuestionImportTemplate.Xlsx(L10n.Current), QuestionImportTemplate.XlsxContentType, QuestionImportTemplate.FileName(".xlsx"));
+
     public async Task<IActionResult> OnPostImportAsync(IFormFile? file, int? subjectId, int? topicId)
     {
         Tab = "import";
