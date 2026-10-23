@@ -4,118 +4,19 @@ using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
 using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using RazorRealtime = Razor::AIVES.WebRazor.Realtime;
 
 namespace AIVES.Tests;
-
-/// <summary>Records every call and answers "preview" or "final" text, so tests see which ran.</summary>
-internal sealed class FakeSpeechToText : ISpeechToText
-{
-    public ConcurrentQueue<(int Samples, bool Preview, string? Prompt)> Calls { get; } = new();
-
-    public bool IsAvailable { get; set; } = true;
-
-    public Task<string> TranscribeAsync(ReadOnlyMemory<float> samples, AppLanguage language, string? prompt, bool preview,
-        CancellationToken cancellationToken = default)
-    {
-        Calls.Enqueue((samples.Length, preview, prompt));
-        if (!Audio.HasSpeech(samples.Span))
-            return Task.FromResult(string.Empty);
-        return Task.FromResult(preview ? $"tạm{Calls.Count}" : $"đoạn{Calls.Count(call => !call.Preview)}");
-    }
-}
-
-public sealed class LiveTranscriberTests
-{
-    private static readonly SpeechOptions Options = new() { PreviewEverySeconds = 1, CommitAfterSeconds = 4, MaxWindowSeconds = 6 };
-
-    /// <summary>A tone for "speech" and zeros for a pause.</summary>
-    private static float[] Tone(double seconds, float level = 0.3f) =>
-        Enumerable.Range(0, (int)(seconds * Audio.SampleRate)).Select(i => level * MathF.Sin(i * 0.05f)).ToArray();
-
-    private static float[] Silence(double seconds) => new float[(int)(seconds * Audio.SampleRate)];
-
-    [Fact]
-    public async Task PreviewIsRefreshedOnlyAfterEnoughNewAudio()
-    {
-        var speech = new FakeSpeechToText();
-        var transcriber = new LiveTranscriber(speech, Options, AppLanguage.Vi, "prompt", 60);
-
-        transcriber.Append(Tone(0.5));
-        Assert.Null(await transcriber.UpdateAsync());
-
-        transcriber.Append(Tone(0.6));
-        var text = await transcriber.UpdateAsync();
-
-        Assert.Equal("tạm1", text);
-        Assert.All(speech.Calls, call => Assert.True(call.Preview));
-        Assert.All(speech.Calls, call => Assert.Equal("prompt", call.Prompt));
-    }
-
-    [Fact]
-    public async Task LongAnswersAreCommittedAtAPauseSoEachCallStaysShort()
-    {
-        var speech = new FakeSpeechToText();
-        var transcriber = new LiveTranscriber(speech, Options, AppLanguage.Vi, null, 60);
-
-        // 3 s speech, a pause, 1.5 s speech: the 4 s commit should cut inside the pause.
-        foreach (var part in new[] { Tone(3), Silence(0.4), Tone(1.5) })
-        {
-            transcriber.Append(part);
-            await transcriber.UpdateAsync();
-        }
-
-        var commit = speech.Calls.First(call => !call.Preview);
-        Assert.InRange(commit.Samples / (double)Audio.SampleRate, 3.0, 3.4);
-        Assert.All(speech.Calls, call => Assert.True(call.Samples <= Options.MaxWindowSeconds * Audio.SampleRate));
-    }
-
-    [Fact]
-    public async Task FinishTranscribesTheRestWithTheFullModelAndJoinsTheWindows()
-    {
-        var speech = new FakeSpeechToText();
-        var transcriber = new LiveTranscriber(speech, Options, AppLanguage.Vi, null, 60);
-        transcriber.Append(Tone(5));
-        await transcriber.UpdateAsync();
-        transcriber.Append(Tone(2));
-
-        var final = await transcriber.FinishAsync();
-
-        Assert.Equal("đoạn1 đoạn2", final);
-        Assert.False(speech.Calls.Last().Preview);
-        Assert.Equal(final, transcriber.Text);
-    }
-
-    [Fact]
-    public async Task SilenceProducesNoText()
-    {
-        var transcriber = new LiveTranscriber(new FakeSpeechToText(), Options, AppLanguage.Vi, null, 60);
-        transcriber.Append(Silence(3));
-
-        Assert.Equal(string.Empty, await transcriber.FinishAsync());
-    }
-
-    [Fact]
-    public void AudioPastTheTimeLimitIsIgnored()
-    {
-        var transcriber = new LiveTranscriber(new FakeSpeechToText(), Options, AppLanguage.Vi, null, maxSeconds: 2);
-        transcriber.Append(Tone(1.5));
-        transcriber.Append(Tone(1.5));
-
-        Assert.True(transcriber.IsFull);
-        Assert.Equal(2.0, transcriber.Seconds, 3);
-    }
-}
 
 public sealed class AudioTests
 {
@@ -132,40 +33,12 @@ public sealed class AudioTests
         Assert.Equal(8, BitConverter.ToInt32(wav, 40));
         Assert.Equal(44 + 8, wav.Length);
     }
-
-    [Fact]
-    public void Pcm16RoundTripsThroughFloats()
-    {
-        var bytes = new byte[] { 0x00, 0x40, 0x00, 0xC0 };
-        var samples = Audio.FromPcm16(bytes);
-
-        Assert.Equal([0.5f, -0.5f], samples);
-    }
-
-    [Fact]
-    public void ResampleKeepsTheDuration()
-    {
-        var resampled = Audio.Resample(new float[22050], 22050, 16000);
-        Assert.Equal(16000, resampled.Length);
-    }
-
-    [Theory]
-    [InlineData("Hãy subscribe cho kênh Ghiền Mì Gõ để không bỏ lỡ", true)]
-    [InlineData("Cảm ơn các bạn đã theo dõi", true)]
-    [InlineData(" www.thichews.ac.com", true)]
-    [InlineData("SignalR dùng WebSocket.", false)]
-    [InlineData("Kiến trúc ba lớp gồm presentation, business và data access", false)]
-    public void KnownWhisperHallucinationsAreDropped(string text, bool hallucination) =>
-        Assert.Equal(hallucination, WhisperSpeechToText.IsHallucination(text));
-
-    [Fact]
-    public void CleanRemovesTagsAndExtraSpaces() =>
-        Assert.Equal("xin chào thầy", WhisperSpeechToText.Clean("  [âm nhạc] xin   chào (nhạc nền) thầy "));
 }
 
 /// <summary>
-/// The viva over SignalR with the BLL replaced by fakes: audio in, transcript out, answers submitted,
-/// lecturers notified. No database and no speech model needed.
+/// The viva page with the BLL replaced by fakes: questions are read by the server voice, answers are
+/// submitted over HTTP, and lecturers watching the exam over SignalR are told about every step.
+/// No database and no speech model needed.
 /// </summary>
 public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 {
@@ -179,114 +52,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
     {
         this.app = app;
         app.Interviews.Reset();
-        app.Answers.Text = null;
-        app.Answers.Enabled = false;
-    }
-
-    [Fact]
-    public async Task SpokenAnswerIsTranscribedLiveAndSubmittedAsSpeech()
-    {
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        var transcripts = Channel.CreateUnbounded<(int TurnId, string Text, bool Final)>();
-        student.On<int, string, bool>("Transcript", (turn, text, final) => transcripts.Writer.TryWrite((turn, text, final)));
-
-        var started = await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false);
-        Assert.Equal(InterviewStatus.InProgress, started.Status);
-        var turnId = started.CurrentTurn!.TurnId;
-
-        // 2.5 s of "speech" in 250 ms chunks: enough for a live preview, then a final transcript.
-        await student.SendAsync("StreamAnswer", CandidateId, turnId, Chunks(2.5));
-        var partial = await ReadUntilAsync(transcripts.Reader, item => !item.Final);
-        Assert.StartsWith("tạm", partial.Text);
-        var final = await ReadUntilAsync(transcripts.Reader, item => item.Final);
-        Assert.Equal(turnId, final.TurnId);
-        Assert.False(string.IsNullOrWhiteSpace(final.Text));
-
-        var next = await student.InvokeAsync<InterviewStateDto>("SubmitAnswer", CandidateId, turnId, final.Text, 300);
-
-        var answer = Assert.Single(app.Interviews.Answers);
-        Assert.Equal(final.Text, answer.Transcript);
-        Assert.Equal(AnswerInputMode.Speech, answer.InputMode);
-        Assert.NotNull(answer.SpeakingMs);
-        // The fake examiner always probes once: the next turn is a follow-up of the same question.
-        Assert.Equal(TurnKind.FollowUp, next.CurrentTurn!.Kind);
-        Assert.Equal(1, next.CurrentTurn.MainIndex);
-    }
-
-    [Fact]
-    public async Task EditedTranscriptIsRecordedAsTyped()
-    {
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        var finals = Channel.CreateUnbounded<string>();
-        student.On<int, string, bool>("Transcript", (_, text, final) => { if (final) finals.Writer.TryWrite(text); });
-        var turnId = (await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false)).CurrentTurn!.TurnId;
-
-        await student.SendAsync("StreamAnswer", CandidateId, turnId, Chunks(1));
-        var final = await ReadAsync(finals.Reader);
-        await student.InvokeAsync<InterviewStateDto>("SubmitAnswer", CandidateId, turnId, final + " và thêm ý gõ tay", null);
-
-        Assert.Equal(AnswerInputMode.Typed, Assert.Single(app.Interviews.Answers).InputMode);
-    }
-
-    [Fact]
-    public async Task GeminiTranscriptReplacesWhispersAndCountsAsSpeech()
-    {
-        app.Answers.Enabled = true;
-        app.Answers.Text = "Kiến trúc ba lớp trong ASP.NET Core";
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        var transcripts = Channel.CreateUnbounded<(string Text, bool Final)>();
-        student.On<int, string, bool>("Transcript", (_, text, final) => transcripts.Writer.TryWrite((text, final)));
-        var turnId = (await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false)).CurrentTurn!.TurnId;
-
-        await student.SendAsync("StreamAnswer", CandidateId, turnId, Chunks(1));
-        var seen = new List<(string Text, bool Final)>();
-        do
-            seen.Add(await ReadAsync(transcripts.Reader));
-        while (!seen[^1].Final);
-
-        // Whisper's own final text is shown while Gemini works, then Gemini's is the one kept.
-        Assert.Contains(seen, item => !item.Final && item.Text.StartsWith("đoạn"));
-        Assert.Equal("Kiến trúc ba lớp trong ASP.NET Core", seen[^1].Text);
-        // The glossary goes to Gemini; words of the question ("ASP.NET Core") do not.
-        Assert.Equal(["Razor Pages"], app.Answers.LastVocabulary);
-        await student.InvokeAsync<InterviewStateDto>("SubmitAnswer", CandidateId, turnId, seen[^1].Text, null);
-        Assert.Equal(AnswerInputMode.Speech, Assert.Single(app.Interviews.Answers).InputMode);
-    }
-
-    [Fact]
-    public async Task WhisperTranscriptIsKeptWhenGeminiGivesNothing()
-    {
-        app.Answers.Enabled = true;
-        app.Answers.Text = null;
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        var finals = Channel.CreateUnbounded<string>();
-        student.On<int, string, bool>("Transcript", (_, text, final) => { if (final) finals.Writer.TryWrite(text); });
-        var turnId = (await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false)).CurrentTurn!.TurnId;
-
-        await student.SendAsync("StreamAnswer", CandidateId, turnId, Chunks(1));
-
-        Assert.StartsWith("đoạn", await ReadAsync(finals.Reader));
-    }
-
-    [Fact]
-    public void VocabularyIsTheGlossaryOnly() =>
-        Assert.Equal(["Razor Pages", "SignalR"], RazorRealtime.InterviewHub.Vocabulary(["Razor Pages", "SignalR", "signalr", " "]));
-
-    [Fact]
-    public async Task StreamingForAQuestionThatIsNotOpenIsRefused()
-    {
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false);
-
-        await Assert.ThrowsAsync<HubException>(() => student.InvokeAsync("StreamAnswer", CandidateId, 999, Chunks(0.5)));
-    }
-
-    [Fact]
-    public async Task OtherPeopleCannotDriveSomeoneElsesViva()
-    {
-        await using var stranger = await ConnectAsync("u-other", "nguoikhac@fpt.edu.vn", AppRoles.Student);
-
-        await Assert.ThrowsAsync<HubException>(() => stranger.InvokeAsync<InterviewStateDto>("Start", CandidateId, false));
+        app.Voice.Reset();
     }
 
     [Fact]
@@ -297,9 +63,11 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         lecturer.On<RazorRealtime.InterviewEvent>("InterviewEvent", change => events.Writer.TryWrite(change));
         await lecturer.InvokeAsync("WatchExam", ExamId);
 
-        await using var student = await ConnectAsync("u-student", Student, AppRoles.Student);
-        var turnId = (await student.InvokeAsync<InterviewStateDto>("Start", CandidateId, false)).CurrentTurn!.TurnId;
-        await student.InvokeAsync<InterviewStateDto>("SubmitAnswer", CandidateId, turnId, "Ba lớp là giao diện, nghiệp vụ, dữ liệu.", null);
+        using var student = StudentClient();
+        var token = await TokenAsync(student);
+        var started = await PostAsync(student, token, "Start", new { recordingConsent = false });
+        var turnId = started.GetProperty("currentTurn").GetProperty("turnId").GetInt32();
+        await PostAsync(student, token, "Answer", new { turnId, transcript = "Ba lớp là giao diện, nghiệp vụ, dữ liệu.", inputMode = 0 });
 
         Assert.Equal("started", (await ReadAsync(events.Reader)).Kind);
         Assert.Equal("question", (await ReadAsync(events.Reader)).Kind);
@@ -319,18 +87,65 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         await Assert.ThrowsAsync<HubException>(() => student.InvokeAsync("WatchExam", ExamId));
     }
 
-    private static async IAsyncEnumerable<string> Chunks(double seconds)
+    [Fact]
+    public async Task TheOpenQuestionIsReadAloudByTheServerVoice()
     {
-        var total = (int)(seconds * Audio.SampleRate);
-        const int chunk = Audio.SampleRate / 4;
-        for (var start = 0; start < total; start += chunk)
-        {
-            var bytes = new byte[Math.Min(chunk, total - start) * 2];
-            for (var i = 0; i < bytes.Length / 2; i++)
-                BitConverter.TryWriteBytes(bytes.AsSpan(i * 2), (short)(9000 * Math.Sin((start + i) * 0.05)));
-            yield return Convert.ToBase64String(bytes);
-            await Task.Yield();
-        }
+        using var student = StudentClient();
+        var token = await TokenAsync(student);
+        var started = await PostAsync(student, token, "Start", new { recordingConsent = false });
+        var turn = started.GetProperty("currentTurn");
+        var turnId = turn.GetProperty("turnId").GetInt32();
+
+        var audio = await student.GetAsync($"/Interview/{CandidateId}/QuestionAudio/{turnId}");
+
+        Assert.Equal(HttpStatusCode.OK, audio.StatusCode);
+        Assert.Equal("audio/wav", audio.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(await audio.Content.ReadAsByteArrayAsync(), 0, 4));
+        Assert.Equal(turn.GetProperty("questionText").GetString(), Assert.Single(app.Voice.Spoken));
+    }
+
+    [Fact]
+    public async Task OnlyTheOpenQuestionOfTheCandidateCanBeReadAloud()
+    {
+        using var student = StudentClient();
+        var token = await TokenAsync(student);
+        await PostAsync(student, token, "Start", new { recordingConsent = false });
+
+        Assert.Equal(HttpStatusCode.NotFound, (await student.GetAsync($"/Interview/{CandidateId}/QuestionAudio/999")).StatusCode);
+        using var stranger = app.CreateClient();
+        stranger.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.UserHeader, "u-other");
+        stranger.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.NameHeader, "nguoikhac@fpt.edu.vn");
+        stranger.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.RoleHeader, AppRoles.Student);
+        Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/Interview/{CandidateId}/QuestionAudio/101")).StatusCode);
+        Assert.Empty(app.Voice.Spoken);
+    }
+
+    private HttpClient StudentClient()
+    {
+        var client = app.CreateClient();
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.UserHeader, "u-student");
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.NameHeader, Student);
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.RoleHeader, AppRoles.Student);
+        return client;
+    }
+
+    /// <summary>The page carries the antiforgery token that its JSON endpoints want in a header.</summary>
+    private static async Task<string> TokenAsync(HttpClient client)
+    {
+        var page = await client.GetAsync($"/Interview/{CandidateId}");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var match = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        return WebUtility.HtmlDecode(match.Groups[1].Value);
+    }
+
+    private static async Task<System.Text.Json.JsonElement> PostAsync(HttpClient client, string token, string action, object body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{CandidateId}/{action}");
+        request.Headers.Add("RequestVerificationToken", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(body);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
     }
 
     private async Task<HubConnection> ConnectAsync(string userId, string name, string role)
@@ -359,21 +174,10 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         return await reader.ReadAsync(timeout.Token);
     }
 
-    private static async Task<T> ReadUntilAsync<T>(ChannelReader<T> reader, Func<T, bool> match)
-    {
-        using var timeout = new CancellationTokenSource(Wait);
-        while (true)
-        {
-            var item = await reader.ReadAsync(timeout.Token);
-            if (match(item))
-                return item;
-        }
-    }
-
     public sealed class VivaApp : RazorRealtimeTests.RazorApp
     {
         public FakeInterviewService Interviews { get; } = new();
-        public FakeAnswerTranscriber Answers { get; } = new();
+        public FakeTextToSpeech Voice { get; } = new();
 
         protected override void ConfigureFakes(IServiceCollection services)
         {
@@ -383,12 +187,26 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
             services.AddSingleton<IExamService>(new FakeExamService());
             services.RemoveAll<IRecordingService>();
             services.AddSingleton<IRecordingService>(new FakeRecordingService());
-            services.RemoveAll<ISpeechToText>();
-            services.AddSingleton<ISpeechToText>(new FakeSpeechToText());
-            services.RemoveAll<IAnswerTranscriber>();
-            services.AddSingleton<IAnswerTranscriber>(Answers);
-            // Short windows so a couple of seconds of test audio exercise the preview.
-            services.Configure<SpeechOptions>(options => options.PreviewEverySeconds = 1);
+            services.RemoveAll<ITextToSpeech>();
+            services.AddSingleton<ITextToSpeech>(Voice);
+            // The antiforgery token is protected with keys kept in the database, which these tests do not have.
+            services.RemoveAll<IDataProtectionProvider>();
+            services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
+        }
+    }
+
+    public sealed class FakeTextToSpeech : ITextToSpeech
+    {
+        public ConcurrentQueue<string> Spoken { get; } = new();
+
+        public void Reset() => Spoken.Clear();
+
+        public bool IsAvailable(AppLanguage language) => true;
+
+        public Task<byte[]> SynthesizeWavAsync(string text, AppLanguage language, double speed, CancellationToken cancellationToken = default)
+        {
+            Spoken.Enqueue(text);
+            return Task.FromResult(Audio.ToWav([0f, 0.1f, -0.1f], 24000));
         }
     }
 
@@ -501,78 +319,5 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         public Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default) => Task.FromResult<RecordingContent?>(null);
         public Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default) => Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Real models, end to end: the Vietnamese voice reads a sentence and Whisper hears it back.
-/// Set AIVES_SPEECH_MODELS to the models folder (see scripts/download-speech-models.ps1) to run.
-/// </summary>
-public sealed class SpeechModelTests
-{
-    private static readonly string? Models = Environment.GetEnvironmentVariable("AIVES_SPEECH_MODELS");
-
-    public sealed class NeedsModelsFact : FactAttribute
-    {
-        public NeedsModelsFact()
-        {
-            if (string.IsNullOrWhiteSpace(Models) || !Directory.Exists(Models))
-                Skip = "Set AIVES_SPEECH_MODELS to a folder with the Whisper and Piper models.";
-        }
-    }
-
-    [NeedsModelsFact]
-    public async Task VietnameseQuestionReadAloudIsRecognisedAgain()
-    {
-        var options = Microsoft.Extensions.Options.Options.Create(new SpeechOptions { ModelsPath = Models! });
-        var environment = new HostEnvironmentStub();
-        using var voice = new SherpaTextToSpeech(options, environment, new MemoryCache(new MemoryCacheOptions()), NullLogger<SherpaTextToSpeech>.Instance);
-        using var whisper = new WhisperSpeechToText(options, environment, NullLogger<WhisperSpeechToText>.Instance);
-        Assert.True(voice.IsAvailable(AppLanguage.Vi));
-        Assert.True(whisper.IsAvailable);
-
-        var wav = await voice.SynthesizeWavAsync("Hãy giải thích vai trò của từng lớp trong kiến trúc ba lớp.", AppLanguage.Vi, 1);
-        var samples = Audio.FromPcm16(wav.AsSpan(44));
-        var sampleRate = BitConverter.ToInt32(wav, 24);
-        var text = await whisper.TranscribeAsync(Audio.Resample(samples, sampleRate, Audio.SampleRate), AppLanguage.Vi, null, preview: false);
-
-        // Synthetic speech often lands on a neighbouring tone ("vài trò"), so compare without diacritics.
-        var compare = System.Globalization.CultureInfo.InvariantCulture.CompareInfo;
-        const System.Globalization.CompareOptions loose = System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace;
-        // GPU decoding is not fully deterministic ("giải thích" sometimes comes back "giải thiết"), so
-        // this checks the pipeline works end to end, not word-for-word accuracy.
-        string[] phrases = ["giai thich", "vai tro", "lop", "kien truc"];
-        Assert.True(phrases.Count(phrase => compare.IndexOf(text, phrase, loose) >= 0) >= 2, text);
-    }
-
-    private sealed class HostEnvironmentStub : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = "Testing";
-        public string ApplicationName { get; set; } = "AIVES.Tests";
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
-    }
-}
-
-/// <summary>Stands in for Gemini: returns <see cref="Text"/> (null = "use the local transcript").</summary>
-public sealed class FakeAnswerTranscriber : IAnswerTranscriber
-{
-    public bool Enabled
-    {
-        get; set;
-    }
-    public string? Text
-    {
-        get; set;
-    }
-    public IReadOnlyList<string> LastVocabulary { get; private set; } = [];
-
-    public bool IsEnabled => Enabled;
-
-    public Task<string?> TranscribeAnswerAsync(ReadOnlyMemory<float> samples, AppLanguage language, IReadOnlyList<string> vocabulary,
-        CancellationToken cancellationToken = default)
-    {
-        LastVocabulary = vocabulary;
-        return Task.FromResult(Enabled ? Text : null);
     }
 }

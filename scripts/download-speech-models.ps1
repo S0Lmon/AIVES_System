@@ -1,27 +1,15 @@
-# Downloads the offline speech models for the AI viva (Whisper.net + sherpa-onnx Piper voices).
+# Downloads the offline voices for the AI viva (sherpa-onnx Piper, the fallback when VieNeu-TTS is not used).
 #   .\scripts\download-speech-models.ps1                       # into AIVES.WebRazor\App_Data\speech-models
-#   .\scripts\download-speech-models.ps1 -Target D:\models -WhisperModel medium
-# About 600 MB with the default "small" Whisper model. Existing files are kept.
+#   .\scripts\download-speech-models.ps1 -Target D:\models
+# About 150 MB. Existing files are kept.
 param(
-    [string]$Target = (Join-Path $PSScriptRoot '..\AIVES.WebRazor\App_Data\speech-models'),
-    [ValidateSet('base', 'small', 'medium')]
-    [string]$WhisperModel = 'small',
-    [switch]$WithPreviewModel
+    [string]$Target = (Join-Path $PSScriptRoot '..\AIVES.WebRazor\App_Data\speech-models')
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$whisperDir = Join-Path $Target 'whisper'
 $ttsDir = Join-Path $Target 'tts'
-New-Item -ItemType Directory -Force $whisperDir, $ttsDir | Out-Null
-
-function Get-Whisper([string]$name) {
-    $file = Join-Path $whisperDir "ggml-$name.bin"
-    if (Test-Path $file) { Write-Host "ok   $file"; return }
-    Write-Host "get  ggml-$name.bin"
-    Invoke-WebRequest "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-$name.bin" -OutFile "$file.part"
-    Move-Item "$file.part" $file
-}
+New-Item -ItemType Directory -Force $ttsDir | Out-Null
 
 function Get-Voice([string]$name) {
     $folder = Join-Path $ttsDir $name
@@ -42,12 +30,8 @@ function Get-Voice([string]$name) {
     }
 }
 
-Get-Whisper $WhisperModel
-if ($WithPreviewModel) { Get-Whisper 'base' }
 Get-Voice 'vits-piper-vi_VN-vais1000-medium'
 Get-Voice 'vits-piper-en_US-amy-low'
 
 Write-Host ''
 Write-Host "Models are in $((Resolve-Path $Target).Path)"
-if ($WhisperModel -ne 'small') { Write-Host "Set Speech:WhisperModel to whisper/ggml-$WhisperModel.bin" }
-if ($WithPreviewModel) { Write-Host 'Set Speech:WhisperPreviewModel to whisper/ggml-base.bin for a faster live preview' }

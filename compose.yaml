@@ -105,13 +105,11 @@ services:
       GmailSmtp__AppPassword: "${GMAIL_APP_PASSWORD:-}"
       GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
       Registration__AllowedEmailDomains: "${REGISTRATION_EMAIL_DOMAINS:-gmail.com,fpt.edu.vn}"
-      # Whisper runs on the CPU here; compose.gpu.yaml switches web to an NVIDIA GPU (CUDA).
+      # Questions are read by VieNeu-TTS when SPEECH_VIENEU_URL is set (see README), then by the offline Piper voice.
       Speech__ModelsPath: /app/App_Data/speech-models
-      Speech__UseGpu: "false"
-      Speech__Threads: "${SPEECH_THREADS:-8}"
-      Speech__WhisperPreviewModel: "${SPEECH_PREVIEW_MODEL:-whisper/ggml-base.bin}"
-      Speech__Provider: "${SPEECH_PROVIDER:-Local}"
       Speech__TtsProvider: "${SPEECH_TTS_PROVIDER:-Local}"
+      Speech__VieNeuUrl: "${SPEECH_VIENEU_URL:-}"
+      Speech__VieNeuVoice: "${SPEECH_VIENEU_VOICE:-Mai Anh}"
     expose:
       - "8080"
     volumes:

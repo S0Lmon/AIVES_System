@@ -9,7 +9,7 @@ Phiên bản hiện tại bao phủ toàn bộ quy trình: **ngân hàng câu h�
 - **Tài khoản:** đăng ký bằng email thuộc các tên miền được phép (mặc định `gmail.com` và `fpt.edu.vn`, cấu hình qua `Registration:AllowedEmailDomains`; so khớp chính xác phần sau `@`), gửi mã xác minh qua SMTP, xác minh email, gửi lại mã, đăng nhập bằng mật khẩu, đăng xuất và đăng nhập Google khi được cấu hình.
 - **Phân quyền:** ba vai trò `Admin`, `Lecturer` (giảng viên), `Student` (sinh viên). Mọi tài khoản mới (mật khẩu hoặc Google) là `Student` và **không** vào được ngân hàng câu hỏi, rubric hay danh mục; chỉ `Lecturer` và `Admin` dùng được các trang này. Admin (đặt qua `AdminAccess:Emails`/`ADMIN_EMAIL`) nâng/hạ vai trò Giảng viên ↔ Sinh viên ở trang **Users** (`/Admin/Users`); thay đổi áp dụng cho phiên đang mở trong vòng một phút. Tài khoản tạo trước khi có phân quyền được gán `Student` ở lần khởi động (migrate) đầu tiên sau khi nâng cấp. Tài khoản phát triển (`Development:TestAccount`) và tài khoản demo (`DemoAccount`) được gán `Lecturer`.
 - **Kỳ thi & lịch thi:** giảng viên tạo phiên thi vấn đáp (`/Exam`) gắn môn học (và chủ đề), giờ bắt đầu, số phút mỗi thí sinh, số câu hỏi chính và số câu hỏi đào sâu tối đa, danh sách thí sinh theo email (dán mỗi dòng một email, theo thứ tự thi). Khung giờ từng thí sinh được tính nối tiếp. Hệ thống rút bộ câu hỏi chính riêng cho từng thí sinh từ các câu đang hoạt động của môn/chủ đề: ưu tiên không trùng với các thí sinh thi liền trước (tránh tới 3 người khi ngân hàng đủ lớn), dùng đều các câu, rồi đa dạng mức Bloom; nếu ngân hàng quá nhỏ thì cảnh báo số câu trùng. Nội dung câu được sao lưu lúc giao nên sửa/xóa câu gốc không đổi hồ sơ kỳ thi. Giảng viên chỉ thấy kỳ thi của mình (admin thấy tất cả); sau giờ bắt đầu không sửa/rút lại được. Sinh viên xem khung giờ của mình ở **Lịch thi của tôi** (`/MyExams`), không thấy câu hỏi. Giờ nhập/hiển thị theo `Exams:TimeZone` (mặc định `Asia/Ho_Chi_Minh`).
-- **Phỏng vấn AI (giám khảo ảo):** trong khung giờ của mình, sinh viên mở **Lịch thi của tôi → Bắt đầu vấn đáp**. Trình duyệt đọc to từng câu hỏi (Web Speech `speechSynthesis`) và nhận dạng câu trả lời theo thời gian gần thực (`SpeechRecognition`, Chrome/Edge; trình duyệt khác thì gõ phím, được ghi nhận là *Gõ phím*). Sau mỗi câu trả lời, Gemini (`Interview:Model`, mặc định `gemini-3.5-flash-lite`, ~1 giây) đánh giá câu trả lời so với đáp án mong đợi và quyết định **đủ ý** hay **mơ hồ / thiếu ý / mâu thuẫn / lạc đề**; nếu chưa đủ thì sinh **một câu hỏi xoáy** nhắm vào chỗ đó. Giới hạn: thời gian trả lời mỗi câu (tự nộp khi hết giờ, trả lời trễ bị đánh dấu *Quá giờ*), số câu xoáy tối đa mỗi câu chính và mỗi thí sinh, ngôn ngữ phỏng vấn (Việt/Anh) theo kỳ thi. AI lỗi hoặc quá `Interview:AiTimeoutSeconds` thì chuyển sang câu tiếp theo, không làm treo buổi thi. Lời sinh viên được đưa vào prompt như dữ liệu, có rào chống prompt injection. Chỉ phần chữ được gửi lên server và lưu lại (âm thanh do dịch vụ giọng nói của trình duyệt xử lý); giảng viên xem toàn bộ hỏi–đáp cùng lý do quyết định của AI trong trang chi tiết kỳ thi.
+- **Phỏng vấn AI (giám khảo ảo):** trong khung giờ của mình, sinh viên mở **Lịch thi của tôi → Bắt đầu vấn đáp**. Máy chủ đọc to từng câu hỏi (VieNeu-TTS cho tiếng Việt, hoặc giọng dự phòng; trình duyệt tự đọc nếu máy chủ không có giọng) và trình duyệt nhận dạng câu trả lời theo thời gian gần thực (`SpeechRecognition`, Chrome/Edge; trình duyệt khác thì gõ phím, được ghi nhận là *Gõ phím*). Sau mỗi câu trả lời, Gemini (`Interview:Model`, mặc định `gemini-3.5-flash-lite`, ~1 giây) đánh giá câu trả lời so với đáp án mong đợi và quyết định **đủ ý** hay **mơ hồ / thiếu ý / mâu thuẫn / lạc đề**; nếu chưa đủ thì sinh **một câu hỏi xoáy** nhắm vào chỗ đó. Giới hạn: thời gian trả lời mỗi câu (tự nộp khi hết giờ, trả lời trễ bị đánh dấu *Quá giờ*), số câu xoáy tối đa mỗi câu chính và mỗi thí sinh, ngôn ngữ phỏng vấn (Việt/Anh) theo kỳ thi. AI lỗi hoặc quá `Interview:AiTimeoutSeconds` thì chuyển sang câu tiếp theo, không làm treo buổi thi. Lời sinh viên được đưa vào prompt như dữ liệu, có rào chống prompt injection. Chỉ phần chữ được gửi lên server và lưu lại (âm thanh do dịch vụ giọng nói của trình duyệt xử lý); giảng viên xem toàn bộ hỏi–đáp cùng lý do quyết định của AI trong trang chi tiết kỳ thi.
 - **Chấm điểm có AI hỗ trợ (human-in-the-loop):** khi buổi vấn đáp kết thúc, một worker nền (chạy trên mọi replica, có cơ chế "claim" trong DB để không chấm trùng) gửi từng câu chính kèm các câu hỏi xoáy và câu trả lời cho Gemini (`Grading:Model`, trống thì dùng `Gemini:Model`). AI đối chiếu với đáp án mong đợi và **rubric được chụp lại lúc giao câu hỏi** (sửa rubric trong ngân hàng không làm đổi cách chấm kỳ thi cũ): chọn mức đạt cho từng tiêu chí, nêu điểm mạnh, điểm yếu, ý còn thiếu và nhận xét. Điểm được kẹp trong thang của tiêu chí và tổng do server tự cộng. Câu không trả lời được 0 điểm mà không gọi AI. Giảng viên mở **Chấm điểm** (`/Grading`) để xem transcript đầy đủ, nghe/xem bản ghi, điểm AI đề xuất và các tín hiệu phụ (thời gian bắt đầu trả lời, thời lượng, tốc độ nói, số từ ngập ngừng, quá giờ, gõ phím, số câu xoáy) — tín hiệu chỉ để tham khảo, không cộng vào điểm. Giảng viên nhập điểm từng câu (điền sẵn đề xuất của AI), nhận xét, **lưu nháp** hoặc **chốt điểm**; điểm tổng quy về thang 10. Chỉ khi chốt thì sinh viên mới thấy kết quả; muốn sửa phải **mở lại**. Có nút yêu cầu AI chấm lại (giữ điểm giảng viên đã nhập).
 - **Ghi âm/ghi hình & bảo mật:** mỗi kỳ thi chọn *ghi âm*, *ghi âm + camera* hoặc *không ghi*. Sinh viên phải tích đồng ý trước khi bắt đầu (thời điểm đồng ý được lưu). Trình duyệt ghi từng câu trả lời bằng `MediaRecorder` và tải lên sau khi nộp; server **mã hoá bằng khoá Data Protection** trước khi ghi ra volume dùng chung `aives-recordings`. Chỉ giảng viên của kỳ thi và admin phát được bản ghi, mỗi lần phát đều ghi nhật ký; bản ghi tự xoá sau thời hạn lưu (mặc định 365 ngày, đổi ở trang cấu hình).
 - **Nhật ký kiểm tra (audit log):** ghi lại tạo/sửa/xoá kỳ thi, bắt đầu/kết thúc vấn đáp, đồng ý ghi âm, mỗi đề xuất của AI, mỗi lần đổi điểm (điểm cũ → mới, kèm điểm AI), chốt/mở lại điểm, phát bản ghi, xuất bảng điểm, đổi vai trò/khóa tài khoản, phân công môn, đổi cấu hình. Xem theo kỳ thi (`/Grading/Audit/{id}`) hoặc toàn hệ thống (`/Admin/Audit`). Toàn bộ hỏi–đáp vẫn được lưu từng lượt như trước.
@@ -85,47 +85,41 @@ Phân quyền khai báo bằng Razor Pages conventions trong `RazorPresentation.
 
 ### Lõi phỏng vấn AI bằng giọng nói (nhóm chức năng 3)
 
-Giám khảo AI đọc câu hỏi, sinh viên trả lời bằng giọng nói, chữ hiện ra gần như ngay lập tức, và AI hỏi xoáy khi câu trả lời còn mơ hồ, thiếu ý, mâu thuẫn hoặc lạc đề. Phần giọng nói chạy **offline trên máy chủ bằng package NuGet**, không phụ thuộc trình duyệt:
+Giám khảo AI đọc câu hỏi thành tiếng, sinh viên trả lời bằng giọng nói (nhận dạng của trình duyệt) hoặc gõ phím, và AI hỏi xoáy khi câu trả lời còn mơ hồ, thiếu ý, mâu thuẫn hoặc lạc đề. Máy chủ **chỉ tạo giọng đọc**; không có mô hình nhận dạng giọng nói nào chạy trên máy chủ.
 
 | Phần | Package / lớp | Ghi chú |
 |---|---|---|
-| Đọc câu hỏi (TTS) | `org.k2fsa.sherpa-onnx` + giọng Piper `vi_VN-vais1000-medium` / `en_US-amy-low`, lớp `BLL/Services/Speech/SherpaTextToSpeech` | Trang phòng thi lấy WAV qua handler `?handler=QuestionAudio`, chỉ cho câu hỏi đang mở; kết quả được cache theo nội dung câu |
-| Nghe câu trả lời (STT) | `Whisper.net` + `Whisper.net.Runtime` (CPU) + `Whisper.net.Runtime.Vulkan` (GPU trên Windows) + `Whisper.net.Runtime.Cuda.Linux` (image NVIDIA, `compose.gpu.yaml`), bản 1.8.1, lớp `WhisperSpeechToText` | Dùng câu hỏi và thuật ngữ môn học làm prompt; bỏ đoạn im lặng và các câu Whisper hay "bịa" |
-| Gần thời gian thực | `LiveTranscriber` + `Realtime/InterviewHub.cs` (`/hubs/interview`) | Trình duyệt thu micro bằng AudioWorklet, chuyển về 16 kHz PCM, gửi từng khối 250 ms qua **SignalR client-to-server streaming**. Máy chủ đọc lại phần đuôi khoảng mỗi 1,5 giây (`Transcript`), và chốt từng đoạn khoảng 8 giây tại chỗ ngắt hơi, nên bản cuối chỉ còn vài giây phải nhận dạng |
-| Hỏi xoáy thích ứng | `IInterviewService` + `GeminiFollowUpGenerator` (đã có) | AI phân loại câu trả lời (`Sufficient`, `Vague`, `Missing`, `Contradiction`, `OffTopic`) và viết câu hỏi xoáy; quá thời gian chờ thì chuyển câu, không làm treo buổi thi |
-| Giới hạn | `AnswerTimeLimitSeconds`, `MaxFollowUpsPerQuestion`, `MaxFollowUpQuestions` của kỳ thi | Đồng hồ đếm ngược trên trang, hết giờ thì tự nộp; máy chủ không nhận âm thanh quá giới hạn, và BLL đánh dấu `timedOut` |
-| Giám sát | `InterviewEvent` gửi tới nhóm `exam-{id}` | Giảng viên thấy câu hỏi, chữ sinh viên đang nói, câu trả lời, câu hỏi xoáy và lúc hoàn thành |
+| Đọc câu hỏi (TTS) | **VieNeu-TTS** (tiếng Việt, xem mục dưới) → Gemini (tuỳ chọn) → `org.k2fsa.sherpa-onnx` với giọng Piper `vi_VN-vais1000-medium` / `en_US-amy-low`; lớp `BLL/Services/Speech/HybridTextToSpeech` | Trang phòng thi lấy WAV qua `GET /Interview/{id}/QuestionAudio/{turnId}`, chỉ cho câu hỏi đang mở; kết quả được cache theo nội dung câu. Server không có giọng hoặc lỗi thì trình duyệt tự đọc bằng giọng của nó |
+| Nghe câu trả lời (STT) | Web Speech `SpeechRecognition` của trình duyệt (Chrome/Edge) | Trình duyệt khác hoặc không cấp micro thì gõ phím; câu trả lời được ghi là `Speech` hoặc `Typed` |
+| Hỏi xoáy thích ứng | `IInterviewService` + `GeminiFollowUpGenerator` | AI phân loại câu trả lời (`Sufficient`, `Vague`, `Missing`, `Contradiction`, `OffTopic`) và viết câu hỏi xoáy; quá thời gian chờ thì chuyển câu, không làm treo buổi thi |
+| Giới hạn | `AnswerTimeLimitSeconds`, `MaxFollowUpsPerQuestion`, `MaxFollowUpQuestions` của kỳ thi | Đồng hồ đếm ngược trên trang, hết giờ thì tự nộp; BLL đánh dấu `timedOut` |
+| Giám sát | `InterviewEvent` gửi tới nhóm `exam-{id}` qua `Realtime/InterviewHub.cs` (`/hubs/interview`) | Trang phòng thi báo từng bước (bắt đầu, câu hỏi, câu trả lời, câu xoáy, hoàn thành); giảng viên của kỳ thi và admin xem ở `/Interviews/Monitor` |
 
-Chữ nhận dạng giữ nguyên thì được ghi là `Speech`; phần sinh viên sửa lại thì được ghi là `Typed`, để giảng viên phân biệt. Kỳ thi có ghi âm (`Recording = Audio`) sẽ lưu file WAV của từng câu trả lời (được mã hoá) qua `IRecordingService`.
+Kỳ thi có ghi âm (`Recording = Audio`/`AudioVideo`) lưu file của từng câu trả lời (được mã hoá) qua `IRecordingService`; trình duyệt ghi bằng `MediaRecorder` và tải lên sau khi nộp.
 
-**Cài model** (khoảng 600 MB, nằm trong `AIVES.WebRazor/App_Data/speech-models`, không commit):
+**Cài giọng đọc offline** (khoảng 150 MB, nằm trong `AIVES.WebRazor/App_Data/speech-models`, không commit; là giọng dự phòng khi không dùng VieNeu):
 
 ```powershell
-.\scripts\download-speech-models.ps1            # Whisper small + giọng Việt và Anh
-.\scripts\download-speech-models.ps1 -WithPreviewModel   # thêm ggml-base cho bản xem trước nhanh hơn trên CPU
+.\scripts\download-speech-models.ps1
 ```
 
-Đo ngày 08/10/2026 trên máy chủ (GTX 1070, Vulkan): đọc một câu hỏi mất 0,3–0,6 giây (lần đầu khoảng 2,7 giây do nạp model); chữ tạm cập nhật khoảng mỗi 1,6 giây khi đang nói; bản cuối có sau khi ngừng nói 0,7–2,9 giây; Gemini quyết định hỏi xoáy trong khoảng 1,2–1,6 giây. Chỉ có CPU thì Whisper small chậm hơn khoảng 6 lần, nên đặt `Speech:WhisperPreviewModel` là `whisper/ggml-base.bin`. Thiếu model thì phòng thi tự chuyển sang chế độ gõ câu trả lời. Cấu hình nằm trong mục `Speech` (`SpeechOptions`).
+#### Giọng đọc VieNeu-TTS (tuỳ chọn, tiếng Việt)
 
-#### Kết hợp với Gemini (tuỳ chọn)
+Giọng Piper mặc định nghe máy móc. Có thể thay bằng [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) (v3 Turbo, 48 kHz, giọng có sẵn, chạy được trên CPU) qua máy chủ API tương thích OpenAI của repo đó:
 
-Mặc định mọi thứ chạy tại chỗ. Khi đã có `Gemini:ApiKey`, có thể bật thêm:
+```powershell
+git clone https://github.com/pnnbao97/VieNeu-TTS.git
+cd VieNeu-TTS
+$env:API_PORT = 8800
+docker compose -f docker/docker-compose.yml --profile api-cpu up -d --build   # hoặc --profile api-gpu nếu có NVIDIA
+dotnet user-secrets set "Speech:VieNeuUrl" "http://localhost:8800" --project AIVES.WebRazor
+```
 
-| Cấu hình | Tác dụng |
-|---|---|
-| `Speech:Provider = Gemini` | Chữ tạm khi đang nói vẫn do Whisper làm. Khi sinh viên ngừng nói, **toàn bộ** câu trả lời được gửi cho `gemini-3.5-transcribe` (Interactions API, `vi-VN`, chế độ `verbatim`, `custom_vocabulary` là **bảng thuật ngữ môn học**) **song song** với lượt chốt cuối của Whisper. Sinh viên thấy bản của Whisper trước, rồi bản của Gemini thay vào. Gemini lỗi, bị 429 hoặc quá `Speech:GeminiTimeoutSeconds` (10 giây) thì giữ bản của Whisper; sau lỗi 429, hệ thống ngưng gọi Gemini trong khoảng thời gian API yêu cầu. Không cài Whisper nhưng bật Gemini thì vẫn thi bằng giọng nói được, chỉ không có chữ tạm. |
-| `Speech:TtsProvider = Gemini` | Đọc câu hỏi bằng `gemini-3.8-flash-lite-tts` (giọng `Speech:GeminiVoice`), có cache; lỗi thì dùng giọng sherpa-onnx tại chỗ. |
+Thứ tự đọc câu hỏi tiếng Việt: **VieNeu → Gemini (nếu bật `Speech:TtsProvider`) → giọng Piper tại chỗ**. Máy chủ VieNeu tắt hoặc chậm quá `Speech:VieNeuTimeoutSeconds` (20 giây) thì tự dùng giọng kế tiếp và tạm ngừng gọi VieNeu 30 giây. Chọn giọng bằng `Speech:VieNeuVoice` (xem `GET /v1/voices`, mặc định `Mai Anh`). Tiếng Anh vẫn dùng giọng tại chỗ. Máy chủ VieNeu bỏ qua tham số tốc độ, nên "tốc độ đọc" ở trang cấu hình không áp dụng cho giọng này. Lần chạy đầu container tải model từ Hugging Face; nếu báo `PermissionError` ở `/home/app/.cache/huggingface`, cấp quyền cho volume `docker_huggingface_cache` cho uid 1000.
 
-Đo ngày 08/10/2026 với key gói miễn phí:
-- Gemini viết đúng phần tiếng Việt mà Whisper nghe sai ("Lớp **giao diện**… lớp **nghiệp vụ**… **xử lý**… **đọc ghi**", trong khi Whisper ra "sau diện… nghiệp phụ… sự lý… độc ký").
-- Bản cuối của Gemini có sau khi ngừng nói khoảng 5–8 giây.
-- Gói miễn phí chỉ cho **3 request/phút** với model Transcribe, nên khi nhiều sinh viên thi cùng lúc thì phần lớn câu trả lời sẽ quay về Whisper.
-- Gemini TTS mất 8–9 giây mỗi câu, và câu hỏi xoáy được sinh ra ngay lúc thi nên không cache trước được. Vì vậy mặc định vẫn là TTS tại chỗ.
+#### Giọng đọc Gemini (tuỳ chọn)
 
-Cần lưu ý trước khi bật `Provider = Gemini` cho bài thi thật:
-- Gặp tên tiếng Anh phát âm không rõ, Gemini **đoán** ra một cụm nghe hợp lý thay vì ghi sai như Whisper. Ví dụ: với giọng máy đọc "SignalR… qua WebSocket", chế độ `smart` ghi thành "Server-Sent Events… qua HTTP", và chế độ `verbatim` ghi thành "…qua SSE". Giám khảo AI sau đó hỏi xoáy về điều sinh viên không nói. Code dùng `verbatim` (theo tài liệu là ghi đúng từng từ) và **không** đưa thuật ngữ trong câu hỏi vào `custom_vocabulary`, vì làm vậy từng biến "WebSocket" thành "ASP.NET Core". Các phép đo này dùng giọng máy đọc; cần thử với giọng sinh viên thật trước khi dùng cho bài thi.
-- Sinh viên luôn xem và có thể sửa bản chữ trước khi nộp (phần sửa được ghi là `Typed`), và bài thi có ghi âm vẫn giữ file WAV để giảng viên nghe lại.
-- Âm thanh câu trả lời được gửi tới Google. Gói miễn phí có thể dùng dữ liệu để cải thiện sản phẩm, nên với bài thi thật nên dùng gói trả phí và báo trước cho sinh viên.
+Khi đã có `Gemini:ApiKey`, đặt `Speech:TtsProvider = Gemini` để đọc câu hỏi bằng `gemini-3.8-flash-lite-tts` (giọng `Speech:GeminiVoice`), có cache; lỗi, quá `Speech:GeminiTtsTimeoutSeconds` hoặc hết hạn mức thì dùng giọng kế tiếp. Đo ngày 08/10/2026 với key gói miễn phí: Gemini TTS mất 8–9 giây mỗi câu và câu hỏi xoáy được sinh ngay lúc thi nên không cache trước được, vì vậy mặc định vẫn là giọng tại chỗ.
 
 **Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
 
@@ -141,7 +135,7 @@ Chạy ứng dụng WebRazor (HTTP cổng 5201):
 dotnet run --project AIVES.WebRazor --launch-profile http
 ```
 
-Trong Docker Compose, WebRazor là service `web` (một instance, Whisper chạy trên CPU, model được mount từ máy chủ). Xem mục *Phỏng vấn bằng giọng nói* trong [DEPLOY.md](DEPLOY.md).
+Trong Docker Compose, WebRazor là service `web` (một instance, giọng Piper dự phòng được mount từ máy chủ). Xem mục *Phỏng vấn bằng giọng nói* trong [DEPLOY.md](DEPLOY.md).
 
 Để thấy real-time: mở hai cửa sổ (hoặc một cửa sổ ẩn danh với tài khoản giảng viên khác) ở `/Questions` và `/`, rồi thêm, sửa hoặc xoá câu hỏi ở một cửa sổ.
 

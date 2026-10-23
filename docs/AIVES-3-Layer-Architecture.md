@@ -29,7 +29,7 @@ flowchart TB
 
 | Nhóm trách nhiệm | Thành phần hiện có | Vai trò |
 |---|---|---|
-| Hub | `Realtime/AivesHub.cs`, `Realtime/InterviewHub.cs` | Endpoint SignalR, quản lý kết nối/nhóm và trao đổi audio, transcript, sự kiện; InterviewHub gọi service BLL cho nghiệp vụ |
+| Hub | `Realtime/AivesHub.cs`, `Realtime/InterviewHub.cs` | Endpoint SignalR, quản lý kết nối/nhóm và đẩy sự kiện; InterviewHub chỉ phục vụ màn hình giám sát (`WatchExam`), còn trang phòng thi gọi service BLL qua HTTP rồi báo cho nhóm giám sát |
 | Realtime services | `Realtime/LiveUpdates.cs`, `PresenceTracker.cs`, `ExamExpiryService.cs` | Phát cập nhật qua `IHubContext`, theo dõi presence và thông báo kỳ thi kết thúc |
 
 Hai khối **Hub** và **Realtime** được tách riêng trên sơ đồ nhưng cùng nằm trong tầng Presentation. Trong source hiện tại, các file cùng thuộc thư mục/namespace `AIVES.WebRazor.Realtime`; sơ đồ không ngụ ý đã chuyển Hub sang thư mục `Hubs/`.

@@ -172,49 +172,27 @@ docker compose logs quicktunnel | Select-String "trycloudflare.com"
 
 ## Phỏng vấn bằng giọng nói
 
-WebRazor cung cấp giao diện duy nhất (Razor Pages + SignalR; giám khảo AI đọc câu hỏi và nghe câu trả lời ngay trên máy chủ). Trình duyệt truy cập cùng hostname qua Caddy; micro chỉ hoạt động trên HTTPS (hoặc `localhost`).
+WebRazor cung cấp giao diện duy nhất (Razor Pages + SignalR cho màn hình giám sát). Máy chủ đọc câu hỏi thành tiếng; sinh viên trả lời bằng nhận dạng giọng nói của trình duyệt (Chrome/Edge) hoặc gõ phím. Không có mô hình nhận dạng giọng nói nào chạy trên máy chủ.
 
-**Model giọng nói** không nằm trong image hay Git. Tải một lần trên máy chủ, compose mount chỉ đọc vào container (`SPEECH_MODELS_DIR`, mặc định `./AIVES.WebRazor/App_Data/speech-models`):
-
-```powershell
-.\scripts\download-speech-models.ps1 -WithPreviewModel   # Whisper small + base, giọng Việt và Anh, khoảng 750 MB
-```
-
-- Mặc định Whisper chạy trên CPU (`Speech:UseGpu=false`). Chữ tạm khi đang nói dùng `ggml-base`, bản giữ lại dùng `ggml-small`. Máy nhiều nhân thì tăng `SPEECH_THREADS`. CPU không theo kịp thời gian thực: đo trên máy chủ (8 luồng), câu trả lời 7 giây có bản chốt sau khi ngừng nói **khoảng 18 giây**. Có card NVIDIA thì bật GPU như dưới đây.
-- Image cài `libgomp1`. Thiếu thư viện OpenMP này thì thư viện native của Whisper.net không nạp được và tiến trình bị dừng.
-- Chỉ chạy **một** instance, vì danh sách người online và phiên trả lời đang nói nằm trong bộ nhớ. Muốn nhiều instance thì cần SignalR backplane (ví dụ Redis) và sticky session.
-- Thiếu model thì phòng thi tự chuyển sang gõ câu trả lời.
-
-### Chạy Whisper trên GPU NVIDIA (tùy chọn)
-
-`compose.gpu.yaml` build image `aives-web:cuda` (target `runtime-cuda` trong Dockerfile, thêm CUDA 12 runtime và cuBLAS, khoảng 1,2 GB) và chuyển GPU vào container `web`. Image mặc định vẫn chỉ dùng CPU, nên máy không có NVIDIA không bị ảnh hưởng.
-
-Đo trên máy chủ (GTX 1070, Docker Desktop + WSL 2), cùng một câu trả lời tiếng Việt 7 giây gửi qua SignalR:
-
-| | Bản chốt sau khi ngừng nói | Chữ tạm khi đang nói |
-|---|---|---|
-| CPU, xem trước bằng `ggml-base` | khoảng 18 giây | đến sau khi đã nói xong |
-| GPU (CUDA), xem trước bằng `ggml-small` | khoảng 1,6 giây | mỗi 1,5–2 giây |
-
-Yêu cầu:
-
-- Card NVIDIA compute capability 5.0–8.x (GTX 900 trở lên, tới RTX 40) và driver hỗ trợ CUDA 12. Dự án ghim Whisper.net 1.8.1 vì từ 1.9 gói CUDA được build bằng CUDA 13, chỉ chạy trên RTX 30 trở lên.
-- Docker chuyển được GPU vào container: Docker Desktop với WSL 2 trên Windows (có sẵn), hoặc NVIDIA Container Toolkit trên Linux. Kiểm tra:
-
-```powershell
-docker run --rm --gpus all mcr.microsoft.com/dotnet/aspnet:10.0 nvidia-smi
-```
-
-Bật bằng cách thêm file vào `COMPOSE_FILE` trong `.env` (Windows ngăn cách bằng `;`, Linux bằng `:`). Nếu đang dùng `compose.override.yaml` thì phải liệt kê cả file đó, vì khi có `COMPOSE_FILE` Docker không tự nạp override nữa:
+**Giọng đọc tiếng Việt: VieNeu-TTS (khuyến nghị).** Chạy [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) như một dịch vụ riêng (API tương thích OpenAI, ví dụ `docker compose -f docker/docker-compose.yml --profile api-cpu up -d --build` với `API_PORT=8800`) rồi đặt trong `.env`:
 
 ```text
-COMPOSE_FILE=compose.yaml;compose.gpu.yaml
-# hoặc: COMPOSE_FILE=compose.yaml;compose.override.yaml;compose.gpu.yaml
+SPEECH_VIENEU_URL=http://host.docker.internal:8800
+SPEECH_VIENEU_VOICE=Mai Anh
 ```
 
-Rồi `docker compose up -d --build`. Log của `web` có dòng `Loaded Whisper model ggml-small.bin (... CUDA : ARCHS = 500,610,700,750,800 ...)`, và `docker exec aives-web-1 nvidia-smi` thấy bộ nhớ GPU tăng (khoảng 0,7 GB) sau câu trả lời đầu tiên. Ở chế độ này chữ tạm cũng dùng `ggml-small`: trên GPU nó nhanh hơn `ggml-base`, vì `ggml-base` nghe sai tiếng Việt nên liên tục giải mã lại. Bỏ file khỏi `COMPOSE_FILE` rồi `up -d` để quay về CPU.
+VieNeu tắt hoặc chậm quá `Speech:VieNeuTimeoutSeconds` thì tự dùng giọng kế tiếp (Gemini nếu bật `SPEECH_TTS_PROVIDER=Gemini`, rồi giọng Piper tại chỗ) và tạm ngừng gọi VieNeu 30 giây.
 
-`PresenceTracker` và các phiên trả lời trực tiếp hiện lưu trong bộ nhớ, vì vậy triển khai một instance. Mở rộng ngang cần bổ sung SignalR backplane và lưu trữ chia sẻ cho trạng thái phiên trước khi thêm replicas. SQL Server Express giới hạn khoảng 1,4 GB bộ nhớ đệm và database 10 GB; khi tải hoặc dữ liệu tăng cần chuyển `MSSQL_PID` sang bản phù hợp (có bản quyền) hoặc tách database sang máy riêng.
+**Giọng Piper dự phòng** (cũng đọc tiếng Anh) không nằm trong image hay Git. Tải một lần trên máy chủ, compose mount chỉ đọc vào container (`SPEECH_MODELS_DIR`, mặc định `./AIVES.WebRazor/App_Data/speech-models`):
+
+```powershell
+.\scripts\download-speech-models.ps1   # giọng Việt và Anh, khoảng 150 MB
+```
+
+- Chỉ chạy **một** instance, vì danh sách người online nằm trong bộ nhớ. Muốn nhiều instance thì cần backplane SignalR (ví dụ Redis).
+- Không có giọng nào ở máy chủ thì trình duyệt tự đọc câu hỏi bằng giọng của nó; trình duyệt không nhận dạng được giọng nói thì sinh viên gõ câu trả lời.
+
+`PresenceTracker` hiện lưu trong bộ nhớ, vì vậy triển khai một instance. Mở rộng ngang cần thêm backplane (ví dụ Redis).
 
 ## Ollama (tùy chọn)
 
