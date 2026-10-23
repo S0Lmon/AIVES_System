@@ -1,0 +1,97 @@
+# Builds the solution and runs the whole test suite on every push to main and every pull request.
+# The HTTP and SQL integration tests run against a throwaway SQL Server service container; the
+# live Gemini test and the real speech-model test stay skipped because they need a key or ~600 MB
+# of models (see AIVES.Tests: LiveGeminiTests, SpeechModelTests).
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  # Only used by the service container below, which is discarded after the run.
+  SQL_PASSWORD: Ci_${{ github.run_id }}_Aa1!
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_${{ github.run_id }}_Aa1!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci_${{ github.run_id }}_Aa1! -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore AIVES_System.slnx
+
+      - name: Build
+        run: dotnet build AIVES_System.slnx --configuration Release --no-restore
+
+      - name: Test
+        env:
+          AIVES_TEST_SQL_CONNECTION: Server=127.0.0.1,1433;Database=AIVES_Test;User Id=sa;Password=${{ env.SQL_PASSWORD }};TrustServerCertificate=True
+        run: >-
+          dotnet test AIVES.Tests/AIVES.Tests.csproj --configuration Release --no-build
+          --logger "trx;LogFileName=results.trx" --logger "console;verbosity=normal"
+          --results-directory TestResults
+
+      - name: Summarise results
+        if: always()
+        shell: python
+        run: |
+          import glob, os, xml.etree.ElementTree as ET
+          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+          lines = ["## Test results", ""]
+          for path in glob.glob("TestResults/*.trx"):
+              root = ET.parse(path).getroot()
+              c = root.find("t:ResultSummary/t:Counters", ns).attrib
+              lines.append(f"**{c['passed']} passed**, {c['failed']} failed, {int(c['total']) - int(c['executed'])} skipped, {c['total']} total")
+              failed = [r.get("testName") for r in root.iterfind("t:Results/t:UnitTestResult", ns) if r.get("outcome") == "Failed"]
+              lines += [""] + [f"- ❌ `{name}`" for name in failed]
+          if len(lines) == 2:
+              lines.append("No results file was written; check the Test step log.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines) + "\n")
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
