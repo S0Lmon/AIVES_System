@@ -9,6 +9,7 @@
 <div class="page-heading"><div><span class="page-kicker">Exams / AI viva</span><h1>@state.ExamTitle</h1><p>@L10n.T("Your slot"): @TimeZone.ToLocal(state.SlotStartsAtUtc).ToString("yyyy-MM-dd HH:mm") – @TimeZone.ToLocal(state.SlotEndsAtUtc).ToString("HH:mm") (@TimeZone.OffsetLabel)</p></div></div>
 @Html.AntiForgeryToken()
 <div id="interview" data-base-url="@Url.Page("/Interviews/Interview", new { id = state.CandidateId })" data-lang="@culture"
+     data-audio-url="@(Model.ServerReadsQuestions ? Url.Page("/Interviews/Interview", "QuestionAudio", new { id = state.CandidateId }) : null)"
      data-initial-state="@System.Text.Json.JsonSerializer.Serialize(state, InterviewApiModel.JsonOptions)"
      data-text-main="@L10n.T("Question {0} of {1}")" data-text-followup="@L10n.T("Follow-up question")"
      data-text-processing="@L10n.T("The examiner is considering your answer…")" data-text-listening="@L10n.T("Listening… speak your answer.")"

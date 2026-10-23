@@ -10,6 +10,9 @@
 
     var baseUrl = root.dataset.baseUrl;
     var lang = root.dataset.lang;
+    // Set when the server reads questions (VieNeu); otherwise the browser's own voice does.
+    var audioUrl = root.dataset.audioUrl;
+    var player = audioUrl ? new Audio() : null;
     var text = root.dataset;
     var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
     var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -88,6 +91,22 @@
     }
 
     function speak(sentence, done) {
+        if (player && turn) speakFromServer(sentence, done);
+        else speakInBrowser(sentence, done);
+    }
+
+    function speakFromServer(sentence, done) {
+        var finished = false;
+        function finish() { if (!finished) { finished = true; done(); } }
+        // A missing or failed file falls back to the browser's voice, so the question is always read.
+        function fallBack() { if (!finished) { finished = true; speakInBrowser(sentence, done); } }
+        player.onended = finish;
+        player.onerror = fallBack;
+        player.src = audioUrl + '/' + turn.turnId;
+        player.play().catch(fallBack);
+    }
+
+    function speakInBrowser(sentence, done) {
         if (!window.speechSynthesis) { done(); return; }
         window.speechSynthesis.cancel();
         var utterance = new SpeechSynthesisUtterance(sentence);
@@ -333,6 +352,7 @@
         stopTimer();
         stopListening();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (player) player.pause();
         field('processing').textContent = text.textProcessing;
         show('processing');
         clearError();

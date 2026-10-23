@@ -127,6 +127,21 @@ Cần lưu ý trước khi bật `Provider = Gemini` cho bài thi thật:
 - Sinh viên luôn xem và có thể sửa bản chữ trước khi nộp (phần sửa được ghi là `Typed`), và bài thi có ghi âm vẫn giữ file WAV để giảng viên nghe lại.
 - Âm thanh câu trả lời được gửi tới Google. Gói miễn phí có thể dùng dữ liệu để cải thiện sản phẩm, nên với bài thi thật nên dùng gói trả phí và báo trước cho sinh viên.
 
+#### Giọng đọc VieNeu-TTS (tuỳ chọn)
+
+[VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) (Apache-2.0) là model đọc tiếng Việt tự nhiên, có 25 giọng mẫu ("Mai Anh", "Ngọc Huyền", "Hải Đăng", …). Bật bằng cách thêm `compose.vieneu.yaml` vào `COMPOSE_FILE`. File này chạy VieNeu trong một container riêng, chỉ nằm trong mạng nội bộ và không mở cổng ra ngoài, rồi đặt `Speech:TtsProvider = VieNeu`.
+
+| Phần | Cách hoạt động |
+|---|---|
+| Đọc câu hỏi | `VieNeuSpeechClient` gọi `POST /v1/audio/speech`, lấy PCM 24 kHz rồi gói thành WAV. Cả trang vấn đáp lẫn phòng Whisper đều phát audio này; khi không bật VieNeu thì trang vấn đáp vẫn dùng giọng của trình duyệt như trước. |
+| Câu hỏi chính | `QuestionAudioWorker` đọc sẵn câu hỏi chính của các thí sinh trong vòng `Speech:PrepareMinutesAhead` phút (mặc định 120) vào cache, nên lúc thi không phải chờ. |
+| Câu hỏi xoáy | Đọc ngay lúc hỏi. Quá `Speech:VieNeuTimeoutSeconds` (mặc định 8) hoặc VieNeu bận/lỗi thì dùng giọng Piper tại chỗ. |
+| Tiếng Anh | Giọng VieNeu là người Việt, nên kỳ thi tiếng Anh vẫn dùng giọng Piper tiếng Anh (bật `Speech:VieNeuReadsEnglish` để đổi). |
+
+Đo ngày 24/10/2026 trên máy chủ (GTX 1070, 2× Xeon E5-2696 v3): câu hỏi chính khoảng 8 giây âm thanh mất khoảng 12 giây, câu hỏi xoáy một câu mất khoảng 5 giây, 4 câu cùng lúc vẫn khoảng 12 giây mỗi câu. Bản CPU (ONNX) nhanh như vậy với một câu, nhưng 4 câu cùng lúc mất khoảng 52 giây mỗi câu, nên compose dùng GPU. Đồng hồ trả lời chạy từ lúc đặt câu hỏi, nên thời gian chờ giọng đọc tính vào thời gian trả lời; vì thế mới có cache và giới hạn chờ.
+
+Image build từ commit VieNeu đã ghim, đổi PyTorch sang bản CUDA 12.6 (bản 12.8 của upstream không chạy trên card Pascal như GTX 10xx), tải sẵn model theo revision cố định và chạy offline (`HF_HUB_OFFLINE=1`), vì repo codec có code Python được nạp lúc chạy. Âm thanh có watermark mặc định của VieNeu (`VIENEU_WATERMARK`). Theo model card, không dùng để giả giọng người thật khi chưa được phép.
+
 **Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
 
 - **Đang online:** `PresenceTracker` đếm người dùng (nhiều tab tính là một người) và đẩy `PresenceChanged` cho mọi client.

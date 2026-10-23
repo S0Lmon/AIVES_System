@@ -26,4 +26,12 @@ public interface IInterviewRepository
 
     /// <summary>Interviews still open although the candidate's slot ended before <paramref name="cutoffUtc"/>.</summary>
     Task<IReadOnlyList<(int CandidateId, string Email)>> ListOverdueAsync(DateTime cutoffUtc, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Main questions, with the exam's language code, of candidates whose slot starts before
+    /// <paramref name="beforeUtc"/> and has not ended at <paramref name="nowUtc"/>, and who have not finished.
+    /// Earliest slots first; used to have questions read aloud before they are asked.
+    /// </summary>
+    Task<IReadOnlyList<(string Text, string Language)>> ListUpcomingQuestionsAsync(DateTime nowUtc, DateTime beforeUtc, int take,
+        CancellationToken cancellationToken = default);
 }

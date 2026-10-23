@@ -1,0 +1,98 @@
+# Optional: read viva questions with VieNeu-TTS (https://github.com/pnnbao97/VieNeu-TTS, Apache-2.0),
+# a natural Vietnamese voice model, instead of the Piper voice. It runs as its own container on the
+# internal network only (no published port); web calls it and falls back to Piper whenever it is slow,
+# busy or down, so the viva never waits on it. Main questions are read into a cache ahead of each slot
+# (Speech:PrepareMinutesAhead); follow-ups are read when they are asked (Speech:VieNeuTimeoutSeconds).
+#
+# Needs an NVIDIA GPU, like compose.gpu.yaml. Enable it by adding this file to COMPOSE_FILE in .env
+# (";" separates files on Windows, ":" on Linux), then rebuild:
+#   COMPOSE_FILE=compose.yaml;compose.override.yaml;compose.gpu.yaml;compose.vieneu.yaml
+#   docker compose up -d --build
+# Voices (GET /v1/voices): "Mai Anh", "Ngọc Huyền", "Hải Đăng", "Minh Đức", "Thùy Dung", … — set VIENEU_VOICE.
+#
+# Measured 2026-10-24 on the server (GTX 1070, 2× Xeon E5-2696 v3): ~12 s for an 8 s question, first audio
+# after ~0.4 s, and four questions at once still ~12 s each. The ONNX/CPU build was as fast for one
+# question but ran four at once in ~52 s each, so this file uses the GPU.
+
+services:
+  vieneu:
+    build:
+      # Pinned upstream commit, so a rebuild cannot pull in unreviewed changes.
+      context: https://github.com/pnnbao97/VieNeu-TTS.git#04044e1b8f822f946bafb2c88b716459f4164152
+      # Upstream docker/Dockerfile.gpu (prod stage) with three changes, marked below.
+      dockerfile_inline: |
+        FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
+        ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 UV_PROJECT_ENVIRONMENT=/opt/venv UV_LINK_MODE=copy \
+            PATH=/opt/venv/bin:$$PATH PYTHONPATH=/workspace/src:/workspace HF_HOME=/home/app/.cache/huggingface
+        RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common ca-certificates \
+            && add-apt-repository ppa:deadsnakes/ppa && apt-get update && apt-get install -y --no-install-recommends python3.12 \
+            && rm -rf /var/lib/apt/lists/* \
+            && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
+            && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
+        COPY --from=ghcr.io/astral-sh/uv:0.9.5 /uv /uvx /bin/
+        # (1) Ubuntu 24.04 images already have user "ubuntu" with uid 1000, so upstream's useradd fails.
+        RUN userdel -r ubuntu && useradd --create-home --uid 1000 app && mkdir -p /workspace /opt/venv && chown -R app:app /workspace /opt/venv
+        WORKDIR /workspace
+        COPY --chown=app:app pyproject.toml uv.lock ./
+        # (2) The locked torch is built for CUDA 12.8, which has no kernels for Pascal cards (GTX 10xx,
+        # sm_61); the CUDA 12.6 build of the same version still has them. One layer and no cache, so the
+        # replaced build does not stay in the image.
+        RUN uv sync --frozen --no-dev --extra cuda --no-install-project --no-build --no-cache \
+            && uv pip install --python /opt/venv/bin/python --reinstall --no-cache torch==2.8.0 torchaudio==2.8.0 \
+               --index-url https://download.pytorch.org/whl/cu126
+        COPY --chown=app:app src/ src/
+        COPY --chown=app:app apps/ apps/
+        COPY --chown=app:app config.yaml ./
+        COPY --chown=app:app examples/audio_ref/ examples/audio_ref/
+        USER app
+        # (3) Models at pinned revisions, baked in, then offline: the codec repo ships Python code that the
+        # model loads, and without this every start fetched whatever version was newest.
+        RUN python - <<'PY'
+        import os
+        from pathlib import Path
+        from huggingface_hub import snapshot_download
+        pins = {
+            "pnnbao-ump/VieNeu-TTS-v3-Turbo": "61b85e3d937fbbacb387714180e8182823512523",
+            "OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano": "6aa02b01e445cc585582cf0ba480bc3ea6c8dd68",
+        }
+        for repo, sha in pins.items():
+            snapshot_download(repo, revision=sha)
+            # The model asks for "main"; point it at the pinned snapshot so it resolves offline.
+            refs = Path(os.environ["HF_HOME"], "hub", "models--" + repo.replace("/", "--"), "refs")
+            refs.mkdir(parents=True, exist_ok=True)
+            (refs / "main").write_text(sha)
+        PY
+        ENV HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+        EXPOSE 8000
+        CMD ["python", "-m", "apps.openai_speech"]
+    image: aives-vieneu:gpu-04044e1
+    restart: unless-stopped
+    gpus: all
+    environment:
+      HOST: 0.0.0.0
+      VIENEU_BACKEND: pytorch
+      VIENEU_DEVICE: cuda
+      # Questions read at once; ~1.1 GB of VRAM next to Whisper. Extra requests wait, then web uses Piper.
+      VIENEU_MAX_STREAMS: "${VIENEU_MAX_STREAMS:-4}"
+      VIENEU_QUEUE: "${VIENEU_QUEUE:-8}"
+      VIENEU_QUEUE_TIMEOUT: "10"
+      VIENEU_API_KEY: "${VIENEU_API_KEY:-}"
+      OMP_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+    networks:
+      - aives-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+
+  web:
+    environment:
+      Speech__TtsProvider: VieNeu
+      Speech__VieNeuUrl: http://vieneu:8000/
+      Speech__VieNeuVoice: "${VIENEU_VOICE:-Mai Anh}"
+      Speech__VieNeuApiKey: "${VIENEU_API_KEY:-}"
+      Speech__VieNeuTimeoutSeconds: "${VIENEU_TIMEOUT_SECONDS:-8}"

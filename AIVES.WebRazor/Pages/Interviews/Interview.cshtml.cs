@@ -1,5 +1,6 @@
 using AIVES.BLL.Services.Interview;
 using AIVES.BLL.Services.Recordings;
+using AIVES.BLL.Services.Speech;
 using AIVES.DTO;
 using AIVES.DTO.Localization;
 using AIVES.WebRazor.Realtime;
@@ -16,6 +17,8 @@ namespace AIVES.WebRazor.Pages.Interviews;
 public sealed class InterviewApiModel(
     IInterviewService interviews,
     IRecordingService recordings,
+    ITextToSpeech voice,
+    VieNeuSpeechClient vieneu,
     ILogger<InterviewApiModel> logger) : PageModel
 {
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -24,6 +27,12 @@ public sealed class InterviewApiModel(
     };
 
     public InterviewStateDto State { get; private set; } = null!;
+
+    /// <summary>
+    /// The server reads questions when VieNeu covers this language; otherwise the browser's own voice
+    /// does, which the admin may have chosen on the settings page.
+    /// </summary>
+    public bool ServerReadsQuestions => vieneu.Reads(State.Language);
     private string Email => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
@@ -35,6 +44,10 @@ public sealed class InterviewApiModel(
         }
         catch (KeyNotFoundException) { return NotFound(); }
     }
+
+    /// <summary>GET /Interview/{id}/QuestionAudio/{turnId} — the open question as a WAV file.</summary>
+    public Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken) =>
+        QuestionAudio.ServeAsync(Response, interviews, voice, logger, id, Email, turnId, cancellationToken);
 
     public Task<IActionResult> OnGetStateAsync(int id, CancellationToken cancellationToken) =>
         RunAsync(() => interviews.GetStateAsync(id, Email, cancellationToken));

@@ -59,7 +59,17 @@ public static class DependencyInjection
         });
         services.AddSingleton<GeminiSpeechClient>();
         services.AddSingleton<IAnswerTranscriber>(provider => provider.GetRequiredService<GeminiSpeechClient>());
-        services.AddSingleton<ITextToSpeech, HybridTextToSpeech>();
+        services.AddHttpClient(VieNeuSpeechClient.HttpClientName, (provider, client) =>
+        {
+            var url = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SpeechOptions>>().Value.VieNeuUrl;
+            if (!string.IsNullOrWhiteSpace(url))
+                client.BaseAddress = new Uri(url.EndsWith('/') ? url : url + "/");
+            // Each call sets its own, shorter deadline (Speech:VieNeuTimeoutSeconds / VieNeuPrepareTimeoutSeconds).
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
+        services.AddSingleton<VieNeuSpeechClient>();
+        services.AddSingleton<HybridTextToSpeech>();
+        services.AddSingleton<ITextToSpeech>(provider => provider.GetRequiredService<HybridTextToSpeech>());
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IAuditService, AuditService>();
@@ -85,6 +95,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(150);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
         services.AddHostedService<GradingWorker>();
+        services.AddHostedService<QuestionAudioWorker>();
         // Check every authenticated HTTP request so disabling an account also invalidates open
         // sessions immediately; role changes use the same security stamp mechanism.
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);

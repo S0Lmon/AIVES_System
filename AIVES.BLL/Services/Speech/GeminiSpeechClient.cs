@@ -209,27 +209,57 @@ public sealed partial class GeminiSpeechClient(
     private static partial Regex RetryIn();
 }
 
-/// <summary>Reads questions with Gemini when that is switched on, otherwise (or on failure) locally.</summary>
-public sealed class HybridTextToSpeech(SherpaTextToSpeech local, GeminiSpeechClient gemini,
-    IMemoryCache cache) : ITextToSpeech
+/// <summary>
+/// Reads questions with VieNeu or Gemini when one is switched on, otherwise (or on failure) locally.
+/// Remote audio is cached by voice and text, so every candidate given the same question, and every
+/// replay, is served at once.
+/// </summary>
+public sealed class HybridTextToSpeech(SherpaTextToSpeech local, GeminiSpeechClient gemini, VieNeuSpeechClient vieneu,
+    IOptions<SpeechOptions> speech, IMemoryCache cache) : ITextToSpeech
 {
-    public bool IsAvailable(AppLanguage language) => gemini.IsTtsEnabled || local.IsAvailable(language);
+    private static readonly MemoryCacheEntryOptions CacheFor = new() { SlidingExpiration = TimeSpan.FromHours(6) };
+
+    public bool IsAvailable(AppLanguage language) => vieneu.Reads(language) || gemini.IsTtsEnabled || local.IsAvailable(language);
 
     public async Task<byte[]> SynthesizeWavAsync(string text, AppLanguage language, double speed, CancellationToken cancellationToken = default)
     {
+        if (vieneu.Reads(language))
+        {
+            var wav = await CachedAsync(VieNeuKey(text), () => vieneu.SynthesizeWavAsync(text, cancellationToken: cancellationToken));
+            if (wav is not null)
+                return wav;
+        }
         if (gemini.IsTtsEnabled)
         {
-            var key = (nameof(HybridTextToSpeech), text.Trim());
-            if (cache.TryGetValue(key, out byte[]? cached) && cached is not null)
-                return cached;
-            var wav = await gemini.SynthesizeWavAsync(text, cancellationToken);
+            var wav = await CachedAsync((nameof(GeminiSpeechClient), text.Trim()), () => gemini.SynthesizeWavAsync(text, cancellationToken));
             if (wav is not null)
-            {
-                cache.Set(key, wav, new MemoryCacheEntryOptions { SlidingExpiration = TimeSpan.FromHours(2) });
                 return wav;
-            }
         }
         return await local.SynthesizeWavAsync(text, language, speed, cancellationToken);
+    }
+
+    /// <summary>
+    /// Synthesises ahead of time with the long timeout, so the question is in the cache when it is
+    /// asked. True when the remote voice has it ready; the local voice needs no preparation.
+    /// </summary>
+    public async Task<bool> PrepareAsync(string text, AppLanguage language, CancellationToken cancellationToken = default)
+    {
+        if (!vieneu.Reads(language) || string.IsNullOrWhiteSpace(text))
+            return false;
+        var limit = TimeSpan.FromSeconds(Math.Max(1, speech.Value.VieNeuPrepareTimeoutSeconds));
+        return await CachedAsync(VieNeuKey(text), () => vieneu.SynthesizeWavAsync(text, limit, cancellationToken)) is not null;
+    }
+
+    private (string, string?, string) VieNeuKey(string text) => (nameof(VieNeuSpeechClient), speech.Value.VieNeuVoice?.Trim(), text.Trim());
+
+    private async Task<byte[]?> CachedAsync(object key, Func<Task<byte[]?>> synthesize)
+    {
+        if (cache.TryGetValue(key, out byte[]? cached) && cached is not null)
+            return cached;
+        var wav = await synthesize();
+        if (wav is not null)
+            cache.Set(key, wav, CacheFor);
+        return wav;
     }
 }
 

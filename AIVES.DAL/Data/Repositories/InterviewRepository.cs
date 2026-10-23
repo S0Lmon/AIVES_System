@@ -130,6 +130,31 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
         return rows.Select(row => (row.ExamCandidateId, row.Email)).ToList();
     }
 
+    public async Task<IReadOnlyList<(string Text, string Language)>> ListUpcomingQuestionsAsync(DateTime nowUtc, DateTime beforeUtc, int take,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await context.ExamCandidateQuestions.AsNoTracking()
+            .Select(question => new
+            {
+                question.Content,
+                question.Order,
+                question.Candidate.Exam.Language,
+                question.Candidate.StatusOverride,
+                Finished = question.Candidate.Attempt != null && question.Candidate.Attempt.Status == InterviewStatus.Completed,
+                StartsAt = question.Candidate.SlotStartsAtUtc
+                    ?? question.Candidate.Exam.StartsAtUtc.AddMinutes(question.Candidate.Exam.SlotMinutes * (question.Candidate.Order - 1)),
+                question.Candidate.Exam.SlotMinutes
+            })
+            .Where(row => !row.Finished
+                && row.StatusOverride != CandidateStatus.Absent && row.StatusOverride != CandidateStatus.Cancelled
+                && row.StartsAt < beforeUtc && row.StartsAt.AddMinutes(row.SlotMinutes) > nowUtc)
+            .OrderBy(row => row.StartsAt).ThenBy(row => row.Order)
+            .Take(take)
+            .Select(row => new { row.Content, row.Language })
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => (row.Content, row.Language)).ToList();
+    }
+
     private static ExamTurn ToEntity(NewInterviewTurn turn, int order) => new()
     {
         Order = order,

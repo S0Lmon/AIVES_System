@@ -51,31 +51,6 @@ public sealed class RoomModel(IInterviewService interviews, ISpeechToText speech
     }
 
     /// <summary>GET ?handler=QuestionAudio&amp;turnId=… — the open question as a WAV file.</summary>
-    public async Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken)
-    {
-        InterviewStateDto state;
-        try
-        {
-            state = await interviews.GetStateAsync(id, Email, cancellationToken);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        // Only the question being asked right now, so the page cannot be used to read ahead.
-        if (state.CurrentTurn is not { } turn || turn.TurnId != turnId || !voice.IsAvailable(state.Language))
-            return NotFound();
-
-        try
-        {
-            var wav = await voice.SynthesizeWavAsync(turn.QuestionText, state.Language, state.Speech?.SpeechRate ?? 1, cancellationToken);
-            Response.Headers.CacheControl = "private, no-store";
-            return File(wav, "audio/wav");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "Could not read turn {TurnId} aloud", turnId);
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-    }
+    public Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken) =>
+        QuestionAudio.ServeAsync(Response, interviews, voice, logger, id, Email, turnId, cancellationToken);
 }
