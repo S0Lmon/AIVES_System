@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Threading.Channels;
 using RazorRealtime = Razor::AIVES.WebRazor.Realtime;
 
@@ -469,7 +470,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         }
     }
 
-    private sealed class FakeExamService : IExamService
+    internal sealed class FakeExamService : IExamService
     {
         public Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudentExamDto>>(string.Equals(email, Student, StringComparison.OrdinalIgnoreCase)
@@ -495,12 +496,98 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
         public IReadOnlyList<string> ParseCandidateEmails(string? text) => throw new NotSupportedException();
     }
 
-    private sealed class FakeRecordingService : IRecordingService
+    internal sealed class FakeRecordingService : IRecordingService
     {
         public Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default) => Task.FromResult<RecordingContent?>(null);
         public Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+}
+
+/// <summary>With VieNeu switched on, the viva page plays the question from the server instead of the browser voice.</summary>
+public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.VieNeuApp>
+{
+    private const string Student = "sinhvien@fpt.edu.vn";
+    private readonly VieNeuApp app;
+
+    public ServerQuestionAudioTests(VieNeuApp app)
+    {
+        this.app = app;
+        app.Interviews.Reset();
+    }
+
+    [Fact]
+    public async Task TheVivaPageReadsTheOpenQuestionFromTheServerOnly()
+    {
+        using var student = Browser("u-student", Student);
+        var page = await student.GetStringAsync("/Interview/11");
+        Assert.Contains("data-audio-url=\"/Interview/11/QuestionAudio\"", page);
+
+        var turn = (await app.Interviews.StartAsync(11, Student)).CurrentTurn!;
+        var audio = await student.GetAsync($"/Interview/11/QuestionAudio/{turn.TurnId}");
+        Assert.Equal(HttpStatusCode.OK, audio.StatusCode);
+        Assert.Equal("audio/wav", audio.Content.Headers.ContentType!.MediaType);
+        Assert.Equal(FakeVoice.Wav, await audio.Content.ReadAsByteArrayAsync());
+        Assert.Equal(turn.QuestionText, app.Voice.LastText);
+
+        // Not a question that is not open yet, and not someone else's viva.
+        Assert.Equal(HttpStatusCode.NotFound, (await student.GetAsync($"/Interview/11/QuestionAudio/{turn.TurnId + 1}")).StatusCode);
+        using var stranger = Browser("u-other", "nguoikhac@fpt.edu.vn");
+        Assert.Equal(HttpStatusCode.NotFound, (await stranger.GetAsync($"/Interview/11/QuestionAudio/{turn.TurnId}")).StatusCode);
+    }
+
+    private HttpClient Browser(string userId, string email)
+    {
+        var client = app.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.UserHeader, userId);
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.NameHeader, email);
+        client.DefaultRequestHeaders.Add(RazorRealtimeTests.TestAuthHandler.RoleHeader, AppRoles.Student);
+        return client;
+    }
+
+    public sealed class VieNeuApp : RazorRealtimeTests.RazorApp
+    {
+        public InterviewHubTests.FakeInterviewService Interviews { get; } = new();
+        public FakeVoice Voice { get; } = new();
+
+        protected override void ConfigureFakes(IServiceCollection services)
+        {
+            services.RemoveAll<IInterviewService>();
+            services.AddSingleton<IInterviewService>(Interviews);
+            services.RemoveAll<IExamService>();
+            services.AddSingleton<IExamService>(new InterviewHubTests.FakeExamService());
+            services.RemoveAll<IRecordingService>();
+            services.AddSingleton<IRecordingService>(new InterviewHubTests.FakeRecordingService());
+            services.RemoveAll<ITextToSpeech>();
+            services.AddSingleton<ITextToSpeech>(Voice);
+            // The page renders an antiforgery token; keep its keys in memory, as this host has no database.
+            services.RemoveAll<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>();
+            services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
+            services.Configure<SpeechOptions>(options =>
+            {
+                options.TtsProvider = SpeechProvider.VieNeu;
+                options.VieNeuUrl = "http://vieneu.invalid:8000/";
+            });
+        }
+    }
+
+    public sealed class FakeVoice : ITextToSpeech
+    {
+        public static readonly byte[] Wav = Audio.ToWav(new float[240], 24_000);
+
+        public string? LastText
+        {
+            get; private set;
+        }
+
+        public bool IsAvailable(AppLanguage language) => true;
+
+        public Task<byte[]> SynthesizeWavAsync(string text, AppLanguage language, double speed, CancellationToken cancellationToken = default)
+        {
+            LastText = text;
+            return Task.FromResult(Wav);
+        }
     }
 }
 
