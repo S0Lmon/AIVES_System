@@ -287,6 +287,9 @@ public sealed class IndexModel(IQuestionService questions, IBloomLevelService bl
         CancellationToken ct)
     {
         var results = Deserialize(ReviewJson);
+        // The review form posts 0 when the file was imported without a subject; the bank stores that as "no subject".
+        subjectId = subjectId is > 0 ? subjectId : null;
+        topicId = topicId is > 0 ? topicId : null;
         var levels = (await bloomLevels.GetAllAsync()).ToDictionary(x => x.Name, x => x.Id, StringComparer.OrdinalIgnoreCase);
         var saved = 0;
         for (var i = 0; i < results.Count; i++)
