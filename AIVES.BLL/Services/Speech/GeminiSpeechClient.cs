@@ -12,21 +12,8 @@ using System.Text.RegularExpressions;
 
 namespace AIVES.BLL.Services.Speech;
 
-/// <summary>Writes the kept transcript of a whole answer; null means "use the local one".</summary>
-public interface IAnswerTranscriber
-{
-    bool IsEnabled
-    {
-        get;
-    }
-
-    Task<string?> TranscribeAnswerAsync(ReadOnlyMemory<float> samples, AppLanguage language, IReadOnlyList<string> vocabulary,
-        CancellationToken cancellationToken = default);
-}
-
 /// <summary>
-/// Gemini speech over the Interactions API: answer transcripts with the transcription model and,
-/// optionally, question audio with a TTS model. Never throws for a failed call: it logs and returns
+/// Gemini speech over the Interactions API: question audio with a TTS model. Never throws for a failed call: it logs and returns
 /// null so the caller keeps its local result. After a 429 it stops calling that model until the
 /// delay Gemini asked for has passed, so a rate-limited exam does not wait on doomed requests.
 /// </summary>
@@ -35,11 +22,8 @@ public sealed partial class GeminiSpeechClient(
     IOptions<GeminiOptions> gemini,
     IOptions<SpeechOptions> speech,
     TimeProvider clock,
-    ILogger<GeminiSpeechClient> logger) : IAnswerTranscriber
+    ILogger<GeminiSpeechClient> logger)
 {
-    // Inline requests are capped at 20 MB; base64 adds a third, so leave room for the JSON around it.
-    private const int MaxInlineAudioBytes = 14 * 1024 * 1024;
-    private const int MaxVocabulary = 100;
     public const string HttpClientName = "GeminiSpeech";
     private static readonly TimeSpan DefaultCooldown = TimeSpan.FromSeconds(30);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.General);
@@ -47,49 +31,7 @@ public sealed partial class GeminiSpeechClient(
 
     private bool HasKey => !string.IsNullOrWhiteSpace(gemini.Value.ApiKey);
 
-    public bool IsEnabled => HasKey && speech.Value.Provider == SpeechProvider.Gemini;
-
     public bool IsTtsEnabled => HasKey && speech.Value.TtsProvider == SpeechProvider.Gemini;
-
-    public async Task<string?> TranscribeAnswerAsync(ReadOnlyMemory<float> samples, AppLanguage language, IReadOnlyList<string> vocabulary,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsEnabled || !Audio.HasSpeech(samples.Span))
-            return null;
-        var wav = Audio.ToWav(samples.Span, Audio.SampleRate);
-        if (wav.Length > MaxInlineAudioBytes)
-        {
-            logger.LogInformation("Answer audio is {Seconds:F0} s, too long to send inline; keeping the local transcript", samples.Length / (double)Audio.SampleRate);
-            return null;
-        }
-
-        var options = speech.Value;
-        // Verbatim (the default mode), never "smart": smart mode rewrites for readability, and on
-        // 2026-10-08 it turned an unclear "SignalR … qua WebSocket" into "Server-Sent Events … qua HTTP",
-        // so the examiner probed the candidate for something they never said.
-        var config = new JsonObject
-        {
-            ["language_codes"] = new JsonArray(language.ToSpeechLocale())
-        };
-        var terms = Vocabulary(vocabulary);
-        if (terms.Count > 0)
-            config["custom_vocabulary"] = new JsonArray(terms.Select(term => (JsonNode)term!).ToArray());
-        var body = new JsonObject
-        {
-            ["model"] = options.GeminiTranscribeModel,
-            ["input"] = new JsonArray(new JsonObject
-            {
-                ["type"] = "audio",
-                ["data"] = Convert.ToBase64String(wav),
-                ["mime_type"] = "audio/wav"
-            }),
-            ["generation_config"] = new JsonObject { ["transcription_config"] = config }
-        };
-
-        var result = await SendAsync(options.GeminiTranscribeModel, body, options.GeminiTimeoutSeconds, cancellationToken);
-        var text = result is null ? null : OutputText(result);
-        return text is null ? null : WhisperSpeechToText.Clean(text);
-    }
 
     /// <summary>A WAV of the question in Gemini's voice, or null to use the local voice.</summary>
     public async Task<byte[]?> SynthesizeWavAsync(string text, CancellationToken cancellationToken = default)
@@ -200,23 +142,33 @@ public sealed partial class GeminiSpeechClient(
             : null;
     }
 
-    /// <summary>Distinct, trimmed terms, at most the ~100 Gemini handles best.</summary>
-    public static IReadOnlyList<string> Vocabulary(IEnumerable<string> terms) =>
-        terms.Select(term => term.Trim()).Where(term => term.Length is > 1 and <= 60)
-            .Distinct(StringComparer.OrdinalIgnoreCase).Take(MaxVocabulary).ToList();
-
     [GeneratedRegex(@"retry in ([0-9.]+)\s*s", RegexOptions.IgnoreCase)]
     private static partial Regex RetryIn();
 }
 
-/// <summary>Reads questions with Gemini when that is switched on, otherwise (or on failure) locally.</summary>
-public sealed class HybridTextToSpeech(SherpaTextToSpeech local, GeminiSpeechClient gemini,
+/// <summary>
+/// Reads Vietnamese questions with VieNeu when a server is configured, then with Gemini when that is
+/// switched on, and otherwise (or on failure) with the local voice.
+/// </summary>
+public sealed class HybridTextToSpeech(SherpaTextToSpeech local, GeminiSpeechClient gemini, VieNeuSpeechClient vieneu,
     IMemoryCache cache) : ITextToSpeech
 {
-    public bool IsAvailable(AppLanguage language) => gemini.IsTtsEnabled || local.IsAvailable(language);
+    public bool IsAvailable(AppLanguage language) => vieneu.IsEnabled && language == AppLanguage.Vi || gemini.IsTtsEnabled || local.IsAvailable(language);
 
     public async Task<byte[]> SynthesizeWavAsync(string text, AppLanguage language, double speed, CancellationToken cancellationToken = default)
     {
+        if (vieneu.IsAvailable(language))
+        {
+            var key = (nameof(VieNeuSpeechClient), text.Trim(), speed);
+            if (cache.TryGetValue(key, out byte[]? cached) && cached is not null)
+                return cached;
+            var wav = await vieneu.SynthesizeWavAsync(text, speed, cancellationToken);
+            if (wav is not null)
+            {
+                cache.Set(key, wav, new MemoryCacheEntryOptions { SlidingExpiration = TimeSpan.FromHours(2) });
+                return wav;
+            }
+        }
         if (gemini.IsTtsEnabled)
         {
             var key = (nameof(HybridTextToSpeech), text.Trim());
@@ -231,15 +183,4 @@ public sealed class HybridTextToSpeech(SherpaTextToSpeech local, GeminiSpeechCli
         }
         return await local.SynthesizeWavAsync(text, language, speed, cancellationToken);
     }
-}
-
-/// <summary>Stands in for Whisper when no model is installed but Gemini writes the transcript.</summary>
-public sealed class NoPreviewSpeechToText : ISpeechToText
-{
-    public static readonly NoPreviewSpeechToText Instance = new();
-
-    public bool IsAvailable => false;
-
-    public Task<string> TranscribeAsync(ReadOnlyMemory<float> samples, AppLanguage language, string? prompt, bool preview,
-        CancellationToken cancellationToken = default) => Task.FromResult(string.Empty);
 }

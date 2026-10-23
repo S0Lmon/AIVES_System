@@ -35,5 +35,5 @@
     <section class="panel p-4 mb-3" data-step="done" hidden><h2 class="h5">@L10n.T("Your viva is complete")</h2><p class="mb-0">@L10n.T("Thank you. Your answers have been recorded for your lecturer to review.")</p></section>
     <div class="alert alert-danger" role="alert" data-field="error" hidden></div>
 </div>
-<div class="d-flex gap-2"><a asp-page="/MyExams/Index" class="btn btn-light">@L10n.T("Back to my exams")</a><a asp-page="Room" asp-route-id="@state.CandidateId" class="btn btn-light">@L10n.T("Use the Whisper interview room")</a></div>
+<div class="d-flex gap-2"><a asp-page="/MyExams/Index" class="btn btn-light">@L10n.T("Back to my exams")</a></div>
 @section Scripts { <script src="~/js/interview.js" asp-append-version="true"></script> }

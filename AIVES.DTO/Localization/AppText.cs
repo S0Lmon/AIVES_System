@@ -1463,6 +1463,7 @@ internal static class AppText
         ["Every exam change, AI proposal, score change, confirmation and recording playback, newest first. Entries cannot be edited."] = "Mọi thay đổi kỳ thi, đề xuất của AI, thay đổi điểm, lần chốt điểm và lần phát bản ghi, mới nhất ở trên. Không thể sửa các mục này.",
         ["Live interview"] = "Vấn đáp trực tiếp",
         ["Use the Whisper interview room"] = "Dùng phòng vấn đáp Whisper",
+        ["Use the browser voice room"] = "Dùng phòng vấn đáp giọng trình duyệt",
         ["Marked absent by your lecturer"] = "Giảng viên đã đánh dấu vắng",
         ["Cancelled by your lecturer"] = "Giảng viên đã hủy",
         ["Flagged for review"] = "Được đánh dấu để xem xét",

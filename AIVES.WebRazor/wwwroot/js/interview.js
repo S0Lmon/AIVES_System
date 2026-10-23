@@ -1,4 +1,4 @@
-// AI viva page: reads each question aloud (speechSynthesis), recognises the spoken answer
+// AI viva page: reads each question aloud (the server's VieNeu voice, else the browser's), recognises the spoken answer
 // (SpeechRecognition, Chrome/Edge) and exchanges text with the server. Typing is the fallback.
 // When the exam is recorded, each answer is captured with MediaRecorder and uploaded after it is
 // submitted. Timings (time to first word, speaking time) are sent with the answer as signals.
@@ -87,7 +87,39 @@
             || null;
     }
 
-    function speak(sentence, done) {
+    var questionAudio = null;
+
+    function stopSpeaking() {
+        if (questionAudio) { questionAudio.pause(); questionAudio = null; }
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    // The question as spoken by the server (VieNeu for Vietnamese); the browser's own voice reads it
+    // when the server has none or is slow, so the viva never waits on a missing voice.
+    function speak(sentence, turnId, done) {
+        var finished = false;
+        function finish() { if (!finished) { finished = true; done(); } }
+        stopSpeaking();
+        fetch(baseUrl + '/QuestionAudio/' + turnId, { credentials: 'same-origin', headers: { 'RequestVerificationToken': token } })
+            .then(function (response) {
+                if (!response.ok) throw new Error('no server voice');
+                return response.blob();
+            })
+            .then(function (blob) {
+                if (finished) return;
+                var url = URL.createObjectURL(blob);
+                var audio = new Audio(url);
+                questionAudio = audio;
+                function end() { URL.revokeObjectURL(url); if (questionAudio === audio) questionAudio = null; finish(); }
+                audio.onended = end;
+                audio.onerror = function () { URL.revokeObjectURL(url); speakWithBrowser(sentence, finish); };
+                var started = audio.play();
+                if (started && started.catch) started.catch(function () { speakWithBrowser(sentence, finish); });
+            })
+            .catch(function () { speakWithBrowser(sentence, finish); });
+    }
+
+    function speakWithBrowser(sentence, done) {
         if (!window.speechSynthesis) { done(); return; }
         window.speechSynthesis.cancel();
         var utterance = new SpeechSynthesisUtterance(sentence);
@@ -300,7 +332,7 @@
     function readQuestion() {
         stopListening();
         statusLine.textContent = text.textSpeaking;
-        speak(turn.questionText, function () {
+        speak(turn.questionText, turn.turnId, function () {
             if (!answerOpenedAt) answerOpenedAt = Date.now();
             startRecording();
             if (typedMode) { statusLine.textContent = Recognition ? '' : text.textNoSpeech; answerBox.readOnly = false; }
@@ -332,7 +364,7 @@
         submitting = true;
         stopTimer();
         stopListening();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        stopSpeaking();
         field('processing').textContent = text.textProcessing;
         show('processing');
         clearError();
