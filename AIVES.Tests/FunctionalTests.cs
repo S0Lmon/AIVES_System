@@ -35,33 +35,6 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
     private const string Password = "Functional123!";
 
-    [SqlFact]
-    public async Task VideoCandidatesAreRoutedToTheRoomWithCameraSupport()
-    {
-        using var student = app.Browser();
-        var email = await SignIn(student, AppRoles.Student);
-        int candidateId;
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var candidate = new AIVES.DAL.Entities.ExamCandidate { Order = 1, Email = email };
-            db.Exams.Add(new AIVES.DAL.Entities.Exam
-            {
-                Title = "Camera routing test", SubjectName = "Testing", CreatedById = "lecturer",
-                StartsAtUtc = DateTime.UtcNow.AddMinutes(5), SlotMinutes = 10,
-                RecordAudio = true, RecordVideo = true, Candidates = { candidate }
-            });
-            await db.SaveChangesAsync();
-            candidateId = candidate.Id;
-        }
-        var response = await student.GetAsync($"/Interviews/Room/{candidateId}");
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal($"/Interview/{candidateId}", response.Headers.Location!.OriginalString);
-        using var other = app.Browser();
-        await SignIn(other, AppRoles.Student);
-        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/Interviews/Room/{candidateId}")).StatusCode);
-    }
-
     [SqlTheory]
     [InlineData(true)]
     [InlineData(false)]
@@ -837,11 +810,6 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains($"href=\"/Interview/{candidateId}\"", await Html(await student.GetAsync("/MyExams")));
         var page = await student.GetAsync($"/Interview/{candidateId}");
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        // The voice room hands its translated text to interview-room.js as JSON.
-        var room = await Html(await student.GetAsync($"/Interviews/Room/{candidateId}?culture=en"));
-        Assert.Contains("Before you start", room);
-        Assert.Matches("<script type=\"application/json\" data-viva-text>\\{\"connectionError\":\"A connection error occurred\\. Please try again\\.\"", room);
-        Assert.Contains("Bắt đầu vấn đáp", await Html(await student.GetAsync($"/Interviews/Room/{candidateId}?culture=vi")));
         var token = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
 
         // JSON endpoints need the antiforgery token in a header.

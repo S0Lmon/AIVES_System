@@ -43,7 +43,7 @@
                             <td class="text-end">
                                 @if (Model.CanEnter(exam))
                                 {
-                                    <a asp-page="Room" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Continue") : L10n.T("Enter the exam room"))</a>
+                                    <a asp-page="Interview" asp-route-id="@exam.CandidateId" class="btn btn-sm btn-primary">@(exam.InterviewStatus == InterviewStatus.InProgress ? L10n.T("Continue") : L10n.T("Enter the exam room"))</a>
                                 }
                             </td>
                         </tr>
