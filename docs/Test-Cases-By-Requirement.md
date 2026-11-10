@@ -213,4 +213,6 @@ Tài khoản dùng chung: **GV** (giảng viên), **AD** (admin), **SV1**, **SV2
 | FR-14 Thuật ngữ | 2 | 2 / 0 / 0 |
 | FR-15 Giao diện | 6 | 4 / 0 / 2 |
 
+**Test tự động theo yêu cầu.** Mỗi test trong `AIVES.Tests` gắn `[Trait("Requirement", "FR-xx")]`. Workflow GitHub Actions **Requirements** (`.github/workflows/requirements.yml`) chạy toàn bộ test và in bảng Đạt/Lỗi/Bỏ qua theo từng yêu cầu vào phần Summary của lần chạy; có thể chạy riêng một yêu cầu bằng *Run workflow* → `FR-08`. Trên máy: `dotnet test AIVES.Tests --filter Requirement=FR-08`, rồi `python scripts/requirements_report.py <file .trx>` để in bảng.
+
 Cột KQ (Pass/Fail) chưa có trong các bảng trên; thêm vào khi chạy. Các ca đã kiểm tự động bằng `curl` ở phiên này và đạt: TC-02-01, TC-02-06 (với form đăng ký/đăng nhập), TC-15-06 (phần 200 `Healthy`).

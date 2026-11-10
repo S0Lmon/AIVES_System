@@ -21,6 +21,7 @@ namespace AIVES.Tests;
 
 public sealed class PresenceTrackerTests
 {
+    [Trait("Requirement", "FR-15")]
     [Fact]
     public void SeveralTabsOfOneUserCountAsOneOnlineUser()
     {
@@ -35,6 +36,7 @@ public sealed class PresenceTrackerTests
         Assert.Equal(2, online.Single(user => user.UserId == "u1").Connections);
     }
 
+    [Trait("Requirement", "FR-03")]
     [Fact]
     public void DisconnectReturnsTheQuestionsTheConnectionWasEditing()
     {
@@ -50,6 +52,7 @@ public sealed class PresenceTrackerTests
         Assert.Empty(presence.Disconnect("unknown"));
     }
 
+    [Trait("Requirement", "FR-03")]
     [Fact]
     public void StopEditingReportsWhetherAnythingChanged()
     {
@@ -62,6 +65,7 @@ public sealed class PresenceTrackerTests
         Assert.Empty(presence.Editors(3));
     }
 
+    [Trait("Requirement", "NFR-ARCH")]
     [Fact]
     public void RazorPresentationLayerDoesNotReferenceDataAccess()
     {
@@ -76,6 +80,7 @@ public sealed class PresenceTrackerTests
 /// Hosts the Razor Pages site in memory and connects real SignalR clients to it. No database
 /// is touched: users come from a header-based test scheme and nothing here reads data.
 /// </summary>
+[Trait("Requirement", "FR-15")]
 public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorApp>
 {
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(10);
@@ -83,6 +88,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
 
     public RazorRealtimeTests(RazorApp app) => this.app = app;
 
+    [Trait("Requirement", "FR-02")]
     [Fact]
     public async Task StaffPagesRedirectAnonymousVisitorsToLogin()
     {
@@ -94,6 +100,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         Assert.StartsWith("/Account/Login", response.Headers.Location!.PathAndQuery);
     }
 
+    [Trait("Requirement", "FR-02")]
     [Fact]
     public async Task HubRefusesAnonymousConnections()
     {
@@ -127,6 +134,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         Assert.False(studentChanges.TryRead(out _));
     }
 
+    [Trait("Requirement", "FR-07")]
     [Fact]
     public async Task ExamChangesReachStaffAndTheirCandidatesOnly()
     {
@@ -151,6 +159,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         Assert.False(otherChanges.TryRead(out _));
     }
 
+    [Trait("Requirement", "FR-13")]
     [Fact]
     public async Task UserChangesReachAdminsAndTheAccountOnly()
     {
@@ -190,6 +199,7 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         await ReadUntilAsync(updates, users => users.All(user => user.UserId != "presence-b"));
     }
 
+    [Trait("Requirement", "FR-03")]
     [Fact]
     public async Task EditorsOfTheSameQuestionSeeEachOther()
     {
@@ -210,6 +220,8 @@ public sealed class RazorRealtimeTests : IClassFixture<RazorRealtimeTests.RazorA
         Assert.Equal(["an@fpt.edu.vn"], seen.Names);
     }
 
+    [Trait("Requirement", "FR-03")]
+    [Trait("Requirement", "FR-02")]
     [Fact]
     public async Task StudentsCannotJoinAQuestionEditingGroup()
     {

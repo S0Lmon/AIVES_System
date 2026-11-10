@@ -6,6 +6,7 @@ namespace AIVES.Tests;
 /// The parser is the gate that keeps invented levels and difficulties out of the bank, and it is
 /// what makes "leave it blank and the AI decides" safe.
 /// </summary>
+[Trait("Requirement", "FR-03")]
 public sealed class QuestionTaxonomyTests
 {
     [Theory]

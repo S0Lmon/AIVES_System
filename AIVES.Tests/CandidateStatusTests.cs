@@ -3,6 +3,7 @@ using AIVES.DTO;
 namespace AIVES.Tests;
 
 /// <summary>Plan §5: the exam status of one candidate derives from the override, the attempt and the clock.</summary>
+[Trait("Requirement", "FR-07")]
 public sealed class CandidateStatusTests
 {
     private static readonly DateTime Start = new(2026, 12, 15, 1, 0, 0, DateTimeKind.Utc);

@@ -11,6 +11,7 @@ namespace AIVES.Tests;
 
 public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<FunctionalApp>
 {
+    [Trait("Requirement", "FR-01")]
     [SqlTheory]
     [InlineData("locked")]
     [InlineData("unconfirmed")]
@@ -35,6 +36,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
     private const string Password = "Functional123!";
 
+    [Trait("Requirement", "FR-13")]
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData(true)]
     [InlineData(false)]
@@ -116,6 +119,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         [prefix + ".IsActive"] = "true"
     };
 
+    [Trait("Requirement", "FR-15")]
     [SqlTheory]
     [InlineData("/Account/Login")]
     [InlineData("/Account/Register")]
@@ -126,6 +130,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(route)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task HealthEndpointIsAnonymousAndChecksTheDatabase()
     {
@@ -135,6 +140,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData("/")]
     [InlineData("/Home/Privacy")]
@@ -149,6 +155,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("/Account/Login", response.Headers.Location!.OriginalString);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData("Login")]
     [InlineData("Register")]
@@ -161,6 +168,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync("/Account/" + action, new FormUrlEncodedContent([]))).StatusCode);
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlTheory]
     [InlineData("Email", "invalid-email")]
     [InlineData("Email", "test@example.com")]
@@ -179,6 +187,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Users.AnyAsync(u => u.Email == fields["Email"]));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task RegisterVerifyLogoutLoginAndExternalReturnUrlWork()
     {
@@ -200,6 +209,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(login.Headers.GetValues("Set-Cookie"), c => c.StartsWith("AIVES.Auth=") && c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Trait("Requirement", "FR-01")]
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task NewAccountsAreStudentsAndCannotReachLecturerPages()
     {
@@ -237,6 +248,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("href=\"/Admin/Users\"", home);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task LecturersReachTheBanksButNotTheUsersPage()
     {
@@ -250,6 +262,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.StartsWith("/Account/AccessDenied", users.Headers.Location!.PathAndQuery);
     }
 
+    [Trait("Requirement", "FR-02")]
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task AdminPromotesAStudentWhoThenReachesTheQuestionBank()
     {
@@ -290,6 +304,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.OK, (await student.GetAsync("/Question")).StatusCode);
     }
 
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task UsersPageRefusesAdminRoleAndSelfChanges()
     {
@@ -320,6 +335,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(AppRoles.Admin, (await store.GetProfileAsync(adminId))!.Roles);
     }
 
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task AdminDisablesAndEnablesAnAccountWithTheUsersPageButton()
     {
@@ -369,6 +385,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, (await LogIn(Password)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AccountsWithoutARoleBecomeStudentsAtStartup()
     {
@@ -412,6 +429,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return id;
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UniversityEmailRegistersVerifiesAndSignsInWhileOtherDomainsAreRejected()
     {
@@ -437,6 +455,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(app.Mail.Codes.ContainsKey(rejectedEmail));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UnverifiedAccountCannotLoginAndDuplicateEmailCannotRegister()
     {
@@ -456,6 +475,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Users.CountAsync(u => u.Email == email));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task FiveWrongPasswordsLockTheAccount()
     {
@@ -477,6 +497,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("temporarily locked", await Html(locked));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task WrongOtpAndImmediateResendAreRejectedThenNewCodeReplacesOldCode()
     {
@@ -518,6 +539,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, verified.StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task QuestionCrudAndBloomFilterWorkThroughHttp()
     {
@@ -556,6 +578,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/Question/Details/" + id)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task OptionalQuestionFieldsCanBeLeftEmpty()
     {
@@ -568,6 +591,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task NewQuestionFormUsesTheDeclaredDefaults()
     {
@@ -578,6 +602,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Matches("<input[^>]*id=\"Input_DisplayOrder\"[^>]*value=\"0\"", html);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlTheory]
     [InlineData("Content", "short")]
     [InlineData("BloomLevelId", "99999")]
@@ -595,6 +620,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == fields["Input.Content"]));
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlTheory]
     [InlineData("/Question/Details/999999")]
     [InlineData("/Question/Edit/999999")]
@@ -607,6 +633,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(route)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AuthenticatedPostsStillRequireAntiforgery()
     {
@@ -621,6 +648,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             Assert.True(HttpStatusCode.BadRequest == (await browser.PostAsync(route, new FormUrlEncodedContent([]))).StatusCode, route);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiPanelReturnsStructuredQuestionsAndHandlesFailure()
     {
@@ -654,6 +682,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     /// <summary>Adds a subject with one topic straight to the database; names are unique per call.</summary>
+    [Trait("Requirement", "FR-07")]
     [SqlFact]
     public async Task LecturerSchedulesAnExamAndStudentsSeeOnlyTheirOwnSlot()
     {
@@ -737,6 +766,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Viva schedule test", await Html(await student.GetAsync("/MyExams")));
     }
 
+    [Trait("Requirement", "FR-07")]
     [SqlFact]
     public async Task ExamFormExplainsWhyItCannotBeSaved()
     {
@@ -763,6 +793,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("value=\"Too many questions\"", html); // the form keeps what was typed
     }
 
+    [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-11")]
     [SqlFact]
     public async Task StudentTakesTheAiVivaAndTheLecturerSeesTheTranscript()
     {
@@ -998,6 +1030,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return (subject.Id, subject.Topics.Single().Id);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiPanelIsDisabledOnTheExamRoomAndSendsUsersToTheQuestionPage()
     {
@@ -1009,6 +1042,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("/Question/Create", response.Headers.Location!.OriginalString);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task CreatePageCarriesTheCompactAiPanel()
     {
@@ -1023,6 +1057,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("asp-controller=\"AiExamRoom\"", html);
     }
 
+    [Trait("Requirement", "FR-03")]
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task QuestionBankExposesBankCreateAiAndBulkTabs()
     {
@@ -1050,6 +1086,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("name=\"Bulk.Plan[0].Max\"", bulk);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiTabDraftsAQuestionForReviewWithoutSavingIt()
     {
@@ -1076,6 +1113,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == "Generated question 1 for Review topic"));
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiTabNamesTheMaterialTheDraftIsGroundedIn()
     {
@@ -1097,6 +1135,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("Grounded in 1 material items: <span>Chapter 3 notes</span>", await Html(response));
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task BulkTabSplitsTheBatchAcrossBloomLevelsForReview()
     {
@@ -1130,6 +1169,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(3, Regex.Matches(html, "<li>Second follow up</li>").Count);
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task RubricBankExposesBankCreateAndAiTabsWithAMatrixEditor()
     {
@@ -1155,6 +1195,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("name=\"Ai.LevelCount\"", ai);
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task AMatrixRubricCanBeCreatedAndEditedFromTheEditor()
     {
@@ -1204,6 +1245,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             $"Rubric {id} survived the delete. Page said: {Regex.Match(after, "alert-(?:success|danger)[^>]*>([^<]*)").Groups[1].Value}");
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task ARubricWithoutRowsIsRejectedAndNothingIsStored()
     {
@@ -1231,6 +1273,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     private static int CountOccurrences(string haystack, string needle) =>
         Regex.Matches(haystack, Regex.Escape(needle)).Count;
 
+    [Trait("Requirement", "FR-15")]
     [Fact]
     public void VietnameseTextTableBuildsWithoutDuplicateKeys()
     {
@@ -1258,6 +1301,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         }
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
     {
@@ -1275,6 +1319,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("No account yet?", vietnamese);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task FormLabelsAndValidationMessagesFollowTheLanguage()
     {
@@ -1293,6 +1338,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Enter the question text.", vietnamese);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task EnglishPagesCarryNoVietnameseText()
     {
@@ -1330,6 +1376,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         }
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
     {
@@ -1356,6 +1403,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Question bank", after);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task InvalidAiRequestsDoNotCallTheGenerator()
     {
@@ -1385,6 +1433,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(calls, app.Generator.Calls);
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     {
@@ -1409,6 +1458,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AnonymousUsersAreSentToLoginFromProfile()
     {
@@ -1418,6 +1468,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("Login", response.Headers.Location!.ToString());
     }
 
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task CreatingASubjectOpensItsOwnPageWithTopicCreationInFront()
     {
@@ -1448,6 +1499,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("No topics under this subject yet", page);
     }
 
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task AddingATopicKeepsTheSubjectPageOpenAndListsTheTopic()
     {
@@ -1480,6 +1532,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("handler=DeleteTopic", page);
     }
 
+    [Trait("Requirement", "FR-03")]
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task QuestionCreateSavesSubjectAndTopicAsRealReferences()
     {
@@ -1527,6 +1581,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(content, await Html(await browser.GetAsync($"/Question?tab=bank&subjectId={subjectId}&topicId={topicId}")));
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task AQuestionCanBeSavedWithoutARubric()
     {
@@ -1547,6 +1602,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Null((await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.SingleAsync(q => q.Content == "A question stored without any rubric attached")).RubricId);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task TheBankPagesOpenWithTheTabStripAndNoPageHeading()
     {
@@ -1573,6 +1629,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             "question stats should render below the tabs");
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task TheRubricMatrixNumbersItsRows()
     {
@@ -1589,6 +1646,270 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     /// <summary>The subject id that a catalogue redirect opens (<c>/Catalog?tab=subject&amp;subjectId=…</c>).</summary>
+    /// <summary>Posts a multipart form with one file, the way the catalogue's import form does.</summary>
+    private static async Task<HttpResponseMessage> Upload(HttpClient browser, string page, string action, Dictionary<string, string> values,
+        string fileName, byte[] bytes)
+    {
+        var form = await browser.GetAsync(page);
+        Assert.Equal(HttpStatusCode.OK, form.StatusCode);
+        var match = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        Assert.True(match.Success, "The form must contain an antiforgery token.");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(WebUtility.HtmlDecode(match.Groups[1].Value)), "__RequestVerificationToken" }
+        };
+        foreach (var (name, value) in values)
+            content.Add(new StringContent(value), name);
+        content.Add(new ByteArrayContent(bytes), "file", fileName);
+        return await browser.PostAsync(action, content);
+    }
+
+    // TC-06-01, TC-06-02, TC-06-03: importing material through the catalogue page.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task ImportStoresTheFileTextAndRejectsEmptyUnsupportedOrOversizedFiles()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (_, topicId) = await CreateCatalogTopic("Import topic");
+        var fields = new Dictionary<string, string> { ["topicId"] = topicId.ToString(CultureInfo.InvariantCulture) };
+        async Task<string> Import(string fileName, byte[] bytes)
+        {
+            var response = await Upload(browser, "/Catalog?tab=material", "/Catalog?handler=ImportMaterial", new(fields), fileName, bytes);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            return await Html(await browser.GetAsync(response.Headers.Location!.ToString()));
+        }
+
+        var imported = await Import("chuong-3-chuan-hoa.txt", System.Text.Encoding.UTF8.GetBytes("Dạng chuẩn 3NF loại bỏ phụ thuộc bắc cầu."));
+        Assert.Contains("The file was imported as material.", imported);
+        Assert.Contains("chuong-3-chuan-hoa", imported);
+
+        Assert.Contains("Supported formats", await Import("virus.exe", [0x4D, 0x5A, 0x90, 0x00]));
+        Assert.Contains("Choose a file to import.", await Import("empty.txt", []));
+        Assert.Contains("The imported file does not contain enough text.", await Import("short.txt", System.Text.Encoding.UTF8.GetBytes("ngắn")));
+        // 20 MB is the limit: exactly 20 MB is accepted, one byte more is not.
+        Assert.Contains("The file is larger than 20 MB.", await Import("too-big.txt", System.Text.Encoding.ASCII.GetBytes(new string('a', 20 * 1024 * 1024 + 1))));
+        Assert.Contains("The file was imported as material.", await Import("exactly-20mb.txt", System.Text.Encoding.ASCII.GetBytes(new string('a', 20 * 1024 * 1024))));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Materials.AsNoTracking().Where(material => material.TopicId == topicId).OrderBy(material => material.Id).ToListAsync();
+        Assert.Equal(["chuong-3-chuan-hoa.txt", "exactly-20mb.txt"], stored.Select(material => material.SourceFileName));
+        Assert.Equal("Dạng chuẩn 3NF loại bỏ phụ thuộc bắc cầu.", stored[0].Content);
+        Assert.Equal(MaterialSourceType.ImportedFile, stored[0].SourceType);
+    }
+
+    // TC-06-04: deleting a topic removes its material; its questions stay, without the topic.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task DeletingATopicRemovesItsMaterialButKeepsItsQuestions()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, topicId) = await CreateCatalogTopic("Topic to delete");
+        var questionId = await AddCatalogContent(subjectId, topicId);
+
+        var deleted = await Post(browser, $"/Catalog?tab=subject&subjectId={subjectId}", "/Catalog?handler=DeleteTopic", new()
+        {
+            ["id"] = topicId.ToString(CultureInfo.InvariantCulture),
+            ["subjectId"] = subjectId.ToString(CultureInfo.InvariantCulture)
+        });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        Assert.Contains("The topic and its material were deleted.", await Html(await browser.GetAsync(deleted.Headers.Location!.ToString())));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.Topics.AnyAsync(topic => topic.Id == topicId));
+        Assert.False(await db.Materials.AnyAsync(material => material.TopicId == topicId));
+        var question = await db.Questions.AsNoTracking().SingleAsync(item => item.Id == questionId);
+        Assert.Null(question.TopicId);
+        Assert.Equal(subjectId, question.SubjectId);
+    }
+
+    // TC-06-05: deleting a subject removes its topics and material; questions and exams stay, unlinked.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task DeletingASubjectRemovesItsTopicsAndMaterialButKeepsQuestions()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, topicId) = await CreateCatalogTopic("Topic under a deleted subject");
+        var questionId = await AddCatalogContent(subjectId, topicId);
+
+        var deleted = await Post(browser, $"/Catalog?tab=subject&subjectId={subjectId}", "/Catalog?handler=DeleteSubject", new()
+        {
+            ["id"] = subjectId.ToString(CultureInfo.InvariantCulture)
+        });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        Assert.Contains("The subject and everything under it was deleted.", await Html(await browser.GetAsync(deleted.Headers.Location!.ToString())));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.Subjects.AnyAsync(subject => subject.Id == subjectId));
+        Assert.False(await db.Topics.AnyAsync(topic => topic.Id == topicId));
+        Assert.False(await db.Materials.AnyAsync(material => material.TopicId == topicId));
+        var question = await db.Questions.AsNoTracking().SingleAsync(item => item.Id == questionId);
+        Assert.Null(question.SubjectId);
+        Assert.Null(question.TopicId);
+    }
+
+    /// <summary>One material and one question under the topic; returns the question id.</summary>
+    private async Task<int> AddCatalogContent(int subjectId, int topicId)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Materials.Add(new AIVES.DAL.Entities.Material
+        {
+            TopicId = topicId,
+            Title = "Lecture notes",
+            Content = "Normalisation removes redundancy from tables.",
+            SourceType = MaterialSourceType.Manual
+        });
+        var question = new AIVES.DAL.Entities.Question { Content = "Explain normal forms", BloomLevelId = 2, SubjectId = subjectId, TopicId = topicId };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+        return question.Id;
+    }
+
+    // TC-11-03, TC-11-04: role changes, subject assignments and settings are logged; only admins read the system log.
+    [Trait("Requirement", "FR-11")]
+    [Trait("Requirement", "FR-13")]
+    [SqlFact]
+    public async Task AdminActionsAreAuditedAndOnlyAdminsCanReadTheSystemLog()
+    {
+        using var lecturer = app.Browser();
+        var lecturerEmail = await SignIn(lecturer);
+        var denied = await lecturer.GetAsync("/Admin/Audit");
+        Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
+        Assert.StartsWith("/Account/AccessDenied", denied.Headers.Location!.PathAndQuery);
+
+        using var admin = app.Browser();
+        await SignInAsAdmin(admin);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        string studentId, lecturerId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            studentId = (await store.FindByEmailAsync(studentEmail))!.Id;
+            lecturerId = (await store.FindByEmailAsync(lecturerEmail))!.Id;
+        }
+        var (subjectId, _) = await CreateCatalogTopic("Audited subject topic");
+
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Users", "/Admin/SetRole", new()
+        {
+            ["userId"] = studentId,
+            ["role"] = AppRoles.Lecturer
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Subjects", "/Admin/Subjects", new()
+        {
+            ["subjectId"] = subjectId.ToString(CultureInfo.InvariantCulture),
+            ["lecturerIds"] = lecturerId
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Settings", "/Admin/Settings", new()
+        {
+            ["Input.DefaultLanguage"] = nameof(AppLanguage.Vi),
+            ["Input.EnableVietnamese"] = "true",
+            ["Input.EnableEnglish"] = "true",
+            ["Input.SpeechRate"] = "1.1",
+            ["Input.RecordingRetentionDays"] = "91"
+        })).StatusCode);
+
+        IReadOnlyList<AuditEntryDto> entries;
+        using (var scope = app.Services.CreateScope())
+            entries = await scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Operations.IAuditService>()
+                .QueryAsync(new AuditQuery(Take: 1000));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.UserRoleChanged && entry.Details!.Contains(studentEmail) && entry.Details.Contains(AppRoles.Lecturer));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.SubjectLecturersChanged && entry.Details!.Contains($"Subject {subjectId}") && entry.Details.Contains(lecturerEmail));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.SettingsChanged && entry.Details!.Contains("retention 91 days"));
+        Assert.All(entries.Where(entry => entry.Action is AuditActions.UserRoleChanged or AuditActions.SettingsChanged), entry => Assert.NotNull(entry.ActorEmail));
+
+        // The admin log lists them, newest first, and can be narrowed to one kind of action.
+        var log = await Html(await admin.GetAsync("/Admin/Audit"));
+        Assert.Contains(studentEmail, log);
+        Assert.Contains("retention 91 days", log);
+        var settingsOnly = await Html(await admin.GetAsync("/Admin/Audit?action=settings"));
+        Assert.Contains("retention 91 days", settingsOnly);
+        Assert.DoesNotContain($"{studentEmail} → {AppRoles.Lecturer}", settingsOnly);
+    }
+
+    // TC-12-03, TC-12-05, TC-11-03: the report page copes with an ungraded exam; students and other lecturers
+    // cannot reach the report or the export; every export is logged.
+    [Trait("Requirement", "FR-12")]
+    [Trait("Requirement", "FR-11")]
+    [SqlFact]
+    public async Task ReportsAndGradeSheetsAreForTheExamOwnerAndEachExportIsLogged()
+    {
+        using var owner = app.Browser();
+        var ownerEmail = await SignIn(owner);
+        using var otherLecturer = app.Browser();
+        await SignIn(otherLecturer);
+        using var student = app.Browser();
+        await SignIn(student, AppRoles.Student);
+
+        int examId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var ownerId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(ownerEmail))!.Id;
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var exam = new AIVES.DAL.Entities.Exam
+            {
+                Title = "Report access viva",
+                SubjectName = "Công nghệ phần mềm",
+                StartsAtUtc = DateTime.UtcNow.AddDays(2),
+                SlotMinutes = 15,
+                MainQuestionCount = 1,
+                MaxFollowUpQuestions = 1,
+                Language = "vi-VN",
+                CreatedById = ownerId,
+                Candidates =
+                {
+                    new AIVES.DAL.Entities.ExamCandidate
+                    {
+                        Order = 1,
+                        Email = "sinhvien" + Guid.NewGuid().ToString("N")[..6] + "se123456@fpt.edu.vn",
+                        Questions = { new AIVES.DAL.Entities.ExamCandidateQuestion { Order = 1, Content = "Why layers?", ExpectedAnswer = "Separation", BloomLevelName = "Understand" } }
+                    }
+                }
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.Id;
+        }
+
+        // Students are refused at the door of every report address.
+        foreach (var path in new[] { "/Reports", $"/Reports/Exam/{examId}", $"/Grading/Export?id={examId}" })
+        {
+            var refused = await student.GetAsync(path);
+            Assert.Equal(HttpStatusCode.Redirect, refused.StatusCode);
+            Assert.StartsWith("/Account/AccessDenied", refused.Headers.Location!.PathAndQuery);
+        }
+        // Another lecturer does not even learn that the exam exists.
+        Assert.Equal(HttpStatusCode.NotFound, (await otherLecturer.GetAsync($"/Reports/Exam/{examId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherLecturer.GetAsync($"/Grading/Export?id={examId}")).StatusCode);
+        Assert.DoesNotContain("Report access viva", await Html(await otherLecturer.GetAsync("/Reports")));
+
+        // The owner sees the exam listed and an ungraded report that renders without errors.
+        Assert.Contains("Report access viva", await Html(await owner.GetAsync("/Reports")));
+        var report = await owner.GetAsync($"/Reports/Exam/{examId}");
+        Assert.Equal(HttpStatusCode.OK, report.StatusCode);
+        Assert.Contains("Report access viva", await Html(report));
+
+        var sheet = await owner.GetAsync($"/Grading/Export?id={examId}");
+        Assert.Equal(HttpStatusCode.OK, sheet.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sheet.Content.Headers.ContentType!.MediaType);
+        Assert.Matches($@"^grades-cong-nghe-phan-mem-\d{{8}}-{examId}\.xlsx$", sheet.Content.Headers.ContentDisposition!.FileNameStar ?? sheet.Content.Headers.ContentDisposition.FileName!.Trim('"'));
+        using (var workbook = new ClosedXML.Excel.XLWorkbook(new MemoryStream(await sheet.Content.ReadAsByteArrayAsync())))
+            Assert.Equal("SE123456", workbook.Worksheets.First().Cell(10, 2).GetString());
+
+        using var auditScope = app.Services.CreateScope();
+        var entries = await auditScope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Operations.IAuditService>()
+            .QueryAsync(new AuditQuery(ExamId: examId, Action: AuditActions.GradeSheetExported));
+        var export = Assert.Single(entries);
+        Assert.Equal(ownerEmail, export.ActorEmail);
+        Assert.Equal("0 of 1 grades confirmed", export.Details);
+    }
+
     private static string OpenedSubjectId(HttpResponseMessage redirect)
     {
         var id = Regex.Match(redirect.Headers.Location!.ToString(), @"subjectId=(?<id>\d+)").Groups["id"].Value;
@@ -1596,6 +1917,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return id;
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
     {

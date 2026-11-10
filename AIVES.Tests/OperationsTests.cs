@@ -72,6 +72,9 @@ public sealed class RecordingAndInterviewTests
         new InterviewRepository(db), ai, TestServices.Glossary(db), TestServices.Settings(db, clock), TestServices.Audit(db, clock),
         Options.Create(new InterviewOptions()), clock, NullLogger<InterviewService>.Instance);
 
+    [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-10")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task ARecordedVivaNeedsConsentToStart()
     {
@@ -88,6 +91,9 @@ public sealed class RecordingAndInterviewTests
         Assert.Contains(db.AuditEntries, entry => entry.Action == AuditActions.InterviewStarted && entry.Details!.Contains("Audio"));
     }
 
+    [Trait("Requirement", "FR-14")]
+    [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task MisheardTermsAreCorrectedAndTimingsAreKept()
     {
@@ -110,6 +116,8 @@ public sealed class RecordingAndInterviewTests
         Assert.Contains(db.AuditEntries, entry => entry.Action == AuditActions.InterviewCompleted);
     }
 
+    [Trait("Requirement", "FR-10")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task RecordingsAreEncryptedAndOnlyTheExamOwnerCanPlayThem()
     {
@@ -146,6 +154,7 @@ public sealed class RecordingAndInterviewTests
         Assert.Empty(db.TurnRecordings);
     }
 
+    [Trait("Requirement", "FR-10")]
     [Fact]
     public async Task NothingIsRecordedWithoutConsentOrWhenTheExamIsNotRecorded()
     {
@@ -155,6 +164,8 @@ public sealed class RecordingAndInterviewTests
             TestServices.Recordings(db, clock).SaveAsync(candidateId, Email, state.CurrentTurn!.TurnId, new MemoryStream([1, 2, 3]), "audio/webm"));
     }
 
+    [Trait("Requirement", "FR-13")]
+    [Trait("Requirement", "FR-07")]
     [Fact]
     public async Task SubjectsWithAssignedLecturersAreRestricted()
     {
@@ -171,6 +182,7 @@ public sealed class RecordingAndInterviewTests
         Assert.True(await access.CanUseAsync(subjectId, new ExamActor("admin", true)));
     }
 
+    [Trait("Requirement", "FR-13")]
     [Fact]
     public async Task SpeechSettingsAreValidatedAndStored()
     {
@@ -189,6 +201,7 @@ public sealed class RecordingAndInterviewTests
     }
 }
 
+[Trait("Requirement", "FR-14")]
 public sealed class TranscriptNormalizerTests
 {
     private static readonly IReadOnlyList<GlossaryTermDto> Glossary =
@@ -207,6 +220,7 @@ public sealed class TranscriptNormalizerTests
         Assert.Equal(expected, TranscriptNormalizer.Normalize(input, Glossary));
 }
 
+[Trait("Requirement", "FR-04")]
 public sealed class QuestionImportTests
 {
     [Fact]
@@ -282,6 +296,7 @@ public sealed class MaterialRetrievalTests
     private static MaterialDto Material(int id, string title, string content) =>
         new(id, 1, "Databases", "CSDL", title, content, null, MaterialSourceType.ImportedFile, true, DateTime.UtcNow, DateTime.UtcNow, content.Length);
 
+    [Trait("Requirement", "FR-04")]
     [Fact]
     public void OnlyThePassagesAboutTheRequestAreUsed()
     {
@@ -298,6 +313,7 @@ public sealed class MaterialRetrievalTests
         Assert.DoesNotContain("Đoạn 2 nói", context.Text);
     }
 
+    [Trait("Requirement", "FR-06")]
     [Fact]
     public async Task WordDocumentsAreTurnedIntoText()
     {

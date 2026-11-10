@@ -40,12 +40,20 @@ public static class DependencyInjection
         services.AddScoped<IExamService, ExamService>();
         services.Configure<InterviewOptions>(configuration.GetSection(InterviewOptions.SectionName));
         services.AddScoped<IInterviewService, InterviewService>();
-        services.AddHttpClient<IFollowUpGenerator, GeminiFollowUpGenerator>(nameof(GeminiFollowUpGenerator), client =>
+        // Viva follow-ups: Gemini or the local Ollama model, whichever Ollama:PreferLocal puts first, falling back to the other.
+        services.AddHttpClient<GeminiFollowUpGenerator>(nameof(GeminiFollowUpGenerator), client =>
         {
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             // The service gives up sooner (Interview:AiTimeoutSeconds); this only bounds a stuck socket.
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddHttpClient<OllamaFollowUpGenerator>(nameof(OllamaFollowUpGenerator), (provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
+        });
+        services.AddTransient<IFollowUpGenerator, RoutedFollowUpGenerator>();
         // Spoken questions for the viva: VieNeu or Gemini when Speech:TtsProvider asks for it, and the local Piper voice
         // (loaded on first use) otherwise or when they fail.
         services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
@@ -87,11 +95,20 @@ public static class DependencyInjection
         services.Configure<GradingOptions>(configuration.GetSection(GradingOptions.SectionName));
         services.AddScoped<IGradingService, GradingService>();
         services.Configure<ReportOptions>(configuration.GetSection(ReportOptions.SectionName));
-        services.AddHttpClient<IAnswerGrader, GeminiAnswerGrader>(nameof(GeminiAnswerGrader), client =>
+        // Grading suggestions: Gemini or the local Ollama model, ordered by Ollama:PreferLocal, falling back to the other.
+        services.AddHttpClient<GeminiAnswerGrader>(nameof(GeminiAnswerGrader), client =>
         {
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             client.Timeout = TimeSpan.FromSeconds(150);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddHttpClient<OllamaAnswerGrader>(nameof(OllamaAnswerGrader), (provider, client) =>
+        {
+            var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            // A large local model grading a long transcript can take minutes; Grading:TimeoutSeconds still applies per answer.
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(120, options.TimeoutSeconds * 2));
+        });
+        services.AddTransient<IAnswerGrader, RoutedAnswerGrader>();
         services.AddHostedService<GradingWorker>();
         services.AddHostedService<QuestionAudioWorker>();
         // Check every authenticated HTTP request so disabling an account also invalidates open

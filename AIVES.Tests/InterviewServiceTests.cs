@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class InterviewServiceTests
 {
     private const string Email = "student@fpt.edu.vn";

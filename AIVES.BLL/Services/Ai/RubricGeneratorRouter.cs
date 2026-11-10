@@ -10,9 +10,12 @@ namespace AIVES.BLL.Services.Ai;
 /// unavailable request falls back instead of failing.
 /// </summary>
 public sealed class RubricGeneratorRouter(IEnumerable<IRubricGenerator> generators,
-    ILogger<RubricGeneratorRouter> logger) : IRubricGeneratorRouter
+    ILogger<RubricGeneratorRouter> logger, Microsoft.Extensions.Options.IOptions<OllamaOptions>? ollama = null) : IRubricGeneratorRouter
 {
-    private static readonly AiProvider[] PreferenceOrder = [AiProvider.Gemini, AiProvider.Ollama];
+    // Ollama:PreferLocal puts the local model first for every AI feature; Gemini then only steps in when it fails.
+    private AiProvider[] PreferenceOrder => ollama?.Value.PreferLocal == true
+        ? [AiProvider.Ollama, AiProvider.Gemini]
+        : [AiProvider.Gemini, AiProvider.Ollama];
 
     private readonly IReadOnlyList<IRubricGenerator> _generators = generators.ToList();
 

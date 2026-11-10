@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-15")]
 public sealed class LocalizationTests
 {
     [Fact]

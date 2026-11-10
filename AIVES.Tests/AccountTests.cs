@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-01")]
 public sealed class AccountTests
 {
     private static AccountService Service(FakeStore store, FakeVerification verification, Dictionary<string, string?>? settings = null) => new(store, verification,

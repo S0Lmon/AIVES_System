@@ -16,6 +16,7 @@ public sealed class LayerTests
 
     private static QuestionService Questions(ApplicationDbContext db) => new(new QuestionRepository(db), new RubricRepository(db), new BloomLevelRepository(db));
 
+    [Trait("Requirement", "NFR-ARCH")]
     [Fact]
     public void PresentationAndBusinessDoNotReferenceEfOrPersistenceEntities()
     {
@@ -28,6 +29,7 @@ public sealed class LayerTests
         Assert.DoesNotContain(typeof(QuestionDto).Assembly.GetReferencedAssemblies(), a => a.Name!.StartsWith("AIVES.") || a.Name.StartsWith("Microsoft.EntityFrameworkCore"));
     }
 
+    [Trait("Requirement", "FR-03")]
     [Fact]
     public async Task QuestionCrudReturnsNamesAndPreservesCreatedDateInSameScope()
     {
@@ -51,6 +53,7 @@ public sealed class LayerTests
         Assert.Null(await service.GetQuestionByIdAsync(dto.Id));
     }
 
+    [Trait("Requirement", "FR-03")]
     [Theory]
     [InlineData("short", 1, 1)]
     [InlineData("A valid question content", 999, 1)]
@@ -65,6 +68,7 @@ public sealed class LayerTests
         Assert.Empty(db.Questions);
     }
 
+    [Trait("Requirement", "FR-05")]
     [Fact]
     public async Task RubricUpdatePreservesCreatedDate()
     {
@@ -80,6 +84,7 @@ public sealed class LayerTests
         Assert.Equal("Updated", updated.Name);
     }
 
+    [Trait("Requirement", "FR-05")]
     [Theory]
     [InlineData(201, 0)]
     [InlineData(0, 1001)]
@@ -96,6 +101,7 @@ public sealed class LayerTests
     /// <summary>A valid two by two matrix, which is what a rubric is now required to be.</summary>
     private static RubricDto Matrix(string name) => RubricFixtures.Matrix(name);
 
+    [Trait("Requirement", "FR-01")]
     [Fact]
     public async Task VerificationCodeIsHashedRateLimitedAndSingleUse()
     {
@@ -110,6 +116,7 @@ public sealed class LayerTests
         Assert.False(await service.VerifyAsync("user", sender.Code));
     }
 
+    [Trait("Requirement", "FR-01")]
     [Fact]
     public async Task VerificationStopsAfterFiveWrongAttempts()
     {
@@ -123,6 +130,7 @@ public sealed class LayerTests
         Assert.Equal(5, Assert.Single(db.EmailVerificationCodes).FailedAttempts);
     }
 
+    [Trait("Requirement", "FR-01")]
     [Fact]
     public async Task ExpiredVerificationIsRejected()
     {
@@ -135,6 +143,7 @@ public sealed class LayerTests
         Assert.False(await service.VerifyAsync("user", sender.Code));
     }
 
+    [Trait("Requirement", "FR-03")]
     [Fact]
     public void QuestionPostModelDoesNotContainDisplayOnlyNames()
     {

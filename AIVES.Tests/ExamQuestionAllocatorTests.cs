@@ -3,6 +3,7 @@ using AIVES.DTO;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-07")]
 public sealed class ExamQuestionAllocatorTests
 {
     /// <summary>A pool spread evenly over the Bloom levels 1..levels.</summary>

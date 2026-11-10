@@ -9,6 +9,7 @@ using System.Text.Json;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-04")]
 public sealed class GeminiTests
 {
     private static GeneratedVivaQuestion ValidQuestion => new()
@@ -131,6 +132,7 @@ public sealed class GeminiTests
         Assert.Equal(0, handler.Calls);
     }
 
+    [Trait("Requirement", "FR-01")]
     [Fact]
     public async Task UnconfiguredSmtpIsRejectedBeforeSending()
     {

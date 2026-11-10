@@ -15,6 +15,7 @@ using System.Text.Json.Nodes;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class VieNeuSpeechTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-10-24T08:00:00Z");

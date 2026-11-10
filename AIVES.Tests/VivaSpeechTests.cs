@@ -18,6 +18,7 @@ using RazorRealtime = Razor::AIVES.WebRazor.Realtime;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class AudioTests
 {
     [Fact]
@@ -40,6 +41,7 @@ public sealed class AudioTests
 /// submitted over HTTP, and lecturers watching the exam over SignalR are told about every step.
 /// No database and no speech model needed.
 /// </summary>
+[Trait("Requirement", "FR-08")]
 public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 {
     private const int CandidateId = 11;
@@ -329,6 +331,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 }
 
 /// <summary>With VieNeu switched on, the viva page plays the question from the server instead of the browser voice.</summary>
+[Trait("Requirement", "FR-08")]
 public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.VieNeuApp>
 {
     private const string Student = "sinhvien@fpt.edu.vn";

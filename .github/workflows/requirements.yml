@@ -1,0 +1,101 @@
+# Runs the automated tests grouped by functional requirement (FR-01 … FR-15 in
+# docs/Test-Cases-By-Requirement.md) and writes a per-requirement table to the run summary.
+# Every test in AIVES.Tests carries [Trait("Requirement", "FR-xx")]; run one requirement locally with
+#   dotnet test AIVES.Tests --filter Requirement=FR-08
+# or here with "Run workflow" and the requirement field. The manual cases in the document still need a person.
+name: Requirements
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      requirement:
+        description: "Only this requirement, e.g. FR-08 (empty = all)"
+        required: false
+        default: ""
+
+concurrency:
+  group: requirements-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  # Only used by the service container below, which is discarded after the run.
+  SQL_PASSWORD: Ci_${{ github.run_id }}_Aa1!
+  REQUIREMENT: ${{ inputs.requirement }}
+
+jobs:
+  requirements:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_${{ github.run_id }}_Aa1!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci_${{ github.run_id }}_Aa1! -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the requirement input
+        if: env.REQUIREMENT != ''
+        run: |
+          if ! [[ "$REQUIREMENT" =~ ^N?FR-[0-9A-Z]+$ ]]; then
+            echo "::error::Requirement must look like FR-08, got '$REQUIREMENT'"; exit 1
+          fi
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Build
+        run: dotnet build AIVES_System.slnx --configuration Release
+
+      - name: Run the tests
+        # A failing test fails the report step below, which lists it under its requirement.
+        continue-on-error: true
+        env:
+          AIVES_TEST_SQL_CONNECTION: Server=127.0.0.1,1433;Database=AIVES_Test;User Id=sa;Password=${{ env.SQL_PASSWORD }};TrustServerCertificate=True
+        run: |
+          filter=()
+          if [ -n "$REQUIREMENT" ]; then filter=(--filter "Requirement=$REQUIREMENT"); fi
+          dotnet test AIVES.Tests/AIVES.Tests.csproj --configuration Release --no-build "${filter[@]}" \
+            --logger "trx;LogFileName=requirements.trx" --results-directory TestResults
+
+      - name: Report by requirement
+        run: |
+          args=(TestResults/requirements.trx --out TestResults/requirements-report.md)
+          if [ -n "$REQUIREMENT" ]; then args+=(--only "$REQUIREMENT"); fi
+          python3 scripts/requirements_report.py "${args[@]}"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-report
+          path: |
+            TestResults/requirements-report.md
+            TestResults/requirements.trx
+          if-no-files-found: ignore

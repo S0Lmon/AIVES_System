@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-10")]
 public sealed class DataProtectionTests : IDisposable
 {
     private readonly string certificatePath = Path.Combine(Path.GetTempPath(), $"aives-dp-{Guid.NewGuid():N}.pfx");

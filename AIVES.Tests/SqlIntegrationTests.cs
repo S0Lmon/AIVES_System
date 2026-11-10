@@ -9,6 +9,7 @@ namespace AIVES.Tests;
 
 public sealed class SqlIntegrationTests
 {
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task ConcurrentOtpConsumptionAndFailuresAreAtomic()
     {
@@ -43,6 +44,7 @@ public sealed class SqlIntegrationTests
         finally { await setup.Database.EnsureDeletedAsync(); }
     }
 
+    [Trait("Requirement", "NFR-DB")]
     [SqlFact]
     public async Task ExistingMigrationChainAndDtoCrudWorkOnSqlServer()
     {
