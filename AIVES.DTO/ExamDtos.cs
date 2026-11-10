@@ -31,7 +31,13 @@ public enum QuestionSelectionStrategy
     /// <summary>Default: avoid repeats between consecutive candidates, spread usage, cover Bloom levels.</summary>
     Balanced = 0,
     /// <summary>Uniformly random draw; only avoids giving one candidate the same question twice.</summary>
-    Random = 1
+    Random = 1,
+    /// <summary>
+    /// Sets are drawn as for <see cref="Balanced"/>, then adapted during the viva: after each main
+    /// question the next one is swapped for a harder Bloom level when the answer was right first
+    /// time, or an easier one when the candidate struggled.
+    /// </summary>
+    Adaptive = 2
 }
 
 /// <summary>What a lecturer submits to create or edit a viva exam session.</summary>
@@ -83,7 +89,9 @@ public static class ExamLimits
 }
 
 /// <summary>An active question that may be drawn for an exam.</summary>
-public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer, string? RubricJson = null, int? RubricId = null);
+/// <param name="BloomOrder">Position of the Bloom level from Remember (1) upwards; 0 when unknown.</param>
+public sealed record ExamPoolQuestion(int Id, int BloomLevelId, string BloomLevelName, string Content, string ExpectedAnswer, string? RubricJson = null, int? RubricId = null,
+    int BloomOrder = 0);
 
 /// <summary>A question handed to one candidate; the text is a snapshot taken when it was assigned.</summary>
 public sealed record ExamAssignedQuestion(int Order, int? QuestionId, string Content, string ExpectedAnswer, string BloomLevelName, string? RubricJson = null);

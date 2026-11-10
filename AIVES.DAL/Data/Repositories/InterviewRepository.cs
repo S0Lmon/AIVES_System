@@ -39,7 +39,55 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             ExamRepository.RecordingOf(exam),
             candidate.Attempt?.RecordingConsentAtUtc,
             exam.SubjectId,
-            candidate.StatusOverride);
+            candidate.StatusOverride,
+            exam.Strategy);
+    }
+
+    /// <summary>Candidates this many places before or after count as sitting close by.</summary>
+    private const int NeighbourWindow = 3;
+
+    public async Task<AdaptivePool?> GetAdaptivePoolAsync(int candidateId, CancellationToken cancellationToken = default)
+    {
+        var candidate = await context.ExamCandidates.AsNoTracking()
+            .Where(item => item.Id == candidateId)
+            .Select(item => new { item.ExamId, item.Order })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (candidate is null)
+            return null;
+        var poolIds = context.ExamQuestionPools.Where(item => item.ExamId == candidate.ExamId).Select(item => item.QuestionId);
+        var questions = await ExamRepository.LoadPoolAsync(context, context.Questions.Where(question => question.IsActive && poolIds.Contains(question.Id)), cancellationToken);
+        if (questions.Count == 0)
+            return null;
+
+        var assigned = await context.ExamCandidateQuestions.AsNoTracking()
+            .Where(item => item.Candidate.ExamId == candidate.ExamId && item.ExamCandidateId != candidateId && item.QuestionId != null)
+            .Select(item => new { QuestionId = item.QuestionId!.Value, item.Candidate.Order })
+            .ToListAsync(cancellationToken);
+        var neighbours = assigned.Where(item => Math.Abs(item.Order - candidate.Order) <= NeighbourWindow).Select(item => item.QuestionId).ToHashSet();
+        var usage = assigned.GroupBy(item => item.QuestionId).ToDictionary(group => group.Key, group => group.Count());
+        var bloomOrders = await context.BloomLevels.AsNoTracking()
+            .ToDictionaryAsync(level => level.Name, level => level.Order, StringComparer.OrdinalIgnoreCase, cancellationToken);
+        return new AdaptivePool(questions, bloomOrders, neighbours, usage);
+    }
+
+    public async Task<bool> ReplaceQuestionAsync(int candidateId, int order, ExamPoolQuestion question, CancellationToken cancellationToken = default)
+    {
+        var row = await context.ExamCandidateQuestions
+            .Include(item => item.Grade)
+            .FirstOrDefaultAsync(item => item.ExamCandidateId == candidateId && item.Order == order, cancellationToken);
+        if (row is null || row.Grade is not null)
+            return false;
+        // Never change a question that has already been put to the candidate.
+        var asked = await context.ExamTurns.AnyAsync(turn => turn.Attempt.ExamCandidateId == candidateId && turn.MainIndex == order, cancellationToken);
+        if (asked)
+            return false;
+        row.QuestionId = question.Id;
+        row.Content = question.Content;
+        row.ExpectedAnswer = question.ExpectedAnswer;
+        row.BloomLevelName = question.BloomLevelName;
+        row.RubricJson = question.RubricJson;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false, CancellationToken cancellationToken = default)

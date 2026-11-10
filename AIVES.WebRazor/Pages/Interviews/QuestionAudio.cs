@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIVES.WebRazor.Pages.Interviews;
 
-/// <summary>The open question as a WAV file, shared by the viva page and the Whisper room.</summary>
+/// <summary>The open question as a WAV file, served to the viva page.</summary>
 public static class QuestionAudio
 {
     public static async Task<IActionResult> ServeAsync(HttpResponse response, IInterviewService interviews, ITextToSpeech voice,

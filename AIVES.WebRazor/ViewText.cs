@@ -57,6 +57,7 @@ public static class ViewText
         AuditActions.ExamCandidateStatusChanged => L10n.T("Candidate status changed"),
         AuditActions.InterviewStarted => L10n.T("Viva started"),
         AuditActions.InterviewCompleted => L10n.T("Viva finished"),
+        AuditActions.InterviewQuestionAdapted => L10n.T("Next question adapted"),
         AuditActions.RecordingViewed => L10n.T("Recording played"),
         AuditActions.RecordingPurged => L10n.T("Recordings deleted (retention)"),
         AuditActions.AiGraded => L10n.T("AI proposed a grade"),

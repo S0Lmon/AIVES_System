@@ -77,18 +77,13 @@ public static class RazorPresentation
 
         services.AddHttpContextAccessor();
         services.AddSingleton<DisplayTimeZone>();
-        services.AddSignalR(options =>
-            {
-                // Room for audio chunks that arrive while Whisper is busy with the previous ones.
-                options.StreamBufferCapacity = 64;
-            })
+        services.AddSignalR()
             .AddJsonProtocol(options =>
             {
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeConverter());
             });
         services.AddSingleton<PresenceTracker>();
-        services.AddSingleton<AnswerSessions>();
         services.AddScoped<ILiveUpdates, LiveUpdates>();
         services.AddHostedService<ExamExpiryService>();
 

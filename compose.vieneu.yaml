@@ -4,9 +4,9 @@
 # busy or down, so the viva never waits on it. Main questions are read into a cache ahead of each slot
 # (Speech:PrepareMinutesAhead); follow-ups are read when they are asked (Speech:VieNeuTimeoutSeconds).
 #
-# Needs an NVIDIA GPU, like compose.gpu.yaml. Enable it by adding this file to COMPOSE_FILE in .env
+# Needs an NVIDIA GPU (NVIDIA Container Toolkit). Enable it by adding this file to COMPOSE_FILE in .env
 # (";" separates files on Windows, ":" on Linux), then rebuild:
-#   COMPOSE_FILE=compose.yaml;compose.override.yaml;compose.gpu.yaml;compose.vieneu.yaml
+#   COMPOSE_FILE=compose.yaml;compose.override.yaml;compose.vieneu.yaml
 #   docker compose up -d --build
 # Voices (GET /v1/voices): "Mai Anh", "Ngọc Huyền", "Hải Đăng", "Minh Đức", "Thùy Dung", … — set VIENEU_VOICE.
 #
@@ -72,7 +72,7 @@ services:
       HOST: 0.0.0.0
       VIENEU_BACKEND: pytorch
       VIENEU_DEVICE: cuda
-      # Questions read at once; ~1.1 GB of VRAM next to Whisper. Extra requests wait, then web uses Piper.
+      # Questions read at once; ~1.1 GB of VRAM. Extra requests wait, then web uses Piper.
       VIENEU_MAX_STREAMS: "${VIENEU_MAX_STREAMS:-4}"
       VIENEU_QUEUE: "${VIENEU_QUEUE:-8}"
       VIENEU_QUEUE_TIMEOUT: "10"

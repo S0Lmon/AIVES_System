@@ -129,6 +129,7 @@
                                                 asp-for="Input.Strategy" class="form-select">
                                                 <option value="@QuestionSelectionStrategy.Balanced">@L10n.T("Balanced: avoid repeats between consecutive candidates, spread usage, cover Bloom levels")</option>
                                                 <option value="@QuestionSelectionStrategy.Random">@L10n.T("Random: draw each set purely at random")</option>
+                                                <option value="@QuestionSelectionStrategy.Adaptive">@L10n.T("Adaptive: start balanced, then ask a harder or easier Bloom level depending on each answer")</option>
                                             </select></div>
                                             <div class="col-md-6"><label asp-for="Input.MainQuestionCount" class="form-label">@L10n.T("Main questions")</label><span class="text-danger"
                                                                                                                                                                          asp-validation-for="Input.MainQuestionCount"></span><input asp-for="Input.MainQuestionCount"

@@ -5,14 +5,26 @@ namespace AIVES.DAL.Data.Repositories;
 
 public sealed class ExamRepository(ApplicationDbContext context) : IExamRepository
 {
-    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default)
-    {
-        var questions = await context.Questions.AsNoTracking()
-            .Where(question => question.IsActive && question.SubjectId == subjectId
+    public async Task<IReadOnlyList<ExamPoolQuestion>> GetPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default) =>
+        await LoadPoolAsync(context, context.Questions.Where(question => question.IsActive && question.SubjectId == subjectId
                 && (topicId == null || question.TopicId == topicId)
-                && (rubricId == null || question.RubricId == rubricId))
+                && (rubricId == null || question.RubricId == rubricId)), cancellationToken);
+
+    /// <summary>The given bank questions as pool entries, each with a frozen copy of its rubric.</summary>
+    internal static async Task<IReadOnlyList<ExamPoolQuestion>> LoadPoolAsync(ApplicationDbContext context, IQueryable<Question> query, CancellationToken cancellationToken)
+    {
+        var questions = await query.AsNoTracking()
             .OrderBy(question => question.Id)
-            .Select(question => new { question.Id, question.BloomLevelId, BloomName = question.BloomLevel.Name, question.Content, question.ExpectedAnswer, question.RubricId })
+            .Select(question => new
+            {
+                question.Id,
+                question.BloomLevelId,
+                BloomName = question.BloomLevel.Name,
+                BloomOrder = question.BloomLevel.Order,
+                question.Content,
+                question.ExpectedAnswer,
+                question.RubricId
+            })
             .ToListAsync(cancellationToken);
         var rubricIds = questions.Where(question => question.RubricId != null).Select(question => question.RubricId!.Value).Distinct().ToList();
         var rubrics = rubricIds.Count == 0
@@ -25,7 +37,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 .ToListAsync(cancellationToken))
                 .ToDictionary(rubric => rubric.Id, rubric => Snapshot(rubric)?.ToJson());
         return questions.Select(question => new ExamPoolQuestion(question.Id, question.BloomLevelId, question.BloomName, question.Content, question.ExpectedAnswer,
-            question.RubricId is { } questionRubricId ? rubrics.GetValueOrDefault(questionRubricId) : null, question.RubricId)).ToList();
+            question.RubricId is { } questionRubricId ? rubrics.GetValueOrDefault(questionRubricId) : null, question.RubricId, question.BloomOrder)).ToList();
     }
 
     /// <summary>Freezes a rubric matrix as it is now; null when it has nothing to grade against.</summary>

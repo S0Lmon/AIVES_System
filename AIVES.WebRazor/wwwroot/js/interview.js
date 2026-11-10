@@ -1,7 +1,9 @@
-// AI viva page: reads each question aloud (speechSynthesis), recognises the spoken answer
+// AI viva page: reads each question aloud (the server's VieNeu voice, else the browser's), recognises the spoken answer
 // (SpeechRecognition, Chrome/Edge) and exchanges text with the server. Typing is the fallback.
 // When the exam is recorded, each answer is captured with MediaRecorder and uploaded after it is
-// submitted. Timings (time to first word, speaking time) are sent with the answer as signals.
+// submitted, and the whole viva is recorded too: the examiner's voice mixed with the microphone (and
+// the camera), uploaded in 15-second pieces so a closed tab loses at most the last piece.
+// Timings (time to first word, speaking time) are sent with the answer as signals.
 (function () {
     'use strict';
 
@@ -12,7 +14,6 @@
     var lang = root.dataset.lang;
     // Set when the server reads questions (VieNeu); otherwise the browser's own voice does.
     var audioUrl = root.dataset.audioUrl;
-    var player = audioUrl ? new Audio() : null;
     var text = root.dataset;
     var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
     var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -49,6 +50,12 @@
     var mediaStream = null;
     var recorder = null;
     var chunks = [];
+
+    // Whole-viva recording: one recorder from the first question to the end.
+    var SESSION_PIECE_MS = 15000;
+    var mix = null;               // { context, destination } mixing the examiner's voice with the microphone
+    var session = null;           // { recorder, segment, index }
+    var sessionUploads = Promise.resolve();
 
     function show(step) {
         Object.keys(steps).forEach(function (key) { steps[key].hidden = key !== step; });
@@ -90,20 +97,38 @@
             || null;
     }
 
-    function speak(sentence, done) {
-        if (player && turn) speakFromServer(sentence, done);
-        else speakInBrowser(sentence, done);
+    var questionAudio = null;
+
+    function stopSpeaking() {
+        if (questionAudio) { questionAudio.pause(); questionAudio = null; }
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
 
-    function speakFromServer(sentence, done) {
+    // The question as spoken by the server (VieNeu, or Piper when VieNeu is down or slow); the browser's own
+    // voice reads it when the server does not read this language or fails, so the viva never waits on a missing voice.
+    function speak(sentence, turnId, done) {
         var finished = false;
         function finish() { if (!finished) { finished = true; done(); } }
-        // A missing or failed file falls back to the browser's voice, so the question is always read.
-        function fallBack() { if (!finished) { finished = true; speakInBrowser(sentence, done); } }
-        player.onended = finish;
-        player.onerror = fallBack;
-        player.src = audioUrl + '/' + turn.turnId;
-        player.play().catch(fallBack);
+        stopSpeaking();
+        if (!audioUrl) { speakInBrowser(sentence, finish); return; }
+        fetch(audioUrl + '/' + turnId, { credentials: 'same-origin', headers: { 'RequestVerificationToken': token } })
+            .then(function (response) {
+                if (!response.ok) throw new Error('no server voice');
+                return response.blob();
+            })
+            .then(function (blob) {
+                if (finished) return;
+                var url = URL.createObjectURL(blob);
+                var audio = new Audio(url);
+                questionAudio = audio;
+                routeIntoMix(audio);
+                function end() { URL.revokeObjectURL(url); if (questionAudio === audio) questionAudio = null; finish(); }
+                audio.onended = end;
+                audio.onerror = function () { URL.revokeObjectURL(url); speakInBrowser(sentence, finish); };
+                var started = audio.play();
+                if (started && started.catch) started.catch(function () { speakInBrowser(sentence, finish); });
+            })
+            .catch(function () { speakInBrowser(sentence, finish); });
     }
 
     function speakInBrowser(sentence, done) {
@@ -237,7 +262,7 @@
         var active = recorder;
         var recordedChunks = chunks;
         recorder = null;
-        recLabel.hidden = true;
+        recLabel.hidden = !session;
         if (!active) return Promise.resolve(null);
         var recording = new Promise(function (resolve) {
             active.onstop = function () {
@@ -272,7 +297,99 @@
         });
     }
 
+    // An AudioContext only runs after a user gesture, so it is created when "Start" is clicked.
+    // After a reload there was no gesture: the context stays suspended and the whole-viva recording
+    // then holds the microphone only (the examiner's questions remain in the transcript).
+    function ensureMix() {
+        if (mix || recordingMode() === 'None') return;
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        try {
+            var context = new AudioCtx();
+            mix = { context: context, destination: context.createMediaStreamDestination(), micConnected: false };
+            if (context.state === 'suspended' && context.resume) context.resume().catch(function () { });
+        } catch (e) { mix = null; }
+    }
+
+    function mixRunning() { return !!(mix && mix.context.state === 'running'); }
+
+    // Plays the examiner's voice through the speakers and into the whole-viva recording.
+    function routeIntoMix(audio) {
+        if (!mixRunning() || !session) return;
+        try {
+            var source = mix.context.createMediaElementSource(audio);
+            source.connect(mix.context.destination);
+            source.connect(mix.destination);
+        } catch (e) { /* the voice still plays normally */ }
+    }
+
+    function startSessionRecording() {
+        if (session || !mediaStream || !window.MediaRecorder || recordingMode() === 'None' || state.status !== 'InProgress') return;
+        var audioTracks = mediaStream.getAudioTracks();
+        if (mixRunning()) {
+            if (!mix.micConnected) {
+                // The microphone goes only into the recording, never to the speakers (no echo).
+                mix.context.createMediaStreamSource(mediaStream).connect(mix.destination);
+                mix.micConnected = true;
+            }
+            audioTracks = mix.destination.stream.getAudioTracks();
+        }
+        var videoTracks = mediaStream.getVideoTracks();
+        var stream = new MediaStream(audioTracks.concat(videoTracks));
+        var mimeType = pickMimeType(videoTracks.length > 0);
+        var active;
+        try {
+            active = new MediaRecorder(stream, {
+                mimeType: mimeType || undefined,
+                audioBitsPerSecond: 48000,
+                videoBitsPerSecond: videoTracks.length ? 250000 : undefined
+            });
+        } catch (e) { return; }
+        var current = { recorder: active, segment: Date.now(), index: 0 };
+        active.ondataavailable = function (event) {
+            if (!event.data || !event.data.size) return;
+            var piece = current.index++;
+            var type = (active.mimeType || event.data.type || 'audio/webm').split(';')[0];
+            var blob = new Blob([event.data], { type: type });
+            sessionUploads = sessionUploads.then(function () { return uploadSessionPiece(current.segment, piece, blob); });
+        };
+        try { active.start(SESSION_PIECE_MS); } catch (e) { return; }
+        session = current;
+        recLabel.hidden = false;
+    }
+
+    function uploadSessionPiece(segment, index, blob) {
+        var form = new FormData();
+        form.append('segment', String(segment));
+        form.append('index', String(index));
+        form.append('file', blob, 'session-' + segment + '-' + index + (blob.type.indexOf('mp4') >= 0 ? '.mp4' : '.webm'));
+        var send = function (attempt) {
+            return fetch(baseUrl + '/SessionRecording', { method: 'POST', body: form, headers: { 'RequestVerificationToken': token }, credentials: 'same-origin' })
+                .then(function (response) {
+                    if (response.ok) return;
+                    if (response.status >= 500 && attempt < 3) return wait(2000 * attempt).then(function () { return send(attempt + 1); });
+                    throw new Error('rejected');
+                })
+                .catch(function (error) {
+                    if (error && error.message === 'rejected' || attempt >= 3) { showError(text.textRecordError); return; }
+                    return wait(2000 * attempt).then(function () { return send(attempt + 1); });
+                });
+        };
+        return send(1);
+    }
+
+    function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+    // Stops the whole-viva recorder; its last piece is uploaded by ondataavailable.
+    function stopSessionRecording() {
+        if (!session) return;
+        var active = session.recorder;
+        session = null;
+        try { if (active.state !== 'inactive') active.stop(); } catch (e) { /* already stopped */ }
+    }
+
     function stopMedia() {
+        stopSessionRecording();
         if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
         mediaStream = null;
         if (preview) preview.hidden = true;
@@ -313,13 +430,17 @@
         field('question').textContent = turn.questionText;
         show('question');
         startTimer();
-        ensureMedia().then(readQuestion);
+        ensureMedia().then(function () {
+            // The whole-viva recording must never hold up the questions.
+            try { startSessionRecording(); } catch (e) { session = null; }
+            readQuestion();
+        });
     }
 
     function readQuestion() {
         stopListening();
         statusLine.textContent = text.textSpeaking;
-        speak(turn.questionText, function () {
+        speak(turn.questionText, turn.turnId, function () {
             if (!answerOpenedAt) answerOpenedAt = Date.now();
             startRecording();
             if (typedMode) { statusLine.textContent = Recognition ? '' : text.textNoSpeech; answerBox.readOnly = false; }
@@ -351,8 +472,7 @@
         submitting = true;
         stopTimer();
         stopListening();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (player) player.pause();
+        stopSpeaking();
         field('processing').textContent = text.textProcessing;
         show('processing');
         clearError();
@@ -386,6 +506,7 @@
         if (recordingMode() !== 'None' && !consent) { showError(text.textConsent); return; }
         event.target.disabled = true;
         clearError();
+        if (consent) ensureMix();
         // Ask for the microphone (and camera) up front so the first question is not interrupted by the prompt.
         var ready = recordingMode() !== 'None'
             ? ensureMedia()

@@ -102,6 +102,50 @@ namespace AIVES.DAL.Entities
         public virtual ExamTurn Turn { get; set; } = null!;
     }
 
+    /// <summary>
+    /// One piece of the continuous recording of a whole viva (examiner's voice, the candidate's
+    /// microphone and, when enabled, the camera). The browser uploads a piece every few seconds so a
+    /// closed tab loses at most the last piece. Pieces with the same <see cref="Segment"/> come from one
+    /// recorder and play as one file when joined in <see cref="PartIndex"/> order; reloading the page
+    /// starts a new segment.
+    /// </summary>
+    public class SessionRecordingPart
+    {
+        public int Id
+        {
+            get; set;
+        }
+        public int ExamAttemptId
+        {
+            get; set;
+        }
+        /// <summary>When the recorder started, in Unix milliseconds as the browser reported it; identifies the segment.</summary>
+        public long Segment
+        {
+            get; set;
+        }
+        public int PartIndex
+        {
+            get; set;
+        }
+        public string ContentType { get; set; } = string.Empty;
+        public long SizeBytes
+        {
+            get; set;
+        }
+        public bool HasVideo
+        {
+            get; set;
+        }
+        /// <summary>Path relative to the recording store's root.</summary>
+        public string StoragePath { get; set; } = string.Empty;
+        public DateTime CreatedAtUtc
+        {
+            get; set;
+        }
+        public virtual ExamAttempt Attempt { get; set; } = null!;
+    }
+
     /// <summary>Who did what, when: grade changes, recording access, exam and account changes.</summary>
     public class AuditEntry
     {

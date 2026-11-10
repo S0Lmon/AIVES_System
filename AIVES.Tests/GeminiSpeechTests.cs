@@ -11,90 +11,61 @@ namespace AIVES.Tests;
 
 public sealed class GeminiSpeechTests
 {
-    private static float[] Speech(double seconds) =>
-        Enumerable.Range(0, (int)(seconds * Audio.SampleRate)).Select(i => 0.3f * MathF.Sin(i * 0.05f)).ToArray();
-
     private static (GeminiSpeechClient Client, StubHandler Handler, MovableClock Clock) Create(
-        SpeechProvider provider = SpeechProvider.Gemini, SpeechProvider tts = SpeechProvider.Local, string key = "test-key")
+        SpeechProvider tts = SpeechProvider.Local, string key = "test-key")
     {
         var handler = new StubHandler();
         var clock = new MovableClock(DateTimeOffset.Parse("2026-10-08T00:00:00Z"));
         var client = new GeminiSpeechClient(new StubFactory(handler),
             Options.Create(new GeminiOptions { ApiKey = key }),
-            Options.Create(new SpeechOptions { Provider = provider, TtsProvider = tts, GeminiTimeoutSeconds = 2 }),
+            Options.Create(new SpeechOptions { TtsProvider = tts, GeminiTtsTimeoutSeconds = 2 }),
             clock, NullLogger<GeminiSpeechClient>.Instance);
         return (client, handler, clock);
     }
 
-    private static string Transcript(string text) =>
-        $$"""{"status":"completed","steps":[{"type":"model_output","content":[{"type":"text","text":"{{text}}"}]}]}""";
-
     [Fact]
-    public async Task SendsTheWholeAnswerWithLanguageAndVocabularyAndReadsTheText()
+    public async Task NothingIsSentWhenGeminiIsNotTheVoiceOrHasNoKey()
     {
-        var (client, handler, _) = Create();
-        handler.Respond(HttpStatusCode.OK, Transcript("Kiến trúc ba lớp trong ASP.NET Core"));
+        var (local, localHandler, _) = Create(tts: SpeechProvider.Local);
+        var (noKey, noKeyHandler, _) = Create(tts: SpeechProvider.Gemini, key: "");
 
-        var text = await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, ["ASP.NET Core", "SignalR", "ASP.NET Core", " "]);
-
-        Assert.Equal("Kiến trúc ba lớp trong ASP.NET Core", text);
-        var request = Assert.Single(handler.Requests);
-        Assert.Equal("/v1beta/interactions", request.Path);
-        Assert.Equal("test-key", request.ApiKey);
-        var body = JsonNode.Parse(request.Body)!;
-        Assert.Equal("gemini-3.5-transcribe", (string?)body["model"]);
-        Assert.Equal("audio/wav", (string?)body["input"]![0]!["mime_type"]);
-        var wav = Convert.FromBase64String((string)body["input"]![0]!["data"]!);
-        Assert.Equal("RIFF", Encoding.ASCII.GetString(wav, 0, 4));
-        var config = body["generation_config"]!["transcription_config"]!;
-        Assert.Equal("vi-VN", (string?)config["language_codes"]![0]);
-        Assert.Null(config["mode"]); // verbatim: smart mode rewrites what was said
-        Assert.Equal(["ASP.NET Core", "SignalR"], config["custom_vocabulary"]!.AsArray().Select(term => (string)term!));
-    }
-
-    [Fact]
-    public async Task NothingIsSentWhenGeminiIsNotTheProviderOrHasNoKeyOrHearsSilence()
-    {
-        var (local, localHandler, _) = Create(provider: SpeechProvider.Local);
-        var (noKey, noKeyHandler, _) = Create(key: "");
-        var (gemini, geminiHandler, _) = Create();
-
-        Assert.Null(await local.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
-        Assert.Null(await noKey.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
-        Assert.Null(await gemini.TranscribeAnswerAsync(new float[Audio.SampleRate], AppLanguage.Vi, []));
-        Assert.False(local.IsEnabled);
+        Assert.False(local.IsTtsEnabled);
+        Assert.False(noKey.IsTtsEnabled);
+        Assert.Null(await local.SynthesizeWavAsync("Câu hỏi"));
+        Assert.Null(await noKey.SynthesizeWavAsync("Câu hỏi"));
         Assert.Empty(localHandler.Requests);
         Assert.Empty(noKeyHandler.Requests);
-        Assert.Empty(geminiHandler.Requests);
     }
 
     [Fact]
     public async Task RateLimitFallsBackAndPausesCallsForTheDelayGeminiAsksFor()
     {
-        var (client, handler, clock) = Create();
+        var (client, handler, clock) = Create(tts: SpeechProvider.Gemini);
         handler.Respond(HttpStatusCode.TooManyRequests,
-            """{"error":{"message":"Rate limit exceeded for model gemini-3.5-transcribe (limit: 3 requests per minute on Free Tier). Please retry in 21s or upgrade your tier."}}""");
+            """{"error":{"message":"Rate limit exceeded for model gemini-3.8-flash-lite-tts. Please retry in 21s or upgrade your tier."}}""");
 
-        Assert.Null(await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
-        Assert.Null(await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
+        Assert.Null(await client.SynthesizeWavAsync("Câu một"));
+        Assert.Null(await client.SynthesizeWavAsync("Câu hai"));
         Assert.Single(handler.Requests);
 
         clock.Advance(TimeSpan.FromSeconds(22));
-        handler.Respond(HttpStatusCode.OK, Transcript("đã hết chờ"));
-        Assert.Equal("đã hết chờ", await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
+        var wav = Audio.ToWav([0.1f, -0.1f], 24000);
+        handler.Respond(HttpStatusCode.OK,
+            $$"""{"steps":[{"type":"model_output","content":[{"type":"audio","mime_type":"audio/wav","data":"{{Convert.ToBase64String(wav)}}"}]}]}""");
+        Assert.Equal(wav, await client.SynthesizeWavAsync("Câu ba"));
         Assert.Equal(2, handler.Requests.Count);
     }
 
     [Fact]
     public async Task ServerErrorsAndSlowAnswersFallBack()
     {
-        var (client, handler, _) = Create();
+        var (client, handler, _) = Create(tts: SpeechProvider.Gemini);
         handler.Respond(HttpStatusCode.ServiceUnavailable, """{"error":{"message":"overloaded"}}""");
-        Assert.Null(await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
+        Assert.Null(await client.SynthesizeWavAsync("Câu hỏi"));
 
         handler.Delay = TimeSpan.FromSeconds(5);
-        handler.Respond(HttpStatusCode.OK, Transcript("quá muộn"));
-        Assert.Null(await client.TranscribeAnswerAsync(Speech(1), AppLanguage.Vi, []));
+        handler.Respond(HttpStatusCode.OK, """{"steps":[]}""");
+        Assert.Null(await client.SynthesizeWavAsync("Câu hỏi khác"));
     }
 
     [Fact]

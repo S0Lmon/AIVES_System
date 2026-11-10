@@ -84,6 +84,10 @@ namespace AIVES.DAL.Data
         {
             get; set;
         }
+        public DbSet<SessionRecordingPart> SessionRecordingParts
+        {
+            get; set;
+        }
         public DbSet<AuditEntry> AuditEntries
         {
             get; set;
@@ -247,6 +251,18 @@ namespace AIVES.DAL.Data
                 entity.HasOne(e => e.Turn)
                     .WithOne(e => e.Recording)
                     .HasForeignKey<TurnRecording>(e => e.ExamTurnId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<SessionRecordingPart>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.ExamAttemptId, e.Segment, e.PartIndex }).IsUnique();
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(400);
+                entity.HasOne(e => e.Attempt)
+                    .WithMany(e => e.SessionRecordingParts)
+                    .HasForeignKey(e => e.ExamAttemptId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<AuditEntry>(entity =>

@@ -931,6 +931,52 @@ namespace AIVES.DAL.Migrations
                     b.ToTable("RubricLevels");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.SessionRecordingPart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ExamAttemptId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HasVideo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PartIndex")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Segment")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("ExamAttemptId", "Segment", "PartIndex")
+                        .IsUnique();
+
+                    b.ToTable("SessionRecordingParts");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.Subject", b =>
                 {
                     b.Property<int>("Id")
@@ -1434,6 +1480,17 @@ namespace AIVES.DAL.Migrations
                     b.Navigation("Rubric");
                 });
 
+            modelBuilder.Entity("AIVES.DAL.Entities.SessionRecordingPart", b =>
+                {
+                    b.HasOne("AIVES.DAL.Entities.ExamAttempt", "Attempt")
+                        .WithMany("SessionRecordingParts")
+                        .HasForeignKey("ExamAttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attempt");
+                });
+
             modelBuilder.Entity("AIVES.DAL.Entities.SubjectLecturer", b =>
                 {
                     b.HasOne("AIVES.DAL.Entities.Subject", "Subject")
@@ -1538,6 +1595,8 @@ namespace AIVES.DAL.Migrations
 
             modelBuilder.Entity("AIVES.DAL.Entities.ExamAttempt", b =>
                 {
+                    b.Navigation("SessionRecordingParts");
+
                     b.Navigation("Turns");
                 });
 
