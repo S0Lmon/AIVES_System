@@ -24,6 +24,15 @@ public interface IInterviewRepository
     /// </summary>
     Task<bool> AdvanceAsync(int turnId, FollowUpReason decision, NewInterviewTurn? nextTurn, DateTime nowUtc, CancellationToken cancellationToken = default, int? decisionLatencyMs = null);
 
+    /// <summary>The exam's pool and usage around this candidate, for adaptive selection; null when the exam has no stored pool.</summary>
+    Task<AdaptivePool?> GetAdaptivePoolAsync(int candidateId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Puts <paramref name="question"/> in the candidate's set at <paramref name="order"/>. Returns false,
+    /// changing nothing, when that question has already been asked or graded.
+    /// </summary>
+    Task<bool> ReplaceQuestionAsync(int candidateId, int order, ExamPoolQuestion question, CancellationToken cancellationToken = default);
+
     /// <summary>Interviews still open although the candidate's slot ended before <paramref name="cutoffUtc"/>.</summary>
     Task<IReadOnlyList<(int CandidateId, string Email)>> ListOverdueAsync(DateTime cutoffUtc, int take, CancellationToken cancellationToken = default);
 }

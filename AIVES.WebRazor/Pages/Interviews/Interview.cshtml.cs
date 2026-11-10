@@ -125,6 +125,24 @@ public sealed class InterviewApiModel(
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { error = ex.Message }); }
     }
 
+    /// <summary>POST /Interview/{id}/SessionRecording — one piece of the whole-viva recording (form: segment, index, file).</summary>
+    public async Task<IActionResult> OnPostSessionRecordingAsync(int id, [FromForm] long segment, [FromForm] int index, IFormFile? file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new
+            {
+                error = L10n.T("The recording is empty.")
+            });
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            await recordings.SaveSessionPartAsync(id, Email, segment, index, stream, file.ContentType ?? string.Empty, cancellationToken);
+            return StatusCode(StatusCodes.Status204NoContent);
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { error = ex.Message }); }
+    }
+
     public sealed record StartRequest(bool RecordingConsent);
     public sealed record AnswerRequest(int TurnId, string? Transcript, AnswerInputMode InputMode, int? ResponseDelayMs = null, int? SpeakingMs = null);
 

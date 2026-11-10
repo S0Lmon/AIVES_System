@@ -317,6 +317,12 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
     {
         public Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default) => Task.FromResult<RecordingContent?>(null);
+        public Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<SessionSegmentDto>> ListSessionAsync(int candidateId, ExamActor actor, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SessionSegmentDto>>([]);
+        public Task<RecordingContent?> OpenSessionAsync(int candidateId, long segment, ExamActor actor, bool logPlayback = true, CancellationToken cancellationToken = default) =>
+            Task.FromResult<RecordingContent?>(null);
         public Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
         public Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

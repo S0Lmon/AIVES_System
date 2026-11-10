@@ -20,12 +20,18 @@ function browser() {
         });
         return elements.get(name);
     };
-    const uploads = [], requests = [], recorders = [];
+    const uploads = [], requests = [], recorders = [], sessionRecorders = [], sessionUploads = [];
+    class Stream {
+        constructor(tracks) { this.tracks = tracks || []; }
+        getAudioTracks() { return this.tracks.filter(track => track.kind === 'audio'); }
+        getVideoTracks() { return this.tracks.filter(track => track.kind === 'video'); }
+    }
     class Recorder {
         static isTypeSupported() { return true; }
-        constructor() { this.mimeType = 'video/webm'; recorders.push(this); }
-        start() {}
-        stop() { this.stopped = true; }
+        // The whole-viva recorder records a combined MediaStream; per-answer recorders record the camera stream.
+        constructor(stream) { this.mimeType = 'video/webm'; this.state = 'inactive'; (stream instanceof Stream ? sessionRecorders : recorders).push(this); }
+        start(timeslice) { this.state = 'recording'; this.timeslice = timeslice; }
+        stop() { this.stopped = true; this.state = 'inactive'; }
         finish(text) {
             this.ondataavailable({ data: new Blob([text], { type: this.mimeType }) });
             this.onstop();
@@ -39,10 +45,16 @@ function browser() {
     };
     vm.runInNewContext(source, {
         document: { getElementById: () => root, querySelector: () => ({ value: 'test-token' }) },
-        window: { MediaRecorder: Recorder }, MediaRecorder: Recorder, Blob, FormData,
-        navigator: { mediaDevices: { getUserMedia: async () => ({ getVideoTracks: () => [{}],
-            getTracks: () => [{ stop() {} }] }) } },
+        window: { MediaRecorder: Recorder }, MediaRecorder: Recorder, MediaStream: Stream, Blob, FormData,
+        navigator: { mediaDevices: { getUserMedia: async () => ({ getVideoTracks: () => [{ kind: 'video' }],
+            getAudioTracks: () => [{ kind: 'audio' }], getTracks: () => [{ stop() {} }] }) } },
         fetch: (url, options) => {
+            // No server voice in these tests: the question is "read" by the (absent) browser voice at once.
+            if (url.includes('/QuestionAudio/')) return Promise.reject(new Error('no server voice'));
+            if (url.includes('/SessionRecording')) {
+                sessionUploads.push({ url, options });
+                return Promise.resolve(response({}));
+            }
             if (url.includes('/Recording/')) {
                 uploads.push({ url, options });
                 return Promise.resolve(response({}));
@@ -51,7 +63,7 @@ function browser() {
         },
         setInterval: () => 1, clearInterval() {}, setTimeout
     });
-    return { uploads, requests, recorders, submit: () => element('[data-action="submit"]').click() };
+    return { uploads, requests, recorders, sessionRecorders, sessionUploads, submit: () => element('[data-action="submit"]').click() };
 }
 
 test('camera recording waits for the answer to be saved before uploading', async () => {
@@ -95,4 +107,37 @@ test('a delayed recorder stop cannot mix evidence from adjacent questions', asyn
     await flush();
     assert.equal(await b.uploads[0].options.body.get('file').text(), 'first evidence');
     assert.equal(b.uploads[0].url, '/Interview/1/Recording/1');
+});
+
+test('the whole viva is recorded by one recorder and uploaded piece by piece', async () => {
+    const b = browser();
+    await flush();
+    assert.equal(b.sessionRecorders.length, 1);
+    const session = b.sessionRecorders[0];
+    assert.equal(session.timeslice, 15000);
+    session.ondataavailable({ data: new Blob(['piece 0']) });
+    session.ondataavailable({ data: new Blob(['piece 1']) });
+    await flush();
+    await flush();
+    assert.equal(b.sessionUploads.length, 2);
+    assert.equal(b.sessionUploads[0].url, '/Interview/1/SessionRecording');
+    const first = b.sessionUploads[0].options.body;
+    assert.equal(first.get('index'), '0');
+    assert.equal(b.sessionUploads[1].options.body.get('index'), '1');
+    assert.equal(first.get('segment'), b.sessionUploads[1].options.body.get('segment'));
+    assert.equal(await first.get('file').text(), 'piece 0');
+    assert.equal(b.sessionUploads[0].options.headers.RequestVerificationToken, 'test-token');
+
+    // Moving to the next question keeps the same whole-viva recorder running.
+    b.submit();
+    b.requests[0].resolve(response(state(2)));
+    await flush();
+    assert.equal(b.sessionRecorders.length, 1);
+    assert.ok(!session.stopped);
+
+    // The end of the viva stops it, so its last piece is flushed and uploaded.
+    b.submit();
+    b.requests[1].resolve(response({ status: 'Completed', recording: 'AudioVideo', recordingConsentGiven: true }));
+    await flush();
+    assert.ok(session.stopped);
 });

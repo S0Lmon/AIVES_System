@@ -6,8 +6,25 @@ namespace AIVES.DAL.Data.Repositories;
 /// <summary>A stored recording with what is needed to decide who may play it.</summary>
 public sealed record RecordingInfo(int Id, int TurnId, int CandidateId, int ExamId, string ExamOwnerId, string ContentType, long SizeBytes, string StoragePath, bool HasVideo);
 
+/// <summary>One stored piece of a whole-viva recording.</summary>
+public sealed record SessionPartInfo(int Id, long Segment, int PartIndex, string ContentType, long SizeBytes, bool HasVideo, string StoragePath, DateTime CreatedAtUtc);
+
+/// <summary>A candidate's whole-viva recording pieces with what is needed to decide who may play them.</summary>
+public sealed record SessionRecordingInfo(int CandidateId, int ExamId, string ExamOwnerId, IReadOnlyList<SessionPartInfo> Parts);
+
 public interface IRecordingRepository
 {
+    /// <summary>How many whole-viva pieces the attempt has and their total size.</summary>
+    Task<(int Count, long Bytes)> GetSessionUsageAsync(int attemptId, CancellationToken cancellationToken = default);
+    Task<bool> HasSessionPartAsync(int attemptId, long segment, int partIndex, CancellationToken cancellationToken = default);
+    /// <summary>Stores a piece; false when that piece was already stored (a retried upload).</summary>
+    Task<bool> AddSessionPartAsync(int attemptId, long segment, int partIndex, string contentType, long sizeBytes, bool hasVideo, string storagePath, DateTime nowUtc,
+        CancellationToken cancellationToken = default);
+    Task<SessionRecordingInfo?> GetSessionAsync(int candidateId, CancellationToken cancellationToken = default);
+    /// <summary>Pieces of vivas that started before <paramref name="cutoffUtc"/>, so a viva's recording expires as a whole.</summary>
+    Task<IReadOnlyList<(int Id, int ExamId, string StoragePath)>> ListSessionPartsOlderThanAsync(DateTime cutoffUtc, int take, CancellationToken cancellationToken = default);
+    Task DeleteSessionPartsAsync(IReadOnlyCollection<int> partIds, CancellationToken cancellationToken = default);
+
     /// <summary>The turn's candidate and exam, when the turn belongs to <paramref name="candidateId"/>.</summary>
     Task<(int ExamId, bool HasRecording, bool Answered)?> GetTurnAsync(int candidateId, int turnId, CancellationToken cancellationToken = default);
     Task<int> AddAsync(int turnId, string contentType, long sizeBytes, bool hasVideo, string storagePath, DateTime nowUtc, CancellationToken cancellationToken = default);
@@ -51,11 +68,89 @@ public sealed class RecordingRepository(ApplicationDbContext context) : IRecordi
         await Project(context.TurnRecordings.Where(recording => recording.CreatedAtUtc < cutoffUtc).OrderBy(recording => recording.Id).Take(take))
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<string>> ListPathsForExamAsync(int examId, CancellationToken cancellationToken = default) =>
-        await context.TurnRecordings.AsNoTracking()
+    public async Task<IReadOnlyList<string>> ListPathsForExamAsync(int examId, CancellationToken cancellationToken = default)
+    {
+        var answers = await context.TurnRecordings.AsNoTracking()
             .Where(recording => recording.Turn.Attempt.Candidate.ExamId == examId)
             .Select(recording => recording.StoragePath)
             .ToListAsync(cancellationToken);
+        var sessions = await context.SessionRecordingParts.AsNoTracking()
+            .Where(part => part.Attempt.Candidate.ExamId == examId)
+            .Select(part => part.StoragePath)
+            .ToListAsync(cancellationToken);
+        return [.. answers, .. sessions];
+    }
+
+    public async Task<(int Count, long Bytes)> GetSessionUsageAsync(int attemptId, CancellationToken cancellationToken = default)
+    {
+        var parts = context.SessionRecordingParts.Where(part => part.ExamAttemptId == attemptId);
+        return (await parts.CountAsync(cancellationToken), await parts.SumAsync(part => (long?)part.SizeBytes, cancellationToken) ?? 0);
+    }
+
+    public Task<bool> HasSessionPartAsync(int attemptId, long segment, int partIndex, CancellationToken cancellationToken = default) =>
+        context.SessionRecordingParts.AnyAsync(part => part.ExamAttemptId == attemptId && part.Segment == segment && part.PartIndex == partIndex, cancellationToken);
+
+    public async Task<bool> AddSessionPartAsync(int attemptId, long segment, int partIndex, string contentType, long sizeBytes, bool hasVideo, string storagePath,
+        DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        context.SessionRecordingParts.Add(new SessionRecordingPart
+        {
+            ExamAttemptId = attemptId,
+            Segment = segment,
+            PartIndex = partIndex,
+            ContentType = contentType,
+            SizeBytes = sizeBytes,
+            HasVideo = hasVideo,
+            StoragePath = storagePath,
+            CreatedAtUtc = nowUtc
+        });
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent retry of the same piece won the unique index.
+            context.ChangeTracker.Clear();
+            return false;
+        }
+    }
+
+    public async Task<SessionRecordingInfo?> GetSessionAsync(int candidateId, CancellationToken cancellationToken = default)
+    {
+        var owner = await context.ExamCandidates.AsNoTracking()
+            .Where(candidate => candidate.Id == candidateId)
+            .Select(candidate => new { candidate.ExamId, candidate.Exam.CreatedById })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (owner is null)
+            return null;
+        var parts = await context.SessionRecordingParts.AsNoTracking()
+            .Where(part => part.Attempt.ExamCandidateId == candidateId)
+            .OrderBy(part => part.Segment).ThenBy(part => part.PartIndex)
+            .Select(part => new SessionPartInfo(part.Id, part.Segment, part.PartIndex, part.ContentType, part.SizeBytes, part.HasVideo, part.StoragePath, part.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return new SessionRecordingInfo(candidateId, owner.ExamId, owner.CreatedById, parts);
+    }
+
+    public async Task<IReadOnlyList<(int Id, int ExamId, string StoragePath)>> ListSessionPartsOlderThanAsync(DateTime cutoffUtc, int take,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await context.SessionRecordingParts.AsNoTracking()
+            .Where(part => part.Attempt.StartedAtUtc < cutoffUtc)
+            .OrderBy(part => part.Id)
+            .Take(take)
+            .Select(part => new { part.Id, part.Attempt.Candidate.ExamId, part.StoragePath })
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => (row.Id, row.ExamId, row.StoragePath)).ToList();
+    }
+
+    public async Task DeleteSessionPartsAsync(IReadOnlyCollection<int> partIds, CancellationToken cancellationToken = default)
+    {
+        var rows = await context.SessionRecordingParts.Where(part => partIds.Contains(part.Id)).ToListAsync(cancellationToken);
+        context.SessionRecordingParts.RemoveRange(rows);
+        await context.SaveChangesAsync(cancellationToken);
+    }
 
     public async Task DeleteAsync(IReadOnlyCollection<int> recordingIds, CancellationToken cancellationToken = default)
     {

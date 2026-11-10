@@ -13,6 +13,7 @@ public static class AuditActions
     public const string ExamCandidateStatusChanged = "exam.candidate-status";
     public const string InterviewStarted = "interview.started";
     public const string InterviewCompleted = "interview.completed";
+    public const string InterviewQuestionAdapted = "interview.question-adapted";
     public const string RecordingConsent = "recording.consent";
     public const string RecordingStored = "recording.stored";
     public const string RecordingViewed = "recording.viewed";

@@ -18,15 +18,31 @@ public sealed class RecordingOptions
     /// </summary>
     public string Path { get; set; } = "App_Data/recordings";
 
-    /// <summary>Largest accepted upload for one answer.</summary>
+    /// <summary>Largest accepted upload for one answer, and for one piece of a whole-viva recording.</summary>
     public long MaxBytes { get; set; } = 30 * 1024 * 1024;
+
+    /// <summary>Largest total size of one candidate's whole-viva recording.</summary>
+    public long MaxSessionBytes { get; set; } = 400L * 1024 * 1024;
+
+    /// <summary>Most pieces one whole-viva recording may have (the browser sends one every 15 seconds).</summary>
+    public int MaxSessionParts { get; set; } = 1000;
+
+    /// <summary>How long after the slot ends the last pieces of a whole-viva recording are still accepted.</summary>
+    public int SessionUploadGraceMinutes { get; set; } = 15;
 }
 
 /// <summary>A decrypted recording ready to stream to an authorised viewer.</summary>
 public sealed record RecordingContent(byte[] Data, string ContentType, bool HasVideo);
 
 /// <summary>
-/// Evidence recordings of each spoken answer. Files are encrypted with the application's Data
+/// One continuous stretch of a whole-viva recording. A viva normally has one; reloading the page
+/// during the viva starts another.
+/// </summary>
+public sealed record SessionSegmentDto(long Segment, DateTime FirstPartAtUtc, int Parts, long SizeBytes, bool HasVideo);
+
+/// <summary>
+/// Evidence recordings: each spoken answer on its own, and the whole viva as one continuous
+/// recording (examiner's voice, candidate's microphone and camera when enabled). Files are encrypted with the application's Data
 /// Protection keys (shared across instances and themselves encrypted at rest), so a copied volume
 /// or backup alone does not expose students' voices. Only the exam's lecturer or an administrator
 /// may play a recording, and every playback is written to the audit log. Recordings older than the
@@ -36,6 +52,19 @@ public interface IRecordingService
 {
     Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default);
     Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default);
+
+    /// <summary>Stores one piece of the whole-viva recording; a piece uploaded twice is stored once.</summary>
+    Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType, CancellationToken cancellationToken = default);
+
+    /// <summary>The whole-viva recording's segments, empty when there is none or <paramref name="actor"/> may not play it.</summary>
+    Task<IReadOnlyList<SessionSegmentDto>> ListSessionAsync(int candidateId, ExamActor actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// One segment of the whole-viva recording as a single playable file. Logged like any playback; pass
+    /// <paramref name="logPlayback"/> false for the follow-up range requests a player makes while seeking.
+    /// </summary>
+    Task<RecordingContent?> OpenSessionAsync(int candidateId, long segment, ExamActor actor, bool logPlayback = true, CancellationToken cancellationToken = default);
+
     Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default);
     Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default);
 }
@@ -110,11 +139,101 @@ public sealed class RecordingService(
         return new RecordingContent(Protector.Unprotect(encrypted), recording.ContentType, recording.HasVideo);
     }
 
+    public async Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType,
+        CancellationToken cancellationToken = default)
+    {
+        var context = await interviews.GetContextAsync(candidateId, cancellationToken);
+        if (context is null || string.IsNullOrWhiteSpace(email) || !string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new KeyNotFoundException(L10n.T("This exam slot was not found."));
+        if (context.Recording == RecordingMode.None || context.RecordingConsentAtUtc is null || context.AttemptId is not { } attemptId)
+            throw new InvalidOperationException(L10n.T("This viva is not being recorded."));
+        // The final piece arrives just after the viva ends; nothing is accepted long after the slot.
+        if (clock.GetUtcNow().UtcDateTime > context.SlotEndsAtUtc.AddMinutes(Math.Max(0, options.Value.SessionUploadGraceMinutes)))
+            throw new InvalidOperationException(L10n.T("This viva is not being recorded."));
+        if (segment <= 0 || partIndex < 0 || partIndex >= options.Value.MaxSessionParts)
+            throw new ArgumentException(L10n.T("Unsupported recording format."));
+        var (mediaType, hasVideo) = CheckType(contentType, context.Recording);
+
+        if (await recordings.HasSessionPartAsync(attemptId, segment, partIndex, cancellationToken))
+            return;
+        var (count, bytes) = await recordings.GetSessionUsageAsync(attemptId, cancellationToken);
+        if (count >= options.Value.MaxSessionParts)
+            throw new ArgumentException(L10n.T("The recording is too large."));
+
+        using var buffer = new MemoryStream();
+        await CopyLimitedAsync(content, buffer, Math.Min(options.Value.MaxBytes, Math.Max(0, options.Value.MaxSessionBytes - bytes)), cancellationToken);
+        if (buffer.Length == 0)
+            throw new ArgumentException(L10n.T("The recording is empty."));
+
+        var relativePath = $"{context.ExamId}/{candidateId}/session-{segment}-{partIndex:D5}-{Guid.NewGuid():N}.bin";
+        await store.WriteAsync(relativePath, Protector.Protect(buffer.ToArray()), cancellationToken);
+        bool added;
+        try
+        {
+            added = await recordings.AddSessionPartAsync(attemptId, segment, partIndex, mediaType, buffer.Length, hasVideo, relativePath,
+                clock.GetUtcNow().UtcDateTime, cancellationToken);
+        }
+        catch
+        {
+            store.Delete(relativePath);
+            throw;
+        }
+        if (!added)
+        {
+            store.Delete(relativePath);
+            return;
+        }
+        if (partIndex == 0)
+            await audit.WriteAsync(new AuditEntryInput(AuditActions.RecordingStored, null, context.CandidateEmail, context.ExamId, candidateId,
+                $"Whole-viva recording started (segment {segment}, {(hasVideo ? "audio and video" : "audio")})"), cancellationToken);
+        logger.LogInformation("Stored whole-viva piece {Segment}/{Part} ({Size} bytes) for candidate slot {CandidateId}", segment, partIndex, buffer.Length, candidateId);
+    }
+
+    public async Task<IReadOnlyList<SessionSegmentDto>> ListSessionAsync(int candidateId, ExamActor actor, CancellationToken cancellationToken = default)
+    {
+        var session = await recordings.GetSessionAsync(candidateId, cancellationToken);
+        if (session is null || !(actor.IsAdmin || session.ExamOwnerId == actor.UserId))
+            return [];
+        return session.Parts
+            .GroupBy(part => part.Segment)
+            .OrderBy(group => group.Key)
+            .Select(group => new SessionSegmentDto(group.Key, group.Min(part => part.CreatedAtUtc), group.Count(), group.Sum(part => part.SizeBytes),
+                group.Any(part => part.HasVideo)))
+            .ToList();
+    }
+
+    public async Task<RecordingContent?> OpenSessionAsync(int candidateId, long segment, ExamActor actor, bool logPlayback = true, CancellationToken cancellationToken = default)
+    {
+        var session = await recordings.GetSessionAsync(candidateId, cancellationToken);
+        if (session is null || !(actor.IsAdmin || session.ExamOwnerId == actor.UserId))
+            return null;
+        var parts = session.Parts.Where(part => part.Segment == segment).OrderBy(part => part.PartIndex).ToList();
+        if (parts.Count == 0)
+            return null;
+        // Pieces from one MediaRecorder are consecutive chunks of one stream: joined in order they play as one file.
+        using var joined = new MemoryStream();
+        foreach (var part in parts)
+        {
+            var encrypted = await store.ReadAsync(part.StoragePath, cancellationToken);
+            if (encrypted is null)
+                continue;
+            var data = Protector.Unprotect(encrypted);
+            await joined.WriteAsync(data, cancellationToken);
+        }
+        if (joined.Length == 0)
+            return null;
+        var missing = parts[^1].PartIndex + 1 - parts.Count;
+        if (logPlayback)
+            await audit.WriteAsync(new AuditEntryInput(AuditActions.RecordingViewed, actor.UserId, actor.Email, session.ExamId, candidateId,
+            $"Whole-viva recording, segment {segment} ({parts.Count} piece(s){(missing > 0 ? $", {missing} missing" : string.Empty)})"), cancellationToken);
+        return new RecordingContent(joined.ToArray(), parts[0].ContentType, parts.Any(part => part.HasVideo));
+    }
+
     public async Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default)
     {
         var retention = (await settings.GetSpeechAsync(cancellationToken)).RecordingRetentionDays;
         var cutoff = clock.GetUtcNow().UtcDateTime.AddDays(-retention);
-        var purged = 0;
+        var purged = await PurgeSessionsAsync(cutoff, retention, cancellationToken);
         while (true)
         {
             var batch = await recordings.ListOlderThanAsync(cutoff, 200, cancellationToken);
@@ -129,6 +248,36 @@ public sealed class RecordingService(
             purged += batch.Count;
         }
         return purged;
+    }
+
+    private async Task<int> PurgeSessionsAsync(DateTime cutoff, int retention, CancellationToken cancellationToken)
+    {
+        var purged = 0;
+        while (true)
+        {
+            var batch = await recordings.ListSessionPartsOlderThanAsync(cutoff, 200, cancellationToken);
+            if (batch.Count == 0)
+                break;
+            foreach (var part in batch)
+                store.Delete(part.StoragePath);
+            await recordings.DeleteSessionPartsAsync(batch.Select(part => part.Id).ToList(), cancellationToken);
+            foreach (var exam in batch.GroupBy(part => part.ExamId))
+                await audit.WriteAsync(new AuditEntryInput(AuditActions.RecordingPurged, null, "system", exam.Key, null,
+                    $"{exam.Count()} whole-viva recording piece(s) older than {retention} days"), cancellationToken);
+            purged += batch.Count;
+        }
+        return purged;
+    }
+
+    private static (string MediaType, bool HasVideo) CheckType(string contentType, RecordingMode mode)
+    {
+        var mediaType = contentType.Split(';')[0].Trim().ToLowerInvariant();
+        if (!AllowedTypes.Contains(mediaType))
+            throw new ArgumentException(L10n.T("Unsupported recording format."));
+        var hasVideo = mediaType.StartsWith("video/", StringComparison.Ordinal);
+        if (hasVideo && mode != RecordingMode.AudioVideo)
+            throw new ArgumentException(L10n.T("Unsupported recording format."));
+        return (mediaType, hasVideo);
     }
 
     public async Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default)

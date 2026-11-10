@@ -16,7 +16,7 @@
         @if (exam.ScheduleEndsAtUtc is { } scheduleEnd && scheduleEnd != exam.EndsAtUtc) { <span> · @L10n.Format("schedule runs until {0}", TimeZone.ToLocal(scheduleEnd).ToString("HH:mm"))</span> }
     </p>
     @if (exam.BufferMinutes > 0 || (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) || exam.Strategy != QuestionSelectionStrategy.Balanced) {
-        <p class="small text-muted mb-0">@if (exam.BufferMinutes > 0) { <span>@L10n.Format("{0} min buffer between candidates", exam.BufferMinutes)</span> }@if (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) { <span> · @L10n.Format("{0} min break every {1} candidates", exam.BreakMinutes, exam.BreakEveryCount)</span> } · @(exam.Strategy == QuestionSelectionStrategy.Balanced ? L10n.T("Balanced question selection") : L10n.T("Random question selection"))</p>
+        <p class="small text-muted mb-0">@if (exam.BufferMinutes > 0) { <span>@L10n.Format("{0} min buffer between candidates", exam.BufferMinutes)</span> }@if (exam.BreakMinutes > 0 && exam.BreakEveryCount > 0) { <span> · @L10n.Format("{0} min break every {1} candidates", exam.BreakMinutes, exam.BreakEveryCount)</span> } · @(exam.Strategy switch { QuestionSelectionStrategy.Balanced => L10n.T("Balanced question selection"), QuestionSelectionStrategy.Adaptive => L10n.T("Adaptive question selection"), _ => L10n.T("Random question selection") })</p>
     }
     @if (!string.IsNullOrWhiteSpace(exam.Instructions)) { <p class="small mb-0">@exam.Instructions</p> }
 </div><div class="d-flex flex-wrap gap-2 align-items-center">

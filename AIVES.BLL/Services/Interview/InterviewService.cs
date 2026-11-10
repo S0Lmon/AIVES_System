@@ -43,8 +43,9 @@ public sealed class InterviewService(
             {
                 // Answered but never advanced (the request died mid-way): move on without a follow-up.
                 // Waiting past the AI timeout first keeps this from racing an answer still being processed.
-                var next = Now >= context.SlotEndsAtUtc ? null : NextMainTurn(context, last.MainIndex);
-                if (await interviews.AdvanceAsync(last.TurnId, last.Decision ?? FollowUpReason.AiUnavailable, next, Now, cancellationToken))
+                var decision = last.Decision ?? FollowUpReason.AiUnavailable;
+                var next = Now >= context.SlotEndsAtUtc ? null : await NextMainTurnAsync(context, record, last, decision, last.TimedOut, cancellationToken);
+                if (await interviews.AdvanceAsync(last.TurnId, decision, next, Now, cancellationToken))
                     await AuditCompletedAsync(context, "recovered interrupted answer", cancellationToken);
                 context = await LoadAsync(candidateId, email, cancellationToken);
             }
@@ -52,7 +53,7 @@ public sealed class InterviewService(
             {
                 // Enforce the answer timer on the server too, even if the browser was suspended.
                 await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
-                var next = Now >= context.SlotEndsAtUtc ? null : NextMainTurn(context, last.MainIndex);
+                var next = Now >= context.SlotEndsAtUtc ? null : await NextMainTurnAsync(context, record, last, FollowUpReason.NoAnswer, true, cancellationToken);
                 if (await interviews.AdvanceAsync(last.TurnId, FollowUpReason.NoAnswer, next, Now, cancellationToken))
                     await AuditCompletedAsync(context, "answer time expired", cancellationToken);
                 context = await LoadAsync(candidateId, email, cancellationToken);
@@ -124,7 +125,7 @@ public sealed class InterviewService(
             return await GetStateAsync(candidateId, email, cancellationToken);
 
         var stopwatch = Stopwatch.StartNew();
-        var (decision, next) = await DecideAsync(context, record, current, transcript, now, terms, cancellationToken);
+        var (decision, next) = await DecideAsync(context, record, current, transcript, now, timedOut, terms, cancellationToken);
         // An AI call can cross the slot boundary. Never issue a fresh question after it ends,
         // and start the next answer's timer after the AI finishes, not before the call.
         if (Now >= context.SlotEndsAtUtc)
@@ -146,23 +147,25 @@ public sealed class InterviewService(
         context.SubjectId is { } subjectId ? await glossary.ListAsync(subjectId, cancellationToken) : [];
 
     private async Task<(FollowUpReason Decision, NewInterviewTurn? Next)> DecideAsync(
-        InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto current, string transcript, DateTime now,
+        InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto current, string transcript, DateTime now, bool timedOut,
         IReadOnlyList<GlossaryTermDto> terms, CancellationToken cancellationToken)
     {
-        var moveOn = NextMainTurn(context, current.MainIndex);
+        async Task<(FollowUpReason, NewInterviewTurn?)> MoveOn(FollowUpReason reason) =>
+            (reason, await NextMainTurnAsync(context, record, current, reason, timedOut, cancellationToken));
+
         if (now >= context.SlotEndsAtUtc)
             return (FollowUpReason.LimitReached, null);
         if (transcript.Length == 0)
-            return (FollowUpReason.NoAnswer, moveOn);
+            return await MoveOn(FollowUpReason.NoAnswer);
 
         var followUpsHere = record.Turns.Count(turn => turn.Kind == TurnKind.FollowUp && turn.MainIndex == current.MainIndex);
         var followUpsTotal = record.Turns.Count(turn => turn.Kind == TurnKind.FollowUp);
         var leftHere = context.MaxFollowUpsPerQuestion - followUpsHere;
         var leftTotal = context.MaxFollowUpQuestions - followUpsTotal;
         if (leftHere <= 0 || leftTotal <= 0)
-            return (FollowUpReason.LimitReached, moveOn);
+            return await MoveOn(FollowUpReason.LimitReached);
         if (!followUps.IsConfigured)
-            return (FollowUpReason.AiUnavailable, moveOn);
+            return await MoveOn(FollowUpReason.AiUnavailable);
 
         var main = context.Questions[current.MainIndex - 1];
         var exchanges = record.Turns.Where(turn => turn.MainIndex == current.MainIndex)
@@ -171,27 +174,90 @@ public sealed class InterviewService(
         var request = new FollowUpRequest(context.Language, context.SubjectName, main.Content, main.ExpectedAnswer, exchanges, Math.Min(leftHere, leftTotal),
             terms.Select(term => term.Term).ToList());
 
+        FollowUpDecision decision;
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, options.Value.AiTimeoutSeconds)));
-            var decision = await followUps.DecideAsync(request, timeout.Token).WaitAsync(timeout.Token);
-            if (!decision.NeedsFollowUp || string.IsNullOrWhiteSpace(decision.FollowUpQuestion))
-                return (decision.Reason, moveOn);
-            return (decision.Reason, new NewInterviewTurn(TurnKind.FollowUp, current.MainIndex, followUpsHere + 1, decision.FollowUpQuestion, Now));
+            decision = await followUps.DecideAsync(request, timeout.Token).WaitAsync(timeout.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // Never stall a live exam on the AI: record it and carry on with the next main question.
             logger.LogWarning(ex, "Follow-up decision failed for candidate {CandidateId}; continuing without a follow-up", context.CandidateId);
-            return (FollowUpReason.AiUnavailable, moveOn);
+            return await MoveOn(FollowUpReason.AiUnavailable);
         }
+        if (!decision.NeedsFollowUp || string.IsNullOrWhiteSpace(decision.FollowUpQuestion))
+            return await MoveOn(decision.Reason);
+        return (decision.Reason, new NewInterviewTurn(TurnKind.FollowUp, current.MainIndex, followUpsHere + 1, decision.FollowUpQuestion, Now));
     }
 
-    private NewInterviewTurn? NextMainTurn(InterviewContext context, int mainIndex) =>
-        mainIndex < context.Questions.Count
-            ? new NewInterviewTurn(TurnKind.Main, mainIndex + 1, 0, context.Questions[mainIndex].Content, Now)
-            : null;
+    /// <summary>
+    /// The next main question after <paramref name="last"/>'s main question, or null after the last one.
+    /// In an adaptive exam the planned question may first be swapped for a harder or easier one.
+    /// </summary>
+    /// <param name="decision">The decision on <paramref name="last"/>, which the record may not hold yet.</param>
+    /// <param name="lastTimedOut">Whether the answer to <paramref name="last"/> ran out of time.</param>
+    private async Task<NewInterviewTurn?> NextMainTurnAsync(InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto last,
+        FollowUpReason decision, bool lastTimedOut, CancellationToken cancellationToken)
+    {
+        var mainIndex = last.MainIndex;
+        if (mainIndex >= context.Questions.Count)
+            return null;
+        var content = context.Questions[mainIndex].Content;
+        if (context.Strategy == QuestionSelectionStrategy.Adaptive)
+        {
+            try
+            {
+                content = await AdaptAsync(context, record, last, decision, lastTimedOut, cancellationToken) ?? content;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Adaptation is a refinement: if it fails, ask the question that was planned.
+                logger.LogWarning(ex, "Adaptive selection failed for candidate {CandidateId}; asking the planned question", context.CandidateId);
+            }
+        }
+        return new NewInterviewTurn(TurnKind.Main, mainIndex + 1, 0, content, Now);
+    }
+
+    /// <summary>Swaps the planned next main question when the last one went clearly well or badly; returns the new text.</summary>
+    private async Task<string?> AdaptAsync(InterviewContext context, InterviewRecordDto record, InterviewTurnRecordDto last,
+        FollowUpReason decision, bool lastTimedOut, CancellationToken cancellationToken)
+    {
+        var mainIndex = last.MainIndex;
+        var turns = record.Turns.Where(turn => turn.MainIndex == mainIndex).ToList();
+        var main = turns.FirstOrDefault(turn => turn.Kind == TurnKind.Main);
+        if (main is null)
+            return null;
+        var isMain = main.TurnId == last.TurnId;
+        var step = AdaptiveQuestionPicker.Assess(
+            isMain ? decision : main.Decision,
+            isMain ? lastTimedOut : main.TimedOut,
+            turns.Count(turn => turn.Kind == TurnKind.FollowUp),
+            decision);
+        if (step == AdaptiveStep.Same)
+            return null;
+
+        var pool = await interviews.GetAdaptivePoolAsync(context.CandidateId, cancellationToken);
+        if (pool is null)
+            return null;
+        var finished = context.Questions[mainIndex - 1];
+        var planned = context.Questions[mainIndex];
+        var assigned = context.Questions.Where(question => question.QuestionId is not null).Select(question => question.QuestionId!.Value).ToHashSet();
+        var chosen = AdaptiveQuestionPicker.Pick(pool, step, OrderOf(pool, finished), OrderOf(pool, planned), assigned, Random.Shared);
+        if (chosen is null || !await interviews.ReplaceQuestionAsync(context.CandidateId, mainIndex + 1, chosen, cancellationToken))
+            return null;
+
+        logger.LogInformation("Candidate {CandidateId}: question {Order} adapted {Step} to bank question {QuestionId} ({Level})",
+            context.CandidateId, mainIndex + 1, step, chosen.Id, chosen.BloomLevelName);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewQuestionAdapted, null, context.CandidateEmail, context.ExamId, context.CandidateId,
+            $"Question {mainIndex + 1}: {(step == AdaptiveStep.Harder ? "harder" : "easier")} after question {mainIndex} ({finished.BloomLevelName} -> {chosen.BloomLevelName}; was {planned.BloomLevelName})"),
+            cancellationToken);
+        return chosen.Content;
+    }
+
+    private static int OrderOf(AdaptivePool pool, ExamAssignedQuestion question) =>
+        pool.BloomOrders.TryGetValue(question.BloomLevelName, out var order) ? order : 0;
 
     private async Task<InterviewContext> LoadAsync(int candidateId, string email, CancellationToken cancellationToken)
     {

@@ -122,12 +122,29 @@ public sealed class CandidateModel(
         return new FileContentResult(recording.Data, recording.ContentType) { EnableRangeProcessing = true };
     }
 
+    /// <summary>GET ?handler=SessionRecording&amp;segment=… — one segment of the whole-viva recording.</summary>
+    public async Task<IActionResult> OnGetSessionRecordingAsync(long segment, CancellationToken cancellationToken)
+    {
+        // A player asks for the file again in ranges while seeking; log the playback once, at its start.
+        var range = Request.Headers.Range.ToString();
+        var logPlayback = string.IsNullOrEmpty(range) || range.StartsWith("bytes=0-", StringComparison.Ordinal);
+        var recording = await recordings.OpenSessionAsync(Id, segment, ExamPageActors.From(User), logPlayback, cancellationToken);
+        if (recording is null)
+            return NotFound();
+        Response.Headers.CacheControl = "no-store, private";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return new FileContentResult(recording.Data, recording.ContentType) { EnableRangeProcessing = true };
+    }
+
+    public IReadOnlyList<SessionSegmentDto> SessionSegments { get; private set; } = [];
+
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)
     {
         var candidate = await grading.GetCandidateAsync(Id, ExamPageActors.From(User), cancellationToken);
         if (candidate is null)
             return false;
         Candidate = candidate;
+        SessionSegments = await recordings.ListSessionAsync(Id, ExamPageActors.From(User), cancellationToken);
         Form = new GradeFormInput
         {
             Comment = candidate.LecturerComment,

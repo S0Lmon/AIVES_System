@@ -19,6 +19,16 @@ else if (candidate.GradingStatus == GradingStatus.AiFailed) { <div class="alert 
 <div><div class="small text-muted">@L10n.T("Average time to start answering")</div><strong>@ViewText.Seconds(signals.AverageResponseDelaySeconds)</strong></div><div><div class="small text-muted">@L10n.T("Average answer length")</div><strong>@ViewText.Seconds(signals.AverageAnswerSeconds)</strong></div><div><div class="small text-muted">@L10n.T("Speaking pace")</div><strong>@(signals.WordsPerMinute is { } wpm ? L10n.Format("{0} words/min", wpm) : "—")</strong></div>
 <div><div class="small text-muted">@L10n.T("Hesitations")</div><strong>@signals.FillerWords</strong>@if (signals.FillerRatio is { } ratio) { <span class="small text-muted"> (@((ratio * 100).ToString("0.#"))%)</span> }</div><div><div class="small text-muted">@L10n.T("Over time / typed")</div><strong>@signals.TimedOut / @signals.Typed</strong></div></div>
 <p class="small text-muted mb-0 mt-2">@L10n.T("Timing and fluency are shown for context only; they are not part of the AI score.")@if (candidate.RecordingConsentAtUtc is { } consent) { <span> @L10n.Format("Recording agreed at {0}.", Model.TimeZone.ToLocal(consent).ToString("yyyy-MM-dd HH:mm"))</span> }</p></section>
+@if (Model.SessionSegments.Count > 0) {
+<section class="panel p-4 mb-3"><h2 class="h5">@L10n.T("Whole-viva recording")</h2><p class="small text-muted">@L10n.T("The whole viva as one recording: the examiner's voice, the candidate's microphone and, when enabled, the camera. Every playback is logged.")</p>
+    @foreach (var segment in Model.SessionSegments) {
+        var src = Url.Page("Candidate", "SessionRecording", new { id = candidate.CandidateId, segment = segment.Segment });
+        <div class="mb-2">@if (Model.SessionSegments.Count > 1) { <div class="small text-muted">@L10n.Format("Part from {0}", Model.TimeZone.ToLocal(segment.FirstPartAtUtc).ToString("HH:mm:ss"))</div> }
+        @if (segment.HasVideo) { <video class="d-block" controls preload="none" width="480" src="@src"></video> } else { <audio class="d-block w-100" controls preload="none" src="@src"></audio> }
+        <div class="small text-muted">@L10n.Format("{0} MB", (segment.SizeBytes / 1024d / 1024d).ToString("0.0"))</div></div>
+    }
+</section>
+}
 <form method="post" asp-page-handler="Save">
 @for (var i = 0; i < candidate.Questions.Count; i++) {
     var q = candidate.Questions[i]; var input = Model.Form.Questions[i];

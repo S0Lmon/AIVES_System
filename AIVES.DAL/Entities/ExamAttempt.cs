@@ -57,6 +57,7 @@ namespace AIVES.DAL.Entities
         }
         public virtual ExamCandidate Candidate { get; set; } = null!;
         public virtual ICollection<ExamTurn> Turns { get; set; } = new List<ExamTurn>();
+        public virtual ICollection<SessionRecordingPart> SessionRecordingParts { get; set; } = new List<SessionRecordingPart>();
     }
 
     /// <summary>

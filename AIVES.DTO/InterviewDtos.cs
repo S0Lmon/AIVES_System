@@ -139,7 +139,19 @@ public sealed record InterviewContext(
     DateTime? RecordingConsentAtUtc = null,
     int? SubjectId = null,
     /// <summary>Lecturer-set status (absent, cancelled, unscheduled); blocks starting the viva.</summary>
-    CandidateStatus? StatusOverride = null);
+    CandidateStatus? StatusOverride = null,
+    QuestionSelectionStrategy Strategy = QuestionSelectionStrategy.Balanced);
+
+/// <summary>
+/// What adaptive selection may choose from for one candidate: the exam's question pool, the order
+/// of each Bloom level, the questions of candidates sitting close by, and how often each question
+/// has been assigned in the exam so far.
+/// </summary>
+public sealed record AdaptivePool(
+    IReadOnlyList<ExamPoolQuestion> Questions,
+    IReadOnlyDictionary<string, int> BloomOrders,
+    IReadOnlySet<int> NeighbourQuestionIds,
+    IReadOnlyDictionary<int, int> Usage);
 
 /// <summary>A question about to be asked, before it has an id.</summary>
 public sealed record NewInterviewTurn(TurnKind Kind, int MainIndex, int FollowUpIndex, string QuestionText, DateTime AskedAtUtc);
