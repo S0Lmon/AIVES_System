@@ -44,14 +44,38 @@ public sealed class AiHttpClientRegistrationTests
         Assert.Equal(expectedHost, Assert.Single(requests).Host);
     }
 
-    private static (ServiceProvider Services, ConcurrentQueue<Uri> Requests) Build()
+    // Ollama:PreferLocal: the app's real registrations ask the local model first and fall back to Gemini.
+    [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-09")]
+    [Fact]
+    public async Task PreferLocalSendsFollowUpsAndGradingToOllamaFirstThenGemini()
+    {
+        var (services, requests) = Build(preferLocal: true);
+        using var scope = services.CreateScope();
+
+        var followUps = scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Interview.IFollowUpGenerator>();
+        Assert.IsType<AIVES.BLL.Services.Interview.RoutedFollowUpGenerator>(followUps);
+        await Assert.ThrowsAnyAsync<Exception>(() => followUps.DecideAsync(new FollowUpRequest(AppLanguage.Vi, "S", "Q?", "A", [new("Q?", "a")], 1)));
+        Assert.Equal("ollama-test", requests.First().Host);
+        Assert.Contains(requests, uri => uri.Host == "generativelanguage.googleapis.com");
+
+        requests.Clear();
+        var grader = scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Grading.IAnswerGrader>();
+        Assert.Equal("ollama/test-model", grader.ModelName);
+        await Assert.ThrowsAnyAsync<Exception>(() => grader.GradeAsync(new GradingRequest(AppLanguage.Vi, "S", "Q?", "A", "Understand", null, 10, [new("Q?", "a")], [])));
+        Assert.Equal("ollama-test", requests.First().Host);
+        Assert.Contains(requests, uri => uri.Host == "generativelanguage.googleapis.com");
+    }
+
+    private static (ServiceProvider Services, ConcurrentQueue<Uri> Requests) Build(bool preferLocal = false)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "test-key",
             ["Ollama:Enabled"] = "true",
             ["Ollama:BaseUrl"] = OllamaUrl,
-            ["Ollama:Model"] = "test-model"
+            ["Ollama:Model"] = "test-model",
+            ["Ollama:PreferLocal"] = preferLocal ? "true" : "false"
         }).Build();
         var requests = new ConcurrentQueue<Uri>();
         var services = new ServiceCollection();
