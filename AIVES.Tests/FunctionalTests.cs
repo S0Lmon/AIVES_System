@@ -1833,6 +1833,83 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain($"{studentEmail} → {AppRoles.Lecturer}", settingsOnly);
     }
 
+    // TC-12-03, TC-12-05, TC-11-03: the report page copes with an ungraded exam; students and other lecturers
+    // cannot reach the report or the export; every export is logged.
+    [Trait("Requirement", "FR-12")]
+    [Trait("Requirement", "FR-11")]
+    [SqlFact]
+    public async Task ReportsAndGradeSheetsAreForTheExamOwnerAndEachExportIsLogged()
+    {
+        using var owner = app.Browser();
+        var ownerEmail = await SignIn(owner);
+        using var otherLecturer = app.Browser();
+        await SignIn(otherLecturer);
+        using var student = app.Browser();
+        await SignIn(student, AppRoles.Student);
+
+        int examId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var ownerId = (await scope.ServiceProvider.GetRequiredService<IAccountStore>().FindByEmailAsync(ownerEmail))!.Id;
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var exam = new AIVES.DAL.Entities.Exam
+            {
+                Title = "Report access viva",
+                SubjectName = "Công nghệ phần mềm",
+                StartsAtUtc = DateTime.UtcNow.AddDays(2),
+                SlotMinutes = 15,
+                MainQuestionCount = 1,
+                MaxFollowUpQuestions = 1,
+                Language = "vi-VN",
+                CreatedById = ownerId,
+                Candidates =
+                {
+                    new AIVES.DAL.Entities.ExamCandidate
+                    {
+                        Order = 1,
+                        Email = "sinhvien" + Guid.NewGuid().ToString("N")[..6] + "se123456@fpt.edu.vn",
+                        Questions = { new AIVES.DAL.Entities.ExamCandidateQuestion { Order = 1, Content = "Why layers?", ExpectedAnswer = "Separation", BloomLevelName = "Understand" } }
+                    }
+                }
+            };
+            db.Exams.Add(exam);
+            await db.SaveChangesAsync();
+            examId = exam.Id;
+        }
+
+        // Students are refused at the door of every report address.
+        foreach (var path in new[] { "/Reports", $"/Reports/Exam/{examId}", $"/Grading/Export?id={examId}" })
+        {
+            var refused = await student.GetAsync(path);
+            Assert.Equal(HttpStatusCode.Redirect, refused.StatusCode);
+            Assert.StartsWith("/Account/AccessDenied", refused.Headers.Location!.PathAndQuery);
+        }
+        // Another lecturer does not even learn that the exam exists.
+        Assert.Equal(HttpStatusCode.NotFound, (await otherLecturer.GetAsync($"/Reports/Exam/{examId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherLecturer.GetAsync($"/Grading/Export?id={examId}")).StatusCode);
+        Assert.DoesNotContain("Report access viva", await Html(await otherLecturer.GetAsync("/Reports")));
+
+        // The owner sees the exam listed and an ungraded report that renders without errors.
+        Assert.Contains("Report access viva", await Html(await owner.GetAsync("/Reports")));
+        var report = await owner.GetAsync($"/Reports/Exam/{examId}");
+        Assert.Equal(HttpStatusCode.OK, report.StatusCode);
+        Assert.Contains("Report access viva", await Html(report));
+
+        var sheet = await owner.GetAsync($"/Grading/Export?id={examId}");
+        Assert.Equal(HttpStatusCode.OK, sheet.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sheet.Content.Headers.ContentType!.MediaType);
+        Assert.Matches($@"^grades-cong-nghe-phan-mem-\d{{8}}-{examId}\.xlsx$", sheet.Content.Headers.ContentDisposition!.FileNameStar ?? sheet.Content.Headers.ContentDisposition.FileName!.Trim('"'));
+        using (var workbook = new ClosedXML.Excel.XLWorkbook(new MemoryStream(await sheet.Content.ReadAsByteArrayAsync())))
+            Assert.Equal("SE123456", workbook.Worksheets.First().Cell(10, 2).GetString());
+
+        using var auditScope = app.Services.CreateScope();
+        var entries = await auditScope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Operations.IAuditService>()
+            .QueryAsync(new AuditQuery(ExamId: examId, Action: AuditActions.GradeSheetExported));
+        var export = Assert.Single(entries);
+        Assert.Equal(ownerEmail, export.ActorEmail);
+        Assert.Equal("0 of 1 grades confirmed", export.Details);
+    }
+
     private static string OpenedSubjectId(HttpResponseMessage redirect)
     {
         var id = Regex.Match(redirect.Headers.Location!.ToString(), @"subjectId=(?<id>\d+)").Groups["id"].Value;
