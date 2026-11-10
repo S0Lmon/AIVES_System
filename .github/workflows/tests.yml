@@ -1,7 +1,7 @@
 # Builds the solution and runs the whole test suite on every push to main and every pull request.
-# The HTTP and SQL integration tests run against a throwaway SQL Server service container; the
-# live Gemini test and the real speech-model test stay skipped because they need a key or ~600 MB
-# of models (see AIVES.Tests: LiveGeminiTests, SpeechModelTests).
+# The HTTP and SQL integration tests run against a throwaway SQL Server service container. The
+# live Gemini test stays skipped without its opt-in API key. Speech adapter and browser-script
+# tests use stubs and do not download speech models or require a running VieNeu service.
 # Two more jobs run alongside: the Node tests for the viva page script (scripts/tests) and a build of
 # the web Docker image (not pushed), so a broken Dockerfile shows up before a deploy.
 name: Tests

@@ -328,20 +328,20 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
     }
 }
 
-/// <summary>With VieNeu switched on, the viva page plays the question from the server instead of the browser voice.</summary>
-public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.VieNeuApp>
+/// <summary>When a server voice is available, the viva page plays the question from the server.</summary>
+public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.ServerVoiceApp>
 {
     private const string Student = "sinhvien@fpt.edu.vn";
-    private readonly VieNeuApp app;
+    private readonly ServerVoiceApp app;
 
-    public ServerQuestionAudioTests(VieNeuApp app)
+    public ServerQuestionAudioTests(ServerVoiceApp app)
     {
         this.app = app;
         app.Interviews.Reset();
     }
 
     [Fact]
-    public async Task TheVivaPageReadsTheOpenQuestionFromTheServerOnly()
+    public async Task TheVivaPageOffersServerAudioForAGeminiVoiceWhenAvailable()
     {
         using var student = Browser("u-student", Student);
         var page = await student.GetStringAsync("/Interview/11");
@@ -369,7 +369,7 @@ public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudio
         return client;
     }
 
-    public sealed class VieNeuApp : RazorRealtimeTests.RazorApp
+    public sealed class ServerVoiceApp : RazorRealtimeTests.RazorApp
     {
         public InterviewHubTests.FakeInterviewService Interviews { get; } = new();
         public FakeVoice Voice { get; } = new();
@@ -389,8 +389,7 @@ public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudio
             services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
             services.Configure<SpeechOptions>(options =>
             {
-                options.TtsProvider = SpeechProvider.VieNeu;
-                options.VieNeuUrl = "http://vieneu.invalid:8000/";
+                options.TtsProvider = SpeechProvider.Gemini;
             });
         }
     }

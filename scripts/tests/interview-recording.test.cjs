@@ -12,15 +12,15 @@ const state = id => ({ status: 'InProgress', recording: 'AudioVideo', recordingC
     currentTurn: turn(id), serverNowUtc: new Date().toISOString() });
 const response = (data, ok = true) => ({ ok, status: ok ? 200 : 500, json: async () => data });
 
-function browser() {
+function browser(options = {}) {
     const elements = new Map();
     const element = name => {
         if (!elements.has(name)) elements.set(name, {
-            value: '', dataset: {}, checked: true, addEventListener(event, callback) { this[event] = callback; }
+            value: '', dataset: {}, checked: true, addEventListener(event, callback) { this[event] = callback; }, focus() { }
         });
         return elements.get(name);
     };
-    const uploads = [], requests = [], recorders = [], sessionRecorders = [], sessionUploads = [];
+    const uploads = [], requests = [], recorders = [], sessionRecorders = [], sessionUploads = [], recognitions = [];
     class Stream {
         constructor(tracks) { this.tracks = tracks || []; }
         getAudioTracks() { return this.tracks.filter(track => track.kind === 'audio'); }
@@ -37,6 +37,14 @@ function browser() {
             this.onstop();
         }
     }
+    const window = { MediaRecorder: Recorder };
+    if (options.speechRecognition) {
+        window.SpeechRecognition = class {
+            constructor() { recognitions.push(this); }
+            start() { this.started = true; }
+            stop() { this.stopped = true; }
+        };
+    }
     const root = {
         dataset: { baseUrl: '/Interview/1', lang: 'vi-VN', initialState: JSON.stringify(state(1)),
             textMain: 'Question {0}/{1}', textError: 'Error', textRecordError: 'Recording failed' },
@@ -45,7 +53,7 @@ function browser() {
     };
     vm.runInNewContext(source, {
         document: { getElementById: () => root, querySelector: () => ({ value: 'test-token' }) },
-        window: { MediaRecorder: Recorder }, MediaRecorder: Recorder, MediaStream: Stream, Blob, FormData,
+        window, MediaRecorder: Recorder, MediaStream: Stream, Blob, FormData,
         navigator: { mediaDevices: { getUserMedia: async () => ({ getVideoTracks: () => [{ kind: 'video' }],
             getAudioTracks: () => [{ kind: 'audio' }], getTracks: () => [{ stop() {} }] }) } },
         fetch: (url, options) => {
@@ -63,7 +71,12 @@ function browser() {
         },
         setInterval: () => 1, clearInterval() {}, setTimeout
     });
-    return { uploads, requests, recorders, sessionRecorders, sessionUploads, submit: () => element('[data-action="submit"]').click() };
+    return {
+        uploads, requests, recorders, sessionRecorders, sessionUploads, recognitions,
+        answer: () => element('[data-field="answer"]'),
+        typing: () => element('[data-field="typing"]'),
+        submit: () => element('[data-action="submit"]').click()
+    };
 }
 
 test('camera recording waits for the answer to be saved before uploading', async () => {
@@ -140,4 +153,39 @@ test('the whole viva is recorded by one recorder and uploaded piece by piece', a
     b.requests[1].resolve(response({ status: 'Completed', recording: 'AudioVideo', recordingConsentGiven: true }));
     await flush();
     assert.ok(session.stopped);
+});
+
+test('browser speech recognition uses the exam language and submits recognized text as speech', async () => {
+    const b = browser({ speechRecognition: true });
+    await flush();
+    const recognition = b.recognitions[0];
+    assert.ok(recognition);
+    assert.equal(recognition.lang, 'vi-VN');
+    assert.equal(recognition.continuous, true);
+    assert.equal(recognition.interimResults, true);
+
+    const result = [{ transcript: 'Ba lớp gồm giao diện, nghiệp vụ và dữ liệu.' }];
+    result.isFinal = true;
+    recognition.onresult({ resultIndex: 0, results: [result] });
+    b.submit();
+
+    const answer = JSON.parse(b.requests[0].options.body);
+    assert.equal(answer.transcript, 'Ba lớp gồm giao diện, nghiệp vụ và dữ liệu.');
+    assert.equal(answer.inputMode, 0);
+});
+
+test('denied or unavailable browser speech recognition leaves a typing fallback', async () => {
+    const denied = browser({ speechRecognition: true });
+    await flush();
+    denied.recognitions[0].onerror({ error: 'not-allowed' });
+    assert.equal(denied.typing().checked, true);
+    assert.equal(denied.answer().readOnly, false);
+    denied.answer().value = 'Typed answer';
+    denied.submit();
+    assert.equal(JSON.parse(denied.requests[0].options.body).inputMode, 1);
+
+    const unsupported = browser();
+    await flush();
+    assert.equal(unsupported.typing().disabled, true);
+    assert.equal(unsupported.answer().readOnly, false);
 });

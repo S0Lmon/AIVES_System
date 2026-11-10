@@ -21,7 +21,6 @@ public sealed class InterviewApiModel(
     IRecordingService recordings,
     IExamService exams,
     ITextToSpeech voice,
-    VieNeuSpeechClient vieneu,
     IHubContext<InterviewHub, IInterviewClient> monitor,
     ILogger<InterviewApiModel> logger) : PageModel
 {
@@ -33,10 +32,9 @@ public sealed class InterviewApiModel(
     public InterviewStateDto State { get; private set; } = null!;
 
     /// <summary>
-    /// The server reads questions when VieNeu covers this language; otherwise the browser's own voice
-    /// does, which the admin may have chosen on the settings page.
+    /// Use the configured server voice when one is available; otherwise the browser reads the question.
     /// </summary>
-    public bool ServerReadsQuestions => vieneu.Reads(State.Language);
+    public bool ServerReadsQuestions => voice.IsAvailable(State.Language);
     private string Email => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
