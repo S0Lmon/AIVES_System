@@ -5,6 +5,26 @@ namespace AIVES.BLL.Services.Speech;
 /// <summary>Writes synthesised speech as a WAV file.</summary>
 public static class Audio
 {
+    /// <summary>Little-endian 16-bit PCM bytes (as VieNeu returns them) to floats in [-1, 1].</summary>
+    public static float[] FromPcm16(ReadOnlySpan<byte> bytes)
+    {
+        var samples = new float[bytes.Length / 2];
+        for (var i = 0; i < samples.Length; i++)
+            samples[i] = BinaryPrimitives.ReadInt16LittleEndian(bytes[(i * 2)..]) / 32768f;
+        return samples;
+    }
+
+    /// <summary>Root mean square loudness of a stretch of samples.</summary>
+    public static float Rms(ReadOnlySpan<float> samples)
+    {
+        if (samples.IsEmpty)
+            return 0;
+        double sum = 0;
+        foreach (var sample in samples)
+            sum += sample * sample;
+        return (float)Math.Sqrt(sum / samples.Length);
+    }
+
     /// <summary>A mono 16-bit PCM WAV file.</summary>
     public static byte[] ToWav(ReadOnlySpan<float> samples, int sampleRate)
     {

@@ -105,7 +105,8 @@ services:
       GmailSmtp__AppPassword: "${GMAIL_APP_PASSWORD:-}"
       GmailSmtp__SenderName: "${GMAIL_SENDER_NAME:-AIVES}"
       Registration__AllowedEmailDomains: "${REGISTRATION_EMAIL_DOMAINS:-gmail.com,fpt.edu.vn}"
-      # Questions are read by VieNeu-TTS when SPEECH_VIENEU_URL is set (see README), then by the offline Piper voice.
+      # Questions are read by VieNeu-TTS with SPEECH_TTS_PROVIDER=VieNeu and SPEECH_VIENEU_URL set (see README),
+      # falling back to the offline Piper voice.
       Speech__ModelsPath: /app/App_Data/speech-models
       Speech__TtsProvider: "${SPEECH_TTS_PROVIDER:-Local}"
       Speech__VieNeuUrl: "${SPEECH_VIENEU_URL:-}"

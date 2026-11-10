@@ -12,6 +12,8 @@
 
     var baseUrl = root.dataset.baseUrl;
     var lang = root.dataset.lang;
+    // Set when the server reads questions (VieNeu); otherwise the browser's own voice does.
+    var audioUrl = root.dataset.audioUrl;
     var text = root.dataset;
     var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
     var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -102,13 +104,14 @@
         if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
 
-    // The question as spoken by the server (VieNeu for Vietnamese); the browser's own voice reads it
-    // when the server has none or is slow, so the viva never waits on a missing voice.
+    // The question as spoken by the server (VieNeu, or Piper when VieNeu is down or slow); the browser's own
+    // voice reads it when the server does not read this language or fails, so the viva never waits on a missing voice.
     function speak(sentence, turnId, done) {
         var finished = false;
         function finish() { if (!finished) { finished = true; done(); } }
         stopSpeaking();
-        fetch(baseUrl + '/QuestionAudio/' + turnId, { credentials: 'same-origin', headers: { 'RequestVerificationToken': token } })
+        if (!audioUrl) { speakInBrowser(sentence, finish); return; }
+        fetch(audioUrl + '/' + turnId, { credentials: 'same-origin', headers: { 'RequestVerificationToken': token } })
             .then(function (response) {
                 if (!response.ok) throw new Error('no server voice');
                 return response.blob();
@@ -121,14 +124,14 @@
                 routeIntoMix(audio);
                 function end() { URL.revokeObjectURL(url); if (questionAudio === audio) questionAudio = null; finish(); }
                 audio.onended = end;
-                audio.onerror = function () { URL.revokeObjectURL(url); speakWithBrowser(sentence, finish); };
+                audio.onerror = function () { URL.revokeObjectURL(url); speakInBrowser(sentence, finish); };
                 var started = audio.play();
-                if (started && started.catch) started.catch(function () { speakWithBrowser(sentence, finish); });
+                if (started && started.catch) started.catch(function () { speakInBrowser(sentence, finish); });
             })
-            .catch(function () { speakWithBrowser(sentence, finish); });
+            .catch(function () { speakInBrowser(sentence, finish); });
     }
 
-    function speakWithBrowser(sentence, done) {
+    function speakInBrowser(sentence, done) {
         if (!window.speechSynthesis) { done(); return; }
         window.speechSynthesis.cancel();
         var utterance = new SpeechSynthesisUtterance(sentence);

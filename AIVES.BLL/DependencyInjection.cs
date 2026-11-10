@@ -46,8 +46,8 @@ public static class DependencyInjection
             // The service gives up sooner (Interview:AiTimeoutSeconds); this only bounds a stuck socket.
             client.Timeout = TimeSpan.FromSeconds(30);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
-        // Spoken questions for the viva: VieNeu when Speech:VieNeuUrl is set, Gemini when Speech:TtsProvider asks
-        // for it, and the local voice (loaded on first use) otherwise or when they fail.
+        // Spoken questions for the viva: VieNeu or Gemini when Speech:TtsProvider asks for it, and the local Piper voice
+        // (loaded on first use) otherwise or when they fail.
         services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
         services.AddSingleton<SherpaTextToSpeech>();
         // No retry handler: a slow answer is worse than the local transcript it would replace.
@@ -57,9 +57,17 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(60);
         });
         services.AddSingleton<GeminiSpeechClient>();
-        services.AddHttpClient(VieNeuSpeechClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(60));
+        services.AddHttpClient(VieNeuSpeechClient.HttpClientName, (provider, client) =>
+        {
+            var url = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SpeechOptions>>().Value.VieNeuUrl;
+            if (!string.IsNullOrWhiteSpace(url))
+                client.BaseAddress = new Uri(url.EndsWith('/') ? url : url + "/");
+            // Each call sets its own, shorter deadline (Speech:VieNeuTimeoutSeconds / VieNeuPrepareTimeoutSeconds).
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
         services.AddSingleton<VieNeuSpeechClient>();
-        services.AddSingleton<ITextToSpeech, HybridTextToSpeech>();
+        services.AddSingleton<HybridTextToSpeech>();
+        services.AddSingleton<ITextToSpeech>(provider => provider.GetRequiredService<HybridTextToSpeech>());
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<IAuditService, AuditService>();
@@ -85,6 +93,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(150);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
         services.AddHostedService<GradingWorker>();
+        services.AddHostedService<QuestionAudioWorker>();
         // Check every authenticated HTTP request so disabling an account also invalidates open
         // sessions immediately; role changes use the same security stamp mechanism.
         services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.Zero);

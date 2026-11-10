@@ -177,11 +177,12 @@ WebRazor cung cấp giao diện duy nhất (Razor Pages + SignalR cho màn hình
 **Giọng đọc tiếng Việt: VieNeu-TTS (khuyến nghị).** Chạy [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) như một dịch vụ riêng (API tương thích OpenAI, ví dụ `docker compose -f docker/docker-compose.yml --profile api-cpu up -d --build` với `API_PORT=8800`) rồi đặt trong `.env`:
 
 ```text
+SPEECH_TTS_PROVIDER=VieNeu
 SPEECH_VIENEU_URL=http://host.docker.internal:8800
 SPEECH_VIENEU_VOICE=Mai Anh
 ```
 
-VieNeu tắt hoặc chậm quá `Speech:VieNeuTimeoutSeconds` thì tự dùng giọng kế tiếp (Gemini nếu bật `SPEECH_TTS_PROVIDER=Gemini`, rồi giọng Piper tại chỗ) và tạm ngừng gọi VieNeu 30 giây.
+VieNeu tắt hoặc chậm quá `Speech:VieNeuTimeoutSeconds` thì giọng Piper tại chỗ đọc thay và tạm ngừng gọi VieNeu vài giây. Hoặc dùng `compose.vieneu.yaml` (xem README) để chạy VieNeu ngay trong compose.
 
 **Giọng Piper dự phòng** (cũng đọc tiếng Anh) không nằm trong image hay Git. Tải một lần trên máy chủ, compose mount chỉ đọc vào container (`SPEECH_MODELS_DIR`, mặc định `./AIVES.WebRazor/App_Data/speech-models`):
 

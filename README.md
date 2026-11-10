@@ -112,14 +112,30 @@ git clone https://github.com/pnnbao97/VieNeu-TTS.git
 cd VieNeu-TTS
 $env:API_PORT = 8800
 docker compose -f docker/docker-compose.yml --profile api-cpu up -d --build   # hoặc --profile api-gpu nếu có NVIDIA
+dotnet user-secrets set "Speech:TtsProvider" "VieNeu" --project AIVES.WebRazor
 dotnet user-secrets set "Speech:VieNeuUrl" "http://localhost:8800" --project AIVES.WebRazor
 ```
 
-Thứ tự đọc câu hỏi tiếng Việt: **VieNeu → Gemini (nếu bật `Speech:TtsProvider`) → giọng Piper tại chỗ**. Máy chủ VieNeu tắt hoặc chậm quá `Speech:VieNeuTimeoutSeconds` (20 giây) thì tự dùng giọng kế tiếp và tạm ngừng gọi VieNeu 30 giây. Chọn giọng bằng `Speech:VieNeuVoice` (xem `GET /v1/voices`, mặc định `Mai Anh`). Tiếng Anh vẫn dùng giọng tại chỗ. Máy chủ VieNeu bỏ qua tham số tốc độ, nên "tốc độ đọc" ở trang cấu hình không áp dụng cho giọng này. Lần chạy đầu container tải model từ Hugging Face; nếu báo `PermissionError` ở `/home/app/.cache/huggingface`, cấp quyền cho volume `docker_huggingface_cache` cho uid 1000.
+VieNeu chỉ bật khi có cả `Speech:TtsProvider = VieNeu` và `Speech:VieNeuUrl`. Thứ tự đọc câu hỏi tiếng Việt: **VieNeu → giọng Piper tại chỗ**. Máy chủ VieNeu tắt, bận (HTTP 429) hoặc chậm quá `Speech:VieNeuTimeoutSeconds` (mặc định 8 giây) thì giọng Piper đọc thay và tạm ngừng gọi VieNeu vài giây. Chọn giọng bằng `Speech:VieNeuVoice` (xem `GET /v1/voices`; để trống là giọng mặc định của máy chủ). Tiếng Anh vẫn dùng giọng Piper. Lần chạy đầu container tải model từ Hugging Face; nếu báo `PermissionError` ở `/home/app/.cache/huggingface`, cấp quyền cho volume `docker_huggingface_cache` cho uid 1000.
 
 #### Giọng đọc Gemini (tuỳ chọn)
 
 Khi đã có `Gemini:ApiKey`, đặt `Speech:TtsProvider = Gemini` để đọc câu hỏi bằng `gemini-3.8-flash-lite-tts` (giọng `Speech:GeminiVoice`), có cache; lỗi, quá `Speech:GeminiTtsTimeoutSeconds` hoặc hết hạn mức thì dùng giọng kế tiếp. Đo ngày 08/10/2026 với key gói miễn phí: Gemini TTS mất 8–9 giây mỗi câu và câu hỏi xoáy được sinh ngay lúc thi nên không cache trước được, vì vậy mặc định vẫn là giọng tại chỗ.
+
+#### VieNeu-TTS trong Docker compose
+
+[VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) (Apache-2.0) là model đọc tiếng Việt tự nhiên, có 25 giọng mẫu ("Mai Anh", "Ngọc Huyền", "Hải Đăng", …). Bật bằng cách thêm `compose.vieneu.yaml` vào `COMPOSE_FILE`. File này chạy VieNeu trong một container riêng, chỉ nằm trong mạng nội bộ và không mở cổng ra ngoài, rồi đặt `Speech:TtsProvider = VieNeu`.
+
+| Phần | Cách hoạt động |
+|---|---|
+| Đọc câu hỏi | `VieNeuSpeechClient` gọi `POST /v1/audio/speech`, lấy PCM 24 kHz rồi gói thành WAV. Trang vấn đáp phát audio này (và trộn vào bản ghi cả buổi khi kỳ thi có ghi âm); khi không bật VieNeu thì trang vấn đáp dùng giọng của trình duyệt. |
+| Câu hỏi chính | `QuestionAudioWorker` đọc sẵn câu hỏi chính của các thí sinh trong vòng `Speech:PrepareMinutesAhead` phút (mặc định 120) vào cache, nên lúc thi không phải chờ. |
+| Câu hỏi xoáy | Đọc ngay lúc hỏi. Quá `Speech:VieNeuTimeoutSeconds` (mặc định 8) hoặc VieNeu bận/lỗi thì dùng giọng Piper tại chỗ. |
+| Tiếng Anh | Giọng VieNeu là người Việt, nên kỳ thi tiếng Anh vẫn dùng giọng Piper tiếng Anh (bật `Speech:VieNeuReadsEnglish` để đổi). |
+
+Đo ngày 24/10/2026 trên máy chủ (GTX 1070, 2× Xeon E5-2696 v3): câu hỏi chính khoảng 8 giây âm thanh mất khoảng 12 giây, câu hỏi xoáy một câu mất khoảng 5 giây, 4 câu cùng lúc vẫn khoảng 12 giây mỗi câu. Bản CPU (ONNX) nhanh như vậy với một câu, nhưng 4 câu cùng lúc mất khoảng 52 giây mỗi câu, nên compose dùng GPU. Đồng hồ trả lời chạy từ lúc đặt câu hỏi, nên thời gian chờ giọng đọc tính vào thời gian trả lời; vì thế mới có cache và giới hạn chờ.
+
+Image build từ commit VieNeu đã ghim, đổi PyTorch sang bản CUDA 12.6 (bản 12.8 của upstream không chạy trên card Pascal như GTX 10xx), tải sẵn model theo revision cố định và chạy offline (`HF_HUB_OFFLINE=1`), vì repo codec có code Python được nạp lúc chạy. Âm thanh có watermark mặc định của VieNeu (`VIENEU_WATERMARK`). Theo model card, không dùng để giả giọng người thật khi chưa được phép.
 
 **Real-time với SignalR.** Có một hub là `Realtime/AivesHub.cs` tại `/hubs/aives` (`[Authorize]`, client strongly-typed `IAivesClient`):
 

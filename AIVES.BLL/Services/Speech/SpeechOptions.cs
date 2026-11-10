@@ -1,26 +1,31 @@
 namespace AIVES.BLL.Services.Speech;
 
-/// <summary>Who reads questions aloud when VieNeu is not used.</summary>
+/// <summary>Who reads questions aloud.</summary>
 public enum SpeechProvider
 {
     /// <summary>On this server with a sherpa-onnx (Piper) voice.</summary>
     Local = 0,
     /// <summary>Gemini, falling back to the local voice when it fails, is rate limited or is too slow.</summary>
-    Gemini = 1
+    Gemini = 1,
+    /// <summary>
+    /// VieNeu-TTS in its own container (<see cref="SpeechOptions.VieNeuUrl"/>), falling back to the
+    /// local Piper voice in the same cases as Gemini.
+    /// </summary>
+    VieNeu = 2
 }
 
 /// <summary>
-/// Spoken questions for the AI viva. Vietnamese questions are read by a VieNeu-TTS server when
-/// <see cref="VieNeuUrl"/> is set, then by Gemini when <see cref="TtsProvider"/> asks for it, and
-/// otherwise by an offline sherpa-onnx (Piper) voice whose models are files under
-/// <see cref="ModelsPath"/> (scripts/download-speech-models). Candidates answer by browser speech
-/// recognition or by typing; no audio is recognised on the server.
+/// Spoken questions for the AI viva. With <see cref="TtsProvider"/> set to VieNeu (and <see cref="VieNeuUrl"/>
+/// set) Vietnamese questions are read by a VieNeu-TTS server, with Gemini by Gemini's TTS model, and
+/// otherwise, or when the remote voice fails, by an offline sherpa-onnx (Piper) voice whose models are
+/// files under <see cref="ModelsPath"/> (scripts/download-speech-models). Candidates answer by browser
+/// speech recognition or by typing; no audio is recognised on the server.
 /// </summary>
 public sealed class SpeechOptions
 {
     public const string SectionName = "Speech";
 
-    /// <summary>Who reads questions aloud after VieNeu. Local is ~0.4 s a question; Gemini took 8-9 s on 2026-10-08.</summary>
+    /// <summary>Who reads questions aloud. Local is ~0.4 s a question; Gemini took 8-9 s on 2026-10-08.</summary>
     public SpeechProvider TtsProvider { get; set; } = SpeechProvider.Local;
 
     public string GeminiTtsModel { get; set; } = "gemini-3.8-flash-lite-tts";
@@ -30,27 +35,45 @@ public sealed class SpeechOptions
 
     public int GeminiTtsTimeoutSeconds { get; set; } = 12;
 
-    /// <summary>
-    /// Base address of a VieNeu-TTS server (its OpenAI-compatible <c>POST /v1/audio/speech</c>), for example
-    /// <c>http://localhost:8800</c>. Empty leaves it off. When set, Vietnamese questions are read by VieNeu first;
-    /// if it is down or slow the next engine (Gemini, then the local voice) reads them instead.
-    /// </summary>
+    /// <summary>Base address of the VieNeu-TTS API, e.g. http://vieneu:8000/. Empty switches it off.</summary>
     public string? VieNeuUrl
     {
         get; set;
     }
 
-    public string VieNeuModel { get; set; } = "vieneu-v3-turbo";
+    /// <summary>A preset from the server's GET /v1/voices (e.g. "Ngọc Huyền"); empty is the server's default.</summary>
+    public string? VieNeuVoice
+    {
+        get; set;
+    }
 
-    /// <summary>One of the server's preset voices (<c>GET /v1/voices</c>).</summary>
-    public string VieNeuVoice { get; set; } = "Mai Anh";
-
+    /// <summary>Sent as a bearer token when the VieNeu container was started with VIENEU_API_KEY.</summary>
     public string? VieNeuApiKey
     {
         get; set;
     }
 
-    public int VieNeuTimeoutSeconds { get; set; } = 20;
+    /// <summary>
+    /// Longest wait while a candidate is waiting for a question. The answer clock already runs, so a
+    /// slow voice costs answer time; past this the local voice reads the question instead. On the
+    /// GTX 1070 server a one-sentence follow-up (~3 s of audio) took ~5 s, a long main question ~12 s.
+    /// </summary>
+    public int VieNeuTimeoutSeconds { get; set; } = 8;
+
+    /// <summary>Longest wait when a question is prepared ahead of the viva, when nobody is waiting.</summary>
+    public int VieNeuPrepareTimeoutSeconds { get; set; } = 120;
+
+    /// <summary>How far ahead of a candidate's slot their main questions are read into the cache.</summary>
+    public int PrepareMinutesAhead { get; set; } = 120;
+
+    /// <summary>One of 48000, 24000, 16000 or 8000; 24 kHz keeps speech clear at half the size of 48 kHz.</summary>
+    public int VieNeuSampleRate { get; set; } = 24_000;
+
+    /// <summary>VieNeu's voices are Vietnamese; by default English exams keep the English Piper voice.</summary>
+    public bool VieNeuReadsEnglish
+    {
+        get; set;
+    }
 
     /// <summary>Folder holding the models; relative paths are under the app's content root.</summary>
     public string ModelsPath { get; set; } = "App_Data/speech-models";

@@ -21,6 +21,7 @@ public sealed class InterviewApiModel(
     IRecordingService recordings,
     IExamService exams,
     ITextToSpeech voice,
+    VieNeuSpeechClient vieneu,
     IHubContext<InterviewHub, IInterviewClient> monitor,
     ILogger<InterviewApiModel> logger) : PageModel
 {
@@ -30,6 +31,12 @@ public sealed class InterviewApiModel(
     };
 
     public InterviewStateDto State { get; private set; } = null!;
+
+    /// <summary>
+    /// The server reads questions when VieNeu covers this language; otherwise the browser's own voice
+    /// does, which the admin may have chosen on the settings page.
+    /// </summary>
+    public bool ServerReadsQuestions => vieneu.Reads(State.Language);
     private string Email => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
@@ -41,6 +48,10 @@ public sealed class InterviewApiModel(
         }
         catch (KeyNotFoundException) { return NotFound(); }
     }
+
+    /// <summary>GET /Interview/{id}/QuestionAudio/{turnId} â€” the open question as a WAV file.</summary>
+    public Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken) =>
+        QuestionAudio.ServeAsync(Response, interviews, voice, logger, id, Email, turnId, cancellationToken);
 
     public Task<IActionResult> OnGetStateAsync(int id, CancellationToken cancellationToken) =>
         RunAsync(() => interviews.GetStateAsync(id, Email, cancellationToken));
@@ -79,35 +90,6 @@ public sealed class InterviewApiModel(
             return state;
         });
 
-    /// <summary>GET /Interview/{id}/QuestionAudio/{turnId} — the open question as a WAV file.</summary>
-    public async Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken)
-    {
-        InterviewStateDto state;
-        try
-        {
-            state = await interviews.GetStateAsync(id, Email, cancellationToken);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        // Only the question being asked right now, so the page cannot be used to read ahead.
-        if (state.CurrentTurn is not { } turn || turn.TurnId != turnId || !voice.IsAvailable(state.Language))
-            return NotFound();
-
-        try
-        {
-            var wav = await voice.SynthesizeWavAsync(turn.QuestionText, state.Language, state.Speech?.SpeechRate ?? 1, cancellationToken);
-            Response.Headers.CacheControl = "private, no-store";
-            return File(wav, "audio/wav");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "Could not read turn {TurnId} aloud", turnId);
-            return StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-    }
-
     public async Task<IActionResult> OnPostRecordingAsync(int id, int turnId, IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
@@ -125,7 +107,7 @@ public sealed class InterviewApiModel(
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { error = ex.Message }); }
     }
 
-    /// <summary>POST /Interview/{id}/SessionRecording — one piece of the whole-viva recording (form: segment, index, file).</summary>
+    /// <summary>POST /Interview/{id}/SessionRecording â€” one piece of the whole-viva recording (form: segment, index, file).</summary>
     public async Task<IActionResult> OnPostSessionRecordingAsync(int id, [FromForm] long segment, [FromForm] int index, IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
