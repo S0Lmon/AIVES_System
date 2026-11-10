@@ -161,6 +161,7 @@ public sealed class GradingTests
         Assert.False(await h.Service.ProcessNextAsync());
     }
 
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task TheLecturerDecidesAndOnlyAConfirmedGradeReachesTheStudent()
     {

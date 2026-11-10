@@ -74,6 +74,7 @@ public sealed class RecordingAndInterviewTests
 
     [Trait("Requirement", "FR-08")]
     [Trait("Requirement", "FR-10")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task ARecordedVivaNeedsConsentToStart()
     {
@@ -92,6 +93,7 @@ public sealed class RecordingAndInterviewTests
 
     [Trait("Requirement", "FR-14")]
     [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task MisheardTermsAreCorrectedAndTimingsAreKept()
     {
@@ -115,6 +117,7 @@ public sealed class RecordingAndInterviewTests
     }
 
     [Trait("Requirement", "FR-10")]
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task RecordingsAreEncryptedAndOnlyTheExamOwnerCanPlayThem()
     {

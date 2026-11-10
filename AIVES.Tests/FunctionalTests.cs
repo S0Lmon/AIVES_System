@@ -794,6 +794,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     [Trait("Requirement", "FR-08")]
+    [Trait("Requirement", "FR-11")]
     [SqlFact]
     public async Task StudentTakesTheAiVivaAndTheLecturerSeesTheTranscript()
     {
@@ -1645,6 +1646,193 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     /// <summary>The subject id that a catalogue redirect opens (<c>/Catalog?tab=subject&amp;subjectId=…</c>).</summary>
+    /// <summary>Posts a multipart form with one file, the way the catalogue's import form does.</summary>
+    private static async Task<HttpResponseMessage> Upload(HttpClient browser, string page, string action, Dictionary<string, string> values,
+        string fileName, byte[] bytes)
+    {
+        var form = await browser.GetAsync(page);
+        Assert.Equal(HttpStatusCode.OK, form.StatusCode);
+        var match = Regex.Match(await form.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        Assert.True(match.Success, "The form must contain an antiforgery token.");
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(WebUtility.HtmlDecode(match.Groups[1].Value)), "__RequestVerificationToken" }
+        };
+        foreach (var (name, value) in values)
+            content.Add(new StringContent(value), name);
+        content.Add(new ByteArrayContent(bytes), "file", fileName);
+        return await browser.PostAsync(action, content);
+    }
+
+    // TC-06-01, TC-06-02, TC-06-03: importing material through the catalogue page.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task ImportStoresTheFileTextAndRejectsEmptyUnsupportedOrOversizedFiles()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (_, topicId) = await CreateCatalogTopic("Import topic");
+        var fields = new Dictionary<string, string> { ["topicId"] = topicId.ToString(CultureInfo.InvariantCulture) };
+        async Task<string> Import(string fileName, byte[] bytes)
+        {
+            var response = await Upload(browser, "/Catalog?tab=material", "/Catalog?handler=ImportMaterial", new(fields), fileName, bytes);
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            return await Html(await browser.GetAsync(response.Headers.Location!.ToString()));
+        }
+
+        var imported = await Import("chuong-3-chuan-hoa.txt", System.Text.Encoding.UTF8.GetBytes("Dạng chuẩn 3NF loại bỏ phụ thuộc bắc cầu."));
+        Assert.Contains("The file was imported as material.", imported);
+        Assert.Contains("chuong-3-chuan-hoa", imported);
+
+        Assert.Contains("Supported formats", await Import("virus.exe", [0x4D, 0x5A, 0x90, 0x00]));
+        Assert.Contains("Choose a file to import.", await Import("empty.txt", []));
+        Assert.Contains("The imported file does not contain enough text.", await Import("short.txt", System.Text.Encoding.UTF8.GetBytes("ngắn")));
+        // 20 MB is the limit: exactly 20 MB is accepted, one byte more is not.
+        Assert.Contains("The file is larger than 20 MB.", await Import("too-big.txt", System.Text.Encoding.ASCII.GetBytes(new string('a', 20 * 1024 * 1024 + 1))));
+        Assert.Contains("The file was imported as material.", await Import("exactly-20mb.txt", System.Text.Encoding.ASCII.GetBytes(new string('a', 20 * 1024 * 1024))));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Materials.AsNoTracking().Where(material => material.TopicId == topicId).OrderBy(material => material.Id).ToListAsync();
+        Assert.Equal(["chuong-3-chuan-hoa.txt", "exactly-20mb.txt"], stored.Select(material => material.SourceFileName));
+        Assert.Equal("Dạng chuẩn 3NF loại bỏ phụ thuộc bắc cầu.", stored[0].Content);
+        Assert.Equal(MaterialSourceType.ImportedFile, stored[0].SourceType);
+    }
+
+    // TC-06-04: deleting a topic removes its material; its questions stay, without the topic.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task DeletingATopicRemovesItsMaterialButKeepsItsQuestions()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, topicId) = await CreateCatalogTopic("Topic to delete");
+        var questionId = await AddCatalogContent(subjectId, topicId);
+
+        var deleted = await Post(browser, $"/Catalog?tab=subject&subjectId={subjectId}", "/Catalog?handler=DeleteTopic", new()
+        {
+            ["id"] = topicId.ToString(CultureInfo.InvariantCulture),
+            ["subjectId"] = subjectId.ToString(CultureInfo.InvariantCulture)
+        });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        Assert.Contains("The topic and its material were deleted.", await Html(await browser.GetAsync(deleted.Headers.Location!.ToString())));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.Topics.AnyAsync(topic => topic.Id == topicId));
+        Assert.False(await db.Materials.AnyAsync(material => material.TopicId == topicId));
+        var question = await db.Questions.AsNoTracking().SingleAsync(item => item.Id == questionId);
+        Assert.Null(question.TopicId);
+        Assert.Equal(subjectId, question.SubjectId);
+    }
+
+    // TC-06-05: deleting a subject removes its topics and material; questions and exams stay, unlinked.
+    [Trait("Requirement", "FR-06")]
+    [SqlFact]
+    public async Task DeletingASubjectRemovesItsTopicsAndMaterialButKeepsQuestions()
+    {
+        using var browser = app.Browser();
+        await SignIn(browser);
+        var (subjectId, topicId) = await CreateCatalogTopic("Topic under a deleted subject");
+        var questionId = await AddCatalogContent(subjectId, topicId);
+
+        var deleted = await Post(browser, $"/Catalog?tab=subject&subjectId={subjectId}", "/Catalog?handler=DeleteSubject", new()
+        {
+            ["id"] = subjectId.ToString(CultureInfo.InvariantCulture)
+        });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        Assert.Contains("The subject and everything under it was deleted.", await Html(await browser.GetAsync(deleted.Headers.Location!.ToString())));
+
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.False(await db.Subjects.AnyAsync(subject => subject.Id == subjectId));
+        Assert.False(await db.Topics.AnyAsync(topic => topic.Id == topicId));
+        Assert.False(await db.Materials.AnyAsync(material => material.TopicId == topicId));
+        var question = await db.Questions.AsNoTracking().SingleAsync(item => item.Id == questionId);
+        Assert.Null(question.SubjectId);
+        Assert.Null(question.TopicId);
+    }
+
+    /// <summary>One material and one question under the topic; returns the question id.</summary>
+    private async Task<int> AddCatalogContent(int subjectId, int topicId)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Materials.Add(new AIVES.DAL.Entities.Material
+        {
+            TopicId = topicId,
+            Title = "Lecture notes",
+            Content = "Normalisation removes redundancy from tables.",
+            SourceType = MaterialSourceType.Manual
+        });
+        var question = new AIVES.DAL.Entities.Question { Content = "Explain normal forms", BloomLevelId = 2, SubjectId = subjectId, TopicId = topicId };
+        db.Questions.Add(question);
+        await db.SaveChangesAsync();
+        return question.Id;
+    }
+
+    // TC-11-03, TC-11-04: role changes, subject assignments and settings are logged; only admins read the system log.
+    [Trait("Requirement", "FR-11")]
+    [Trait("Requirement", "FR-13")]
+    [SqlFact]
+    public async Task AdminActionsAreAuditedAndOnlyAdminsCanReadTheSystemLog()
+    {
+        using var lecturer = app.Browser();
+        var lecturerEmail = await SignIn(lecturer);
+        var denied = await lecturer.GetAsync("/Admin/Audit");
+        Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
+        Assert.StartsWith("/Account/AccessDenied", denied.Headers.Location!.PathAndQuery);
+
+        using var admin = app.Browser();
+        await SignInAsAdmin(admin);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        string studentId, lecturerId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAccountStore>();
+            studentId = (await store.FindByEmailAsync(studentEmail))!.Id;
+            lecturerId = (await store.FindByEmailAsync(lecturerEmail))!.Id;
+        }
+        var (subjectId, _) = await CreateCatalogTopic("Audited subject topic");
+
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Users", "/Admin/SetRole", new()
+        {
+            ["userId"] = studentId,
+            ["role"] = AppRoles.Lecturer
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Subjects", "/Admin/Subjects", new()
+        {
+            ["subjectId"] = subjectId.ToString(CultureInfo.InvariantCulture),
+            ["lecturerIds"] = lecturerId
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(admin, "/Admin/Settings", "/Admin/Settings", new()
+        {
+            ["Input.DefaultLanguage"] = nameof(AppLanguage.Vi),
+            ["Input.EnableVietnamese"] = "true",
+            ["Input.EnableEnglish"] = "true",
+            ["Input.SpeechRate"] = "1.1",
+            ["Input.RecordingRetentionDays"] = "91"
+        })).StatusCode);
+
+        IReadOnlyList<AuditEntryDto> entries;
+        using (var scope = app.Services.CreateScope())
+            entries = await scope.ServiceProvider.GetRequiredService<AIVES.BLL.Services.Operations.IAuditService>()
+                .QueryAsync(new AuditQuery(Take: 1000));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.UserRoleChanged && entry.Details!.Contains(studentEmail) && entry.Details.Contains(AppRoles.Lecturer));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.SubjectLecturersChanged && entry.Details!.Contains($"Subject {subjectId}") && entry.Details.Contains(lecturerEmail));
+        Assert.Contains(entries, entry => entry.Action == AuditActions.SettingsChanged && entry.Details!.Contains("retention 91 days"));
+        Assert.All(entries.Where(entry => entry.Action is AuditActions.UserRoleChanged or AuditActions.SettingsChanged), entry => Assert.NotNull(entry.ActorEmail));
+
+        // The admin log lists them, newest first, and can be narrowed to one kind of action.
+        var log = await Html(await admin.GetAsync("/Admin/Audit"));
+        Assert.Contains(studentEmail, log);
+        Assert.Contains("retention 91 days", log);
+        var settingsOnly = await Html(await admin.GetAsync("/Admin/Audit?action=settings"));
+        Assert.Contains("retention 91 days", settingsOnly);
+        Assert.DoesNotContain($"{studentEmail} → {AppRoles.Lecturer}", settingsOnly);
+    }
+
     private static string OpenedSubjectId(HttpResponseMessage redirect)
     {
         var id = Regex.Match(redirect.Headers.Location!.ToString(), @"subjectId=(?<id>\d+)").Groups["id"].Value;

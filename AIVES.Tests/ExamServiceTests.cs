@@ -200,6 +200,28 @@ public sealed class ExamServiceTests
         Assert.All(exam.Candidates, candidate => Assert.Equal(2, candidate.Questions.Count));
     }
 
+    // TC-11-01: creating, editing, redrawing and deleting an exam are each logged with who did it.
+    [Trait("Requirement", "FR-11")]
+    [Fact]
+    public async Task CreatingEditingRedrawingAndDeletingAnExamAreAudited()
+    {
+        var (service, db, _, subjectId, _, _) = Build();
+        var id = (await service.CreateAsync(Input(subjectId), Lecturer)).ExamId;
+        await service.UpdateAsync(id, Input(subjectId) with { Title = "Renamed viva" }, Lecturer);
+        await service.ReassignQuestionsAsync(id, Lecturer);
+        await service.DeleteAsync(id, Admin);
+
+        var entries = db.AuditEntries.OrderBy(entry => entry.Id).ToList();
+        Assert.Equal([AuditActions.ExamCreated, AuditActions.ExamUpdated, AuditActions.ExamQuestionsRedrawn, AuditActions.ExamDeleted],
+            entries.Select(entry => entry.Action));
+        Assert.All(entries, entry => Assert.Equal(id, entry.ExamId));
+        Assert.Equal([Lecturer.UserId, Lecturer.UserId, Lecturer.UserId, Admin.UserId], entries.Select(entry => entry.ActorId));
+        Assert.Contains("Renamed viva", entries[1].Details);
+        // A refused change leaves no entry.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateAsync(id, Input(subjectId), Lecturer));
+        Assert.Equal(4, db.AuditEntries.Count());
+    }
+
     [Fact]
     public async Task StartedExamsAreLockedButAdminsMayStillDeleteThem()
     {
