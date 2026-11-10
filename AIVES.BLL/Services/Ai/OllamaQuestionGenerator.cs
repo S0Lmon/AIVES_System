@@ -63,7 +63,7 @@ public sealed class OllamaQuestionGenerator : IQuestionGenerator
             options = new
             {
                 temperature = 0.4,
-                num_ctx = 4096
+                num_ctx = _options.ContextTokens
             }
         };
 

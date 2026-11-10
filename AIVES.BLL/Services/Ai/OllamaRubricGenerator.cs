@@ -83,7 +83,7 @@ public sealed class OllamaRubricGenerator : IRubricGenerator
             options = new
             {
                 temperature = 0.3,
-                num_ctx = 4096
+                num_ctx = _options.ContextTokens
             }
         };
 

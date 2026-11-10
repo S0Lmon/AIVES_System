@@ -278,6 +278,35 @@ Hai khác biệt thực tế giữa hai bộ sinh:
 
 `IRubricGenerator` và `RubricGeneratorRouter` lặp lại đúng mẫu của câu hỏi, nên hai loại nội dung dùng chung một quy tắc chọn provider và một câu chữ thông báo khi không provider nào dùng được.
 
+### Dùng Ollama thay Gemini cho mọi tính năng AI
+
+Đặt `Ollama:PreferLocal = true` để **Ollama đứng trước Gemini ở cả bốn chỗ**: sinh câu hỏi, sinh rubric, hỏi xoáy trong buổi vấn đáp (`RoutedFollowUpGenerator`) và đề xuất điểm (`RoutedAnswerGrader`). Gemini chỉ còn là dự phòng khi Ollama lỗi, và không bắt buộc phải có key. Không có Gemini key thì Ollama vẫn được dùng, kể cả khi chưa bật `PreferLocal`. Hỏi xoáy và chấm điểm dùng lại đúng prompt và bộ phân tích của Gemini. Ollama bị ép trả JSON theo schema (structured outputs), nên điểm vẫn được kẹp theo rubric như cũ.
+
+```powershell
+dotnet user-secrets set "Ollama:PreferLocal" "true" --project AIVES.WebRazor
+dotnet user-secrets set "Ollama:Model" "gemma2:27b" --project AIVES.WebRazor          # sinh câu hỏi, rubric, chấm điểm
+dotnet user-secrets set "Ollama:InterviewModel" "qwen2.5:3b" --project AIVES.WebRazor # (tuỳ chọn) model nhỏ cho hỏi xoáy
+dotnet user-secrets set "Ollama:GradingModel" "gemma2:27b" --project AIVES.WebRazor   # (tuỳ chọn) model riêng cho chấm điểm
+dotnet user-secrets set "Ollama:TimeoutSeconds" "900" --project AIVES.WebRazor        # model lớn chạy CPU cần nhiều thời gian
+dotnet user-secrets set "Grading:TimeoutSeconds" "900" --project AIVES.WebRazor
+```
+
+| Tuỳ chọn | Mặc định | Ý nghĩa |
+|---|---|---|
+| `Ollama:PreferLocal` | `false` | Ollama trước, Gemini dự phòng, cho mọi tính năng AI |
+| `Ollama:Model` | `phi3:mini` | Model chung |
+| `Ollama:InterviewModel` / `GradingModel` | trống | Model riêng cho hỏi xoáy / chấm điểm; trống thì dùng `Ollama:Model` |
+| `Ollama:ContextTokens` | `8192` | `num_ctx` chung cho mọi lời gọi. Ollama nạp lại model mỗi khi giá trị này đổi (đo được ~43 s với `gemma2:27b`), nên mọi tính năng dùng cùng một giá trị |
+| `Ollama:KeepAlive` | `30m` | Giữ model trong bộ nhớ giữa các câu trả lời |
+| `Interview:AiTimeoutSeconds` | `12` | Chờ AI tối đa sau mỗi câu trả lời; quá thời gian thì buổi thi đi tiếp mà không hỏi xoáy |
+
+**Chọn model theo máy.** Đo ngày 11/11/2026 trên laptop RTX 3050 4 GB: `gemma2:27b` (15,5 GB) chạy hoàn toàn trên CPU, khoảng 1,8 token/giây. Một quyết định hỏi xoáy mất khoảng 3 phút, một đề xuất điểm khoảng 4,5 phút. Như vậy model này dùng được cho **chấm điểm** (chạy nền) và sinh câu hỏi (chờ lâu), nhưng **không kịp cho hỏi xoáy** trong 12 giây. Cho hỏi xoáy hãy dùng model vừa VRAM (ví dụ 3B) qua `Ollama:InterviewModel`, hoặc nâng `Interview:AiTimeoutSeconds` và chấp nhận thí sinh phải chờ. Kiểm tra model trên máy bằng test thật (bị bỏ qua nếu không đặt biến):
+
+```powershell
+$env:AIVES_TEST_OLLAMA_MODEL = "gemma2:27b"
+dotnet test AIVES.Tests --filter "FullyQualifiedName~LiveOllama" --logger "console;verbosity=detailed"
+```
+
 ## Đa ngôn ngữ EN / VI
 
 Giao diện hỗ trợ hai ngôn ngữ qua enum `AppLanguage` (`AIVES.DTO/AppLanguage.cs`). Mặc định là **English**; người dùng đổi ngôn ngữ bằng nút EN / VI trên thanh trên cùng.

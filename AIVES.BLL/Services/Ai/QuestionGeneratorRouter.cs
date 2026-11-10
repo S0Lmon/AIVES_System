@@ -5,14 +5,17 @@ using Microsoft.Extensions.Logging;
 namespace AIVES.BLL.Services.Ai;
 
 /// <summary>
-/// Chooses between the registered AI providers. Gemini is preferred when it is configured;
-/// otherwise the local phi3:mini model takes over. A caller can also force a specific provider,
+/// Chooses between the registered AI providers. Gemini is preferred when it is configured, or the
+/// local Ollama model when <c>Ollama:PreferLocal</c> is on; the other one takes over when the first is not configured. A caller can also force a specific provider,
 /// and an unavailable choice falls back instead of failing.
 /// </summary>
 public sealed class QuestionGeneratorRouter(IEnumerable<IQuestionGenerator> generators,
-    ILogger<QuestionGeneratorRouter> logger) : IQuestionGeneratorRouter
+    ILogger<QuestionGeneratorRouter> logger, Microsoft.Extensions.Options.IOptions<OllamaOptions>? ollama = null) : IQuestionGeneratorRouter
 {
-    private static readonly AiProvider[] PreferenceOrder = [AiProvider.Gemini, AiProvider.Ollama];
+    // Ollama:PreferLocal puts the local model first for every AI feature; Gemini then only steps in when it fails.
+    private AiProvider[] PreferenceOrder => ollama?.Value.PreferLocal == true
+        ? [AiProvider.Ollama, AiProvider.Gemini]
+        : [AiProvider.Gemini, AiProvider.Ollama];
 
     private readonly IReadOnlyList<IQuestionGenerator> _generators = generators.ToList();
 
