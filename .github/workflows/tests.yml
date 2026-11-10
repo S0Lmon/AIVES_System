@@ -2,6 +2,8 @@
 # The HTTP and SQL integration tests run against a throwaway SQL Server service container; the
 # live Gemini test and the real speech-model test stay skipped because they need a key or ~600 MB
 # of models (see AIVES.Tests: LiveGeminiTests, SpeechModelTests).
+# Two more jobs run alongside: the Node tests for the viva page script (scripts/tests) and a build of
+# the web Docker image (not pushed), so a broken Dockerfile shows up before a deploy.
 name: Tests
 
 on:
@@ -95,3 +97,37 @@ jobs:
           name: test-results
           path: TestResults/*.trx
           if-no-files-found: ignore
+
+  javascript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Runs wwwroot/js/interview.js in a fake browser (node:vm): recording, upload and retry paths.
+      - name: Test the viva page script
+        run: node --test scripts/tests/*.test.cjs
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: AIVES.WebRazor/Dockerfile
+          push: false
+          tags: aives-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
