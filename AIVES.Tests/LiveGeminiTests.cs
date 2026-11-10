@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-04")]
 public sealed class LiveGeminiTests
 {
     [LiveGeminiFact]

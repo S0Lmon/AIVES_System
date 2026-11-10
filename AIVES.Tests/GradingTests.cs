@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-09")]
 public sealed class GradingTests
 {
     private const string Owner = "lecturer-1";
@@ -192,6 +193,7 @@ public sealed class GradingTests
         Assert.Contains(h.Db.AuditEntries, entry => entry.Action == AuditActions.GradeSaved && entry.Details!.Contains("(AI 7)"));
     }
 
+    [Trait("Requirement", "FR-11")]
     [Fact]
     public async Task KeepingTheAiScoreIsLoggedAsAcceptedNotAsAChange()
     {
@@ -231,6 +233,7 @@ public sealed class GradingTests
         Assert.NotNull(await h.Service.GetCandidateAsync(h.CandidateId, new ExamActor("admin", true)));
     }
 
+    [Trait("Requirement", "FR-12")]
     [Fact]
     public async Task TheClassReportAndGradeSheetUseConfirmedGrades()
     {
@@ -282,6 +285,7 @@ public sealed class GradingTests
         Assert.Equal(1000, signals.AverageAiLatencyMs);
     }
 
+    [Trait("Requirement", "FR-12")]
     [Theory]
     [InlineData("anhndse123456@fpt.edu.vn", "SE123456")]
     [InlineData("HuongTTHE170001@fpt.edu.vn", "HE170001")]
@@ -289,6 +293,7 @@ public sealed class GradingTests
     public void StudentCodesComeFromFptEmails(string email, string? code) => Assert.Equal(code, StudentCodes.FromEmail(email));
 }
 
+[Trait("Requirement", "FR-09")]
 public sealed class GradingPromptTests
 {
     private static GradingRequest Request(RubricSnapshot? rubric) => new(AppLanguage.Vi, "SE", "Q?", "A", "Understand", rubric,

@@ -11,6 +11,7 @@ using System.Text;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class AdaptiveQuestionPickerTests
 {
     private static ExamPoolQuestion Q(int id, int order) => new(id, order, $"Level {order}", $"Question {id}", $"Expected {id}", BloomOrder: order);
@@ -60,6 +61,7 @@ public sealed class AdaptiveQuestionPickerTests
     }
 }
 
+[Trait("Requirement", "FR-08")]
 public sealed class AdaptiveInterviewTests
 {
     private const string Email = "student@fpt.edu.vn";
@@ -201,6 +203,7 @@ public sealed class AdaptiveInterviewTests
     }
 }
 
+[Trait("Requirement", "FR-10")]
 public sealed class SessionRecordingTests
 {
     private const string Email = "student@fpt.edu.vn";

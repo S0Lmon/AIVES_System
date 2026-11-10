@@ -10,6 +10,7 @@ namespace AIVES.Tests;
 /// Covers the matrix rules: a rubric needs at least one row and one column, cells must line up
 /// with a column, and the stored total is derived from the grid rather than trusted.
 /// </summary>
+[Trait("Requirement", "FR-05")]
 public sealed class RubricMatrixTests
 {
     private static ApplicationDbContext CreateDatabase(string name) =>

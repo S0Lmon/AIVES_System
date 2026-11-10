@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-01")]
 public sealed class GoogleAccountTests
 {
     private static AccountService Service(Store store) => new(store, new Verification(), new Sender(),

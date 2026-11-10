@@ -8,6 +8,7 @@ using System.Text;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class FollowUpGeneratorTests
 {
     private static FollowUpRequest Request(AppLanguage language = AppLanguage.Vi, string answer = "Scoped giống Singleton") => new(

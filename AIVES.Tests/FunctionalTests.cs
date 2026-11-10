@@ -11,6 +11,7 @@ namespace AIVES.Tests;
 
 public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<FunctionalApp>
 {
+    [Trait("Requirement", "FR-01")]
     [SqlTheory]
     [InlineData("locked")]
     [InlineData("unconfirmed")]
@@ -35,6 +36,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
     private const string Password = "Functional123!";
 
+    [Trait("Requirement", "FR-13")]
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData(true)]
     [InlineData(false)]
@@ -116,6 +119,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         [prefix + ".IsActive"] = "true"
     };
 
+    [Trait("Requirement", "FR-15")]
     [SqlTheory]
     [InlineData("/Account/Login")]
     [InlineData("/Account/Register")]
@@ -126,6 +130,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync(route)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task HealthEndpointIsAnonymousAndChecksTheDatabase()
     {
@@ -135,6 +140,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData("/")]
     [InlineData("/Home/Privacy")]
@@ -149,6 +155,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("/Account/Login", response.Headers.Location!.OriginalString);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlTheory]
     [InlineData("Login")]
     [InlineData("Register")]
@@ -161,6 +168,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsync("/Account/" + action, new FormUrlEncodedContent([]))).StatusCode);
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlTheory]
     [InlineData("Email", "invalid-email")]
     [InlineData("Email", "test@example.com")]
@@ -179,6 +187,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Users.AnyAsync(u => u.Email == fields["Email"]));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task RegisterVerifyLogoutLoginAndExternalReturnUrlWork()
     {
@@ -200,6 +209,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(login.Headers.GetValues("Set-Cookie"), c => c.StartsWith("AIVES.Auth=") && c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Trait("Requirement", "FR-01")]
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task NewAccountsAreStudentsAndCannotReachLecturerPages()
     {
@@ -237,6 +248,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("href=\"/Admin/Users\"", home);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task LecturersReachTheBanksButNotTheUsersPage()
     {
@@ -250,6 +262,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.StartsWith("/Account/AccessDenied", users.Headers.Location!.PathAndQuery);
     }
 
+    [Trait("Requirement", "FR-02")]
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task AdminPromotesAStudentWhoThenReachesTheQuestionBank()
     {
@@ -290,6 +304,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.OK, (await student.GetAsync("/Question")).StatusCode);
     }
 
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task UsersPageRefusesAdminRoleAndSelfChanges()
     {
@@ -320,6 +335,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(AppRoles.Admin, (await store.GetProfileAsync(adminId))!.Roles);
     }
 
+    [Trait("Requirement", "FR-13")]
     [SqlFact]
     public async Task AdminDisablesAndEnablesAnAccountWithTheUsersPageButton()
     {
@@ -369,6 +385,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, (await LogIn(Password)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AccountsWithoutARoleBecomeStudentsAtStartup()
     {
@@ -412,6 +429,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return id;
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UniversityEmailRegistersVerifiesAndSignsInWhileOtherDomainsAreRejected()
     {
@@ -437,6 +455,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(app.Mail.Codes.ContainsKey(rejectedEmail));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UnverifiedAccountCannotLoginAndDuplicateEmailCannotRegister()
     {
@@ -456,6 +475,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Users.CountAsync(u => u.Email == email));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task FiveWrongPasswordsLockTheAccount()
     {
@@ -477,6 +497,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("temporarily locked", await Html(locked));
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task WrongOtpAndImmediateResendAreRejectedThenNewCodeReplacesOldCode()
     {
@@ -518,6 +539,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, verified.StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task QuestionCrudAndBloomFilterWorkThroughHttp()
     {
@@ -556,6 +578,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/Question/Details/" + id)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task OptionalQuestionFieldsCanBeLeftEmpty()
     {
@@ -568,6 +591,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task NewQuestionFormUsesTheDeclaredDefaults()
     {
@@ -578,6 +602,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Matches("<input[^>]*id=\"Input_DisplayOrder\"[^>]*value=\"0\"", html);
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlTheory]
     [InlineData("Content", "short")]
     [InlineData("BloomLevelId", "99999")]
@@ -595,6 +620,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == fields["Input.Content"]));
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlTheory]
     [InlineData("/Question/Details/999999")]
     [InlineData("/Question/Edit/999999")]
@@ -607,6 +633,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync(route)).StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AuthenticatedPostsStillRequireAntiforgery()
     {
@@ -621,6 +648,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             Assert.True(HttpStatusCode.BadRequest == (await browser.PostAsync(route, new FormUrlEncodedContent([]))).StatusCode, route);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiPanelReturnsStructuredQuestionsAndHandlesFailure()
     {
@@ -654,6 +682,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     }
 
     /// <summary>Adds a subject with one topic straight to the database; names are unique per call.</summary>
+    [Trait("Requirement", "FR-07")]
     [SqlFact]
     public async Task LecturerSchedulesAnExamAndStudentsSeeOnlyTheirOwnSlot()
     {
@@ -737,6 +766,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Viva schedule test", await Html(await student.GetAsync("/MyExams")));
     }
 
+    [Trait("Requirement", "FR-07")]
     [SqlFact]
     public async Task ExamFormExplainsWhyItCannotBeSaved()
     {
@@ -763,6 +793,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("value=\"Too many questions\"", html); // the form keeps what was typed
     }
 
+    [Trait("Requirement", "FR-08")]
     [SqlFact]
     public async Task StudentTakesTheAiVivaAndTheLecturerSeesTheTranscript()
     {
@@ -998,6 +1029,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return (subject.Id, subject.Topics.Single().Id);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiPanelIsDisabledOnTheExamRoomAndSendsUsersToTheQuestionPage()
     {
@@ -1009,6 +1041,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("/Question/Create", response.Headers.Location!.OriginalString);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task CreatePageCarriesTheCompactAiPanel()
     {
@@ -1023,6 +1056,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("asp-controller=\"AiExamRoom\"", html);
     }
 
+    [Trait("Requirement", "FR-03")]
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task QuestionBankExposesBankCreateAiAndBulkTabs()
     {
@@ -1050,6 +1085,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("name=\"Bulk.Plan[0].Max\"", bulk);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiTabDraftsAQuestionForReviewWithoutSavingIt()
     {
@@ -1076,6 +1112,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.False(await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.AnyAsync(q => q.Content == "Generated question 1 for Review topic"));
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task AiTabNamesTheMaterialTheDraftIsGroundedIn()
     {
@@ -1097,6 +1134,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("Grounded in 1 material items: <span>Chapter 3 notes</span>", await Html(response));
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task BulkTabSplitsTheBatchAcrossBloomLevelsForReview()
     {
@@ -1130,6 +1168,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(3, Regex.Matches(html, "<li>Second follow up</li>").Count);
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task RubricBankExposesBankCreateAndAiTabsWithAMatrixEditor()
     {
@@ -1155,6 +1194,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("name=\"Ai.LevelCount\"", ai);
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task AMatrixRubricCanBeCreatedAndEditedFromTheEditor()
     {
@@ -1204,6 +1244,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             $"Rubric {id} survived the delete. Page said: {Regex.Match(after, "alert-(?:success|danger)[^>]*>([^<]*)").Groups[1].Value}");
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task ARubricWithoutRowsIsRejectedAndNothingIsStored()
     {
@@ -1231,6 +1272,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
     private static int CountOccurrences(string haystack, string needle) =>
         Regex.Matches(haystack, Regex.Escape(needle)).Count;
 
+    [Trait("Requirement", "FR-15")]
     [Fact]
     public void VietnameseTextTableBuildsWithoutDuplicateKeys()
     {
@@ -1258,6 +1300,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         }
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task DefaultLanguageIsEnglishAndVietnameseCanBeSelected()
     {
@@ -1275,6 +1318,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("No account yet?", vietnamese);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task FormLabelsAndValidationMessagesFollowTheLanguage()
     {
@@ -1293,6 +1337,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Enter the question text.", vietnamese);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task EnglishPagesCarryNoVietnameseText()
     {
@@ -1330,6 +1375,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         }
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task SettingLanguagePersistsThroughTheCookieForAuthenticatedPages()
     {
@@ -1356,6 +1402,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.DoesNotContain("Question bank", after);
     }
 
+    [Trait("Requirement", "FR-04")]
     [SqlFact]
     public async Task InvalidAiRequestsDoNotCallTheGenerator()
     {
@@ -1385,6 +1432,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(calls, app.Generator.Calls);
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task ProfilePageShowsTheSignedInAccountAndLogoutReturnsToLogin()
     {
@@ -1409,6 +1457,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Equal(HttpStatusCode.Redirect, after.StatusCode);
     }
 
+    [Trait("Requirement", "FR-02")]
     [SqlFact]
     public async Task AnonymousUsersAreSentToLoginFromProfile()
     {
@@ -1418,6 +1467,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("Login", response.Headers.Location!.ToString());
     }
 
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task CreatingASubjectOpensItsOwnPageWithTopicCreationInFront()
     {
@@ -1448,6 +1498,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("No topics under this subject yet", page);
     }
 
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task AddingATopicKeepsTheSubjectPageOpenAndListsTheTopic()
     {
@@ -1480,6 +1531,8 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("handler=DeleteTopic", page);
     }
 
+    [Trait("Requirement", "FR-03")]
+    [Trait("Requirement", "FR-06")]
     [SqlFact]
     public async Task QuestionCreateSavesSubjectAndTopicAsRealReferences()
     {
@@ -1527,6 +1580,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains(content, await Html(await browser.GetAsync($"/Question?tab=bank&subjectId={subjectId}&topicId={topicId}")));
     }
 
+    [Trait("Requirement", "FR-03")]
     [SqlFact]
     public async Task AQuestionCanBeSavedWithoutARubric()
     {
@@ -1547,6 +1601,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Null((await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Questions.SingleAsync(q => q.Content == "A question stored without any rubric attached")).RubricId);
     }
 
+    [Trait("Requirement", "FR-15")]
     [SqlFact]
     public async Task TheBankPagesOpenWithTheTabStripAndNoPageHeading()
     {
@@ -1573,6 +1628,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             "question stats should render below the tabs");
     }
 
+    [Trait("Requirement", "FR-05")]
     [SqlFact]
     public async Task TheRubricMatrixNumbersItsRows()
     {
@@ -1596,6 +1652,7 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         return id;
     }
 
+    [Trait("Requirement", "FR-01")]
     [SqlFact]
     public async Task UnconfiguredGoogleLoginAndInvalidCallbackReturnToLogin()
     {

@@ -6,6 +6,7 @@ namespace AIVES.Tests;
 /// The bulk plan hands the lecturer ranges per Bloom level plus one total. Splitting that total
 /// without breaking a range is the part most likely to regress, so it is pinned down here.
 /// </summary>
+[Trait("Requirement", "FR-04")]
 public sealed class BulkPlanTests
 {
     private static BulkInput Plan(int total, params (int Id, int Min, int Max)[] rows) => new()

@@ -6,6 +6,7 @@ using System.Text.Json;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-04")]
 public sealed class OllamaTests
 {
     private static OllamaQuestionGenerator Generator(HttpMessageHandler handler, bool enabled = true) => new(

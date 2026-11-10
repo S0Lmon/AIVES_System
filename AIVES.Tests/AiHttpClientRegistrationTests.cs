@@ -13,6 +13,7 @@ namespace AIVES.Tests;
 /// Gemini and Ollama generators share an interface. Their typed HttpClients must still be
 /// configured separately, otherwise the last registration's BaseAddress wins for both.
 /// </summary>
+[Trait("Requirement", "FR-04")]
 public sealed class AiHttpClientRegistrationTests
 {
     private const string OllamaUrl = "http://ollama-test:11434/";

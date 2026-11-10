@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-04")]
 public sealed class TransientRetryHandlerTests
 {
     [Theory]

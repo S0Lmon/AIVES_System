@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-07")]
 public sealed class ExamServiceTests
 {
     private static readonly DateTime Now = new(2026, 10, 3, 8, 0, 0, DateTimeKind.Utc);

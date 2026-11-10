@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-04")]
 public sealed class AiProviderTests
 {
     private static QuestionGenerationRequest Request(string topic = "Layers", int count = 1) =>

@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 
 namespace AIVES.Tests;
 
+[Trait("Requirement", "FR-08")]
 public sealed class GeminiSpeechTests
 {
     private static (GeminiSpeechClient Client, StubHandler Handler, MovableClock Clock) Create(
