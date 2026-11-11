@@ -92,6 +92,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             client.Timeout = TimeSpan.FromSeconds(150);
         }).AddHttpMessageHandler(() => new TransientRetryHandler());
+        services.AddSingleton<IGradingWorkSignal, GradingWorkSignal>();
         services.AddHostedService<GradingWorker>();
         services.AddHostedService<QuestionAudioWorker>();
         // Check every authenticated HTTP request so disabling an account also invalidates open

@@ -76,9 +76,30 @@ public sealed class GeminiAnswerGrader(
         var text = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Gemini grading returned HTTP {StatusCode}", (int)response.StatusCode);
-            throw new InvalidOperationException($"Gemini returned HTTP {(int)response.StatusCode}.");
+            var errorMessage = ErrorMessage(text, (int)response.StatusCode);
+            logger.LogWarning("Gemini grading returned HTTP {StatusCode}: {Message}", (int)response.StatusCode, errorMessage);
+            throw new InvalidOperationException(errorMessage);
         }
         return GradingPrompt.Parse(GeneratedQuestionParser.ExtractGeminiText(text), request, ModelName);
+    }
+
+    private static string ErrorMessage(string responseBody, int statusCode)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            if (document.RootElement.TryGetProperty("error", out var error)
+                && error.TryGetProperty("message", out var message)
+                && message.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(message.GetString()))
+            {
+                var detail = message.GetString()!.Trim();
+                return detail.Length <= 500 ? detail : detail[..500];
+            }
+        }
+        catch (JsonException)
+        {
+        }
+        return $"Gemini returned HTTP {statusCode}.";
     }
 }

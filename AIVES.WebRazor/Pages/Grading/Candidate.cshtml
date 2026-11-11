@@ -8,7 +8,7 @@
     ViewData["Title"] = candidate.DisplayName ?? candidate.Email;
 }
 <div class="page-heading"><div><span class="page-kicker">Grading / Candidate</span><h1>@(candidate.DisplayName ?? candidate.Email)</h1><p>@candidate.Email@(candidate.StudentCode is null ? "" : " · " + candidate.StudentCode) · @candidate.ExamTitle (@candidate.SubjectName) · @L10n.Format("Candidate {0}", candidate.Order)</p></div>
-<div class="d-flex flex-wrap gap-2 align-items-center">@if (finalized) { <span class="status-label ready">@L10n.Format("Confirmed {0}/10", ViewText.Score(candidate.FinalScore))</span> }@if (completed) { <form method="post" asp-page-handler="RequestAi"><button type="submit" class="btn btn-light">@L10n.T("Ask the AI to grade again")</button></form> }<a class="btn btn-light" asp-page="Exam" asp-route-id="@candidate.ExamId">@L10n.T("Back to the class")</a></div></div>
+<div class="d-flex flex-wrap gap-2 align-items-center">@if (finalized) { <span class="status-label ready">@L10n.Format("Confirmed {0}/10", ViewText.Score(candidate.FinalScore))</span> }<a class="btn btn-light" href="#recordings">@L10n.T("Recordings")</a>@if (completed) { <form method="post" asp-page-handler="RequestAi"><button type="submit" class="btn btn-light">@L10n.T("Ask the AI to grade again")</button></form> }<a class="btn btn-light" asp-page="Exam" asp-route-id="@candidate.ExamId">@L10n.T("Back to the class")</a></div></div>
 @if (TempData["GradeMessage"] is string message) { <div class="alert alert-success" role="status">@message</div> }@if (TempData["GradeError"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
 @if (!completed) { <div class="alert alert-warning" role="status">@L10n.T("The viva is not finished yet. You can look at the answers so far; the grade can be confirmed once it is finished.")</div> }
 else if (candidate.GradingStatus == GradingStatus.Pending) { <div class="alert alert-info" role="status">@L10n.T("The AI is preparing its proposal. Reload the page in a minute, or grade without it.")</div> }
@@ -19,16 +19,38 @@ else if (candidate.GradingStatus == GradingStatus.AiFailed) { <div class="alert 
 <div><div class="small text-muted">@L10n.T("Average time to start answering")</div><strong>@ViewText.Seconds(signals.AverageResponseDelaySeconds)</strong></div><div><div class="small text-muted">@L10n.T("Average answer length")</div><strong>@ViewText.Seconds(signals.AverageAnswerSeconds)</strong></div><div><div class="small text-muted">@L10n.T("Speaking pace")</div><strong>@(signals.WordsPerMinute is { } wpm ? L10n.Format("{0} words/min", wpm) : "—")</strong></div>
 <div><div class="small text-muted">@L10n.T("Hesitations")</div><strong>@signals.FillerWords</strong>@if (signals.FillerRatio is { } ratio) { <span class="small text-muted"> (@((ratio * 100).ToString("0.#"))%)</span> }</div><div><div class="small text-muted">@L10n.T("Over time / typed")</div><strong>@signals.TimedOut / @signals.Typed</strong></div></div>
 <p class="small text-muted mb-0 mt-2">@L10n.T("Timing and fluency are shown for context only; they are not part of the AI score.")@if (candidate.RecordingConsentAtUtc is { } consent) { <span> @L10n.Format("Recording agreed at {0}.", Model.TimeZone.ToLocal(consent).ToString("yyyy-MM-dd HH:mm"))</span> }</p></section>
+@{
+    var answerRecordings = candidate.Questions
+        .SelectMany(question => question.Turns.Select(turn => (Question: question, Turn: turn)))
+        .Where(item => item.Turn.RecordingId is not null)
+        .ToList();
+}
+<section class="panel p-4 mb-3" id="recordings"><h2 class="h5">@L10n.T("Recordings")</h2><p class="small text-muted">@L10n.T("The whole viva as one recording: the examiner's voice, the candidate's microphone and, when enabled, the camera. Every playback is logged.")</p>
 @if (Model.SessionSegments.Count > 0) {
-<section class="panel p-4 mb-3"><h2 class="h5">@L10n.T("Whole-viva recording")</h2><p class="small text-muted">@L10n.T("The whole viva as one recording: the examiner's voice, the candidate's microphone and, when enabled, the camera. Every playback is logged.")</p>
+    <h3 class="h6 mt-3">@L10n.T("Whole-viva recording")</h3>
     @foreach (var segment in Model.SessionSegments) {
         var src = Url.Page("Candidate", "SessionRecording", new { id = candidate.CandidateId, segment = segment.Segment });
         <div class="mb-2">@if (Model.SessionSegments.Count > 1) { <div class="small text-muted">@L10n.Format("Part from {0}", Model.TimeZone.ToLocal(segment.FirstPartAtUtc).ToString("HH:mm:ss"))</div> }
         @if (segment.HasVideo) { <video class="d-block" controls preload="none" width="480" src="@src"></video> } else { <audio class="d-block w-100" controls preload="none" src="@src"></audio> }
         <div class="small text-muted">@L10n.Format("{0} MB", (segment.SizeBytes / 1024d / 1024d).ToString("0.0"))</div></div>
     }
-</section>
 }
+@if (answerRecordings.Count > 0) {
+    <h3 class="h6 mt-4">@L10n.T("Answer recordings")</h3>
+    @foreach (var item in answerRecordings) {
+        var turn = item.Turn;
+        var recordingId = turn.RecordingId!.Value;
+        <div class="border-top py-3"><strong>@L10n.Format("Question {0}", item.Question.Order) · @(turn.Kind == TurnKind.FollowUp ? L10n.T("Follow-up") : L10n.T("Main question"))</strong>
+            <p class="small mb-2">@turn.QuestionText</p>
+            @if (turn.RecordingHasVideo) { <video class="d-block" controls preload="none" width="320" src="@Url.Page("Candidate", "Recording", new { id = candidate.CandidateId, recordingId })"></video> }
+            else { <audio class="d-block w-100" controls preload="none" src="@Url.Page("Candidate", "Recording", new { id = candidate.CandidateId, recordingId })"></audio> }
+        </div>
+    }
+}
+@if (Model.SessionSegments.Count == 0 && answerRecordings.Count == 0) {
+    <p class="mb-0">@L10n.T("No recordings have been uploaded for this viva.")</p>
+}
+</section>
 <form method="post" asp-page-handler="Save">
 @for (var i = 0; i < candidate.Questions.Count; i++) {
     var q = candidate.Questions[i]; var input = Model.Form.Questions[i];
@@ -39,7 +61,6 @@ else if (candidate.GradingStatus == GradingStatus.AiFailed) { <div class="alert 
         <div class="mt-1">@(string.IsNullOrEmpty(turn.Answer) ? (turn.AnsweredAtUtc is null ? L10n.T("Waiting for the answer") : L10n.T("No answer")) : turn.Answer)</div>
         @if (turn.RawAnswer is { Length: > 0 } raw) { <div class="text-muted"><small>@L10n.T("As recognised before term correction"): @raw</small></div> }
         <div class="text-muted">@if (turn.InputMode == AnswerInputMode.Typed) { <span class="badge text-bg-light">@L10n.T("Typed")</span> }@if (turn.TimedOut) { <span class="badge text-bg-warning">@L10n.T("Over time")</span> }@if (turn.Decision is { } decision) { <span class="badge text-bg-light">@L10n.T("Examiner"): @ViewText.Reason(decision)</span> }@if (turn.AnsweredAtUtc is { } answered) { <span class="badge text-bg-light">@L10n.Format("{0} s to answer", Math.Round((answered - turn.AskedAtUtc).TotalSeconds))</span> }</div>
-        @if (turn.RecordingId is { } recordingId) { @if (turn.RecordingHasVideo) { <video class="mt-2 d-block" controls preload="none" width="320" src="@Url.Page("Candidate", "Recording", new { id = candidate.CandidateId, recordingId })"></video> } else { <audio class="mt-2 d-block" controls preload="none" src="@Url.Page("Candidate", "Recording", new { id = candidate.CandidateId, recordingId })"></audio> } }
     </li> }</ol>
     <div class="row g-3"><div class="col-lg-7"><div class="border rounded-3 p-3 h-100"><div class="d-flex justify-content-between"><h3 class="h6 mb-2">@L10n.T("AI proposal")</h3><span><strong>@ViewText.Score(q.AiScore)</strong> / @ViewText.Score(q.MaxScore)</span></div>
         @if (q.AiScore is null) { <p class="small text-muted mb-0">@L10n.T("No AI proposal for this question.")</p> } else {
