@@ -28,7 +28,7 @@ public sealed class SpeechOptions
     /// <summary>Who reads questions aloud. Local is ~0.4 s a question; Gemini took 8-9 s on 2026-10-08.</summary>
     public SpeechProvider TtsProvider { get; set; } = SpeechProvider.Local;
 
-    public string GeminiTtsModel { get; set; } = "gemini-3.8-flash-lite-tts";
+    public string GeminiTtsModel { get; set; } = "gemini-3.5-flash-lite-tts";
 
     /// <summary>One of Gemini's prebuilt voices (Kore, Puck, Charon, …).</summary>
     public string GeminiVoice { get; set; } = "Kore";

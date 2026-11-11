@@ -1,11 +1,11 @@
 <mxfile host="app.diagrams.net" agent="Codex">
   <diagram id="aives-razor-pages" name="AIVES Razor Pages Architecture">
-    <mxGraphModel dx="5255" dy="3688" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1720" pageHeight="1330" background="light-dark(#FFFFFF,#FFFFFF)" math="0" shadow="0">
+    <mxGraphModel dx="5255" dy="3688" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1380" background="light-dark(#FFFFFF,#FFFFFF)" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="2BacIDcDXOktlZdrfco--22" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;fillOpacity=70;strokeColor=#82b366;strokeWidth=2;fontSize=21;fontStyle=1;align=center;verticalAlign=top;spacingTop=8;" value="Third-party" vertex="1">
-          <mxGeometry height="403" width="246" x="1591.5" y="370" as="geometry" />
+        <mxCell id="2BacIDcDXOktlZdrfco--22" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;fillOpacity=70;strokeColor=#82b366;strokeWidth=2;fontSize=21;fontStyle=1;align=center;verticalAlign=top;spacingTop=8;" value="AI providers &amp; external services" vertex="1">
+          <mxGeometry height="500" width="280" x="1555" y="370" as="geometry" />
         </mxCell>
         <mxCell id="presentation" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#15223A;fillOpacity=55;strokeColor=#6EA4FF;strokeWidth=2;fontColor=#6EA4FF;fontSize=21;fontStyle=1;align=center;verticalAlign=top;spacingTop=8;" value="PRESENTATION LAYER – AIVES.WebRazor" vertex="1">
           <mxGeometry height="193" width="1200" x="255.5" y="150" as="geometry" />
@@ -19,7 +19,7 @@
         <mxCell id="realtime" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#6EA4FF;strokeWidth=1.5;dashed=1;fontColor=#DCE4F2;fontSize=15;align=center;verticalAlign=middle;spacing=8;" value="Realtime · SignalR adapter" vertex="1">
           <mxGeometry height="105" width="375" x="1059" y="210" as="geometry" />
         </mxCell>
-        <mxCell id="user" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=light-dark(#D0CEE2,#D5E8D4);strokeColor=light-dark(#56517E,#00994D);strokeWidth=3.5;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;&lt;br&gt;Lecturer · Student · Admin&lt;br&gt;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;Browser Chrome / Edge&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;SignalR client&lt;/span&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="user" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=light-dark(#D0CEE2,#D5E8D4);strokeColor=light-dark(#56517E,#00994D);strokeWidth=3.5;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;&lt;br&gt;Lecturer · Student · Admin&lt;br&gt;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;Browser Chrome / Edge · interview, grading, admin&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;Opt-in browser STT · typing fallback · browser TTS fallback&lt;br&gt;Recordings need separate student consent · SignalR client&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="140" width="1205.5" x="250" y="-33" as="geometry" />
         </mxCell>
         <mxCell id="2BacIDcDXOktlZdrfco--11" edge="1" parent="1" source="oauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=gap;strokeColor=light-dark(#000000,#000000);strokeWidth=2;dashed=1;entryX=1;entryY=0.422;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.009;exitY=0.42;exitDx=0;exitDy=0;exitPerimeter=0;" target="presentation">
@@ -35,10 +35,10 @@
           <mxGeometry height="193" width="254" x="1587" y="150" as="geometry" />
         </mxCell>
         <mxCell id="business" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#0D2824;fillOpacity=65;strokeColor=#45C6A2;strokeWidth=2;fontColor=#45C6A2;fontSize=21;fontStyle=1;align=center;verticalAlign=top;spacingTop=8;" value="BUSINESS LOGIC LAYER – AIVES.BLL" vertex="1">
-          <mxGeometry height="340" width="1200" x="250" y="385" as="geometry" />
+          <mxGeometry height="470" width="1200" x="250" y="385" as="geometry" />
         </mxCell>
-        <mxCell id="dto" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="AIVES.DTO" vertex="1">
-          <mxGeometry height="825" width="205" x="-155" y="148" as="geometry" />
+        <mxCell id="dto" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="AIVES.DTO&lt;br&gt;Shared contracts / DTOs" vertex="1">
+          <mxGeometry height="930" width="205" x="-155" y="148" as="geometry" />
         </mxCell>
         <mxCell id="question" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Question / Bloom" vertex="1">
           <mxGeometry height="105" width="250" x="275" y="450" as="geometry" />
@@ -46,50 +46,104 @@
         <mxCell id="rubric" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Rubric Service" vertex="1">
           <mxGeometry height="105" width="250" x="545" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="catalog" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Catalog Service" vertex="1">
+        <mxCell id="catalog" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Catalog / materials&lt;br&gt;Extraction · BM25 retrieval" vertex="1">
           <mxGeometry height="105" width="250" x="815" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="exam" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Exam Service" vertex="1">
+        <mxCell id="exam" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Exam / scheduling&lt;br&gt;Question allocation" vertex="1">
           <mxGeometry height="105" width="340" x="1085" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="interview" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Interview Service" vertex="1">
+        <mxCell id="interview" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Interview orchestration&lt;br&gt;Answer timer · follow-up caps&lt;br&gt;Adaptive question selection" vertex="1">
           <mxGeometry height="105" width="250" x="275" y="580" as="geometry" />
         </mxCell>
-        <mxCell id="ai" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="LLM Service" vertex="1">
+        <mxCell id="ai" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="AI question / rubric generation&lt;br&gt;Follow-up decision · TTS routing" vertex="1">
           <mxGeometry height="105" width="250" x="545" y="580" as="geometry" />
         </mxCell>
-        <mxCell id="accounts" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Account Service" vertex="1">
+        <mxCell id="accounts" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Accounts · roles&lt;br&gt;Subject access control" vertex="1">
           <mxGeometry height="105" width="250" x="815" y="580" as="geometry" />
         </mxCell>
         <mxCell id="emaildiag" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Email / Diagnostics" vertex="1">
           <mxGeometry height="105" width="340" x="1085" y="580" as="geometry" />
         </mxCell>
+        <mxCell id="gradingreports" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="AI grading proposal&lt;br&gt;Lecturer review / final grade&lt;br&gt;Class reports · grade export" vertex="1">
+          <mxGeometry height="105" width="360" x="275" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="recordingaudit" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Recording consent · encrypted storage&lt;br&gt;Access control · playback audit · retention" vertex="1">
+          <mxGeometry height="105" width="360" x="665" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="backgroundworkers" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#45C6A2;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Background workers&lt;br&gt;AI grading · question audio prep&lt;br&gt;Interview expiry · recording retention" vertex="1">
+          <mxGeometry height="105" width="370" x="1055" y="710" as="geometry" />
+        </mxCell>
         <mxCell id="2BacIDcDXOktlZdrfco--25" edge="1" parent="1" source="dal" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=gap;" target="dto">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="dal" parent="1" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#30230E;fillOpacity=70;strokeColor=#E7A92C;strokeWidth=2;fontColor=#F0B43B;fontSize=21;fontStyle=1;align=center;verticalAlign=top;spacingTop=8;" value="DATA ACCESS LAYER – AIVES.DAL" vertex="1">
-          <mxGeometry height="210" width="1200" x="250" y="765" as="geometry" />
+          <mxGeometry height="210" width="1200" x="250" y="895" as="geometry" />
         </mxCell>
         <mxCell id="repos" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#E7A92C;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Repositories&lt;br&gt;DtoMapping Entity" vertex="1">
-          <mxGeometry height="125" width="375" x="275" y="820" as="geometry" />
+          <mxGeometry height="125" width="375" x="275" y="950" as="geometry" />
         </mxCell>
         <mxCell id="identity" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#E7A92C;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Identity / DbContext" vertex="1">
-          <mxGeometry height="125" width="375" x="675" y="820" as="geometry" />
+          <mxGeometry height="125" width="375" x="675" y="950" as="geometry" />
         </mxCell>
         <mxCell id="entities" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#E7A92C;strokeWidth=1.5;fontColor=#DCE4F2;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Entities / Migrations" vertex="1">
-          <mxGeometry height="125" width="350" x="1075" y="820" as="geometry" />
+          <mxGeometry height="125" width="350" x="1075" y="950" as="geometry" />
         </mxCell>
-        <mxCell id="sql" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="SQL Server 2022" vertex="1">
-          <mxGeometry height="80" width="375" x="675" y="1015" as="geometry" />
+        <mxCell id="sql" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="SQL Server&lt;br&gt;Identity · exams · transcripts · grades · audit" vertex="1">
+          <mxGeometry height="80" width="375" x="675" y="1145" as="geometry" />
         </mxCell>
-        <mxCell id="gemini" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Google Gemini API&lt;br&gt;HTTPS / JSON" vertex="1">
-          <mxGeometry height="100" width="205" x="1612" y="421" as="geometry" />
+        <mxCell id="recordingfiles" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Encrypted recording files&lt;br&gt;Filesystem store by default" vertex="1">
+          <mxGeometry height="80" width="350" x="1075" y="1145" as="geometry" />
         </mxCell>
-        <mxCell id="ollama" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Ollama (local)&lt;br&gt;HTTPS / JSON" vertex="1">
-          <mxGeometry height="100" width="205" x="1611.5" y="532" as="geometry" />
+        <mxCell id="gemini" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Google Gemini API&lt;br&gt;Follow-ups · grading&lt;br&gt;Optional question / rubric · TTS&lt;br&gt;HTTPS / JSON" vertex="1">
+          <mxGeometry height="115" width="230" x="1580" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="ollama" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Local Ollama&lt;br&gt;Question / rubric generation&lt;br&gt;HTTP / JSON" vertex="1">
+          <mxGeometry height="100" width="230" x="1580" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="piper" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=13;align=center;verticalAlign=middle;spacing=5;" value="Local Piper TTS&lt;br&gt;Browser speech fallback">
+          <mxGeometry height="70" width="230" x="1580" y="640" as="geometry" />
         </mxCell>
         <mxCell id="smtp" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=14;align=center;verticalAlign=middle;spacing=7;" value="Gmail SMTP" vertex="1">
-          <mxGeometry height="100" width="205" x="1612" y="643" as="geometry" />
+          <mxGeometry height="65" width="230" x="1580" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="browserstt" parent="1" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#11141B;strokeColor=#B27AE8;strokeWidth=1.5;fontColor=#E8E1F1;fontSize=12;align=center;verticalAlign=middle;spacing=5;" value="Browser-managed Web Speech STT&lt;br&gt;Audio may leave browser; provider varies" vertex="1">
+          <mxGeometry height="80" width="230" x="1580" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="blltorecordings" edge="1" parent="1" source="recordingaudit" target="recordingfiles" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;" value="Encrypted media">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="daltorecordings" edge="1" parent="1" source="dal" target="recordingfiles" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;dashed=1;" value="metadata / path">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="user-to-stt" edge="1" parent="1" source="user" target="browserstt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;endArrow=block;endFill=1;" value="Audio · opt-in">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1500" y="25" /><mxPoint x="1500" y="830" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="stt-to-user" edge="1" parent="1" source="browserstt" target="user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;dashed=1;endArrow=block;endFill=1;" value="Transcript">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1515" y="850" /><mxPoint x="1515" y="80" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="interview-to-gemini" edge="1" parent="1" source="interview" target="gemini" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;endArrow=block;endFill=1;" value="Answer transcript / prompt">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1490" y="630" /><mxPoint x="1490" y="465" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="gemini-to-interview" edge="1" parent="1" source="gemini" target="interview" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;dashed=1;endArrow=block;endFill=1;" value="Follow-up decision / text">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1470" y="490" /><mxPoint x="1470" y="645" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="grading-to-gemini" edge="1" parent="1" source="gradingreports" target="gemini" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;endArrow=block;endFill=1;" value="Completed transcript + rubric">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1455" y="755" /><mxPoint x="1455" y="500" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="gemini-grade-return" edge="1" parent="1" source="gemini" target="gradingreports" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B27AE8;strokeWidth=2;dashed=1;endArrow=block;endFill=1;" value="AI score / feedback">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1435" y="520" /><mxPoint x="1435" y="775" /></Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="userreq" edge="1" parent="1" source="dto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;labelBackgroundColor=none;fontColor=default;exitX=0.99;exitY=0.125;exitDx=0;exitDy=0;exitPerimeter=0;" value="Request">
           <mxGeometry relative="1" x="0.5161" y="-36" as="geometry">
@@ -124,29 +178,29 @@
         <mxCell id="blltodal" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;fontColor=light-dark(#000000,#000000);labelBackgroundColor=none;" value="">
           <mxGeometry relative="1" x="-0.046" y="-133" as="geometry">
             <mxPoint as="offset" />
-            <mxPoint x="830" y="725.0000000000002" as="sourcePoint" />
-            <mxPoint x="830" y="765" as="targetPoint" />
+            <mxPoint x="830" y="855" as="sourcePoint" />
+            <mxPoint x="830" y="895" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="daltobll" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;dashed=1;endArrow=block;endFill=1;labelBackgroundColor=none;fontColor=light-dark(#000000,#000000);" value="">
           <mxGeometry relative="1" x="-0.102" y="-53" as="geometry">
             <mxPoint as="offset" />
-            <mxPoint x="880" y="765" as="sourcePoint" />
-            <mxPoint x="880" y="725" as="targetPoint" />
+            <mxPoint x="880" y="895" as="sourcePoint" />
+            <mxPoint x="880" y="855" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="dalosql" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;entryX=0.468;entryY=-0.005;entryDx=0;entryDy=0;entryPerimeter=0;labelBackgroundColor=none;fontColor=light-dark(#000000,#000000);" value="">
           <mxGeometry relative="1" x="-0.0025" y="-70" as="geometry">
             <mxPoint x="-70" y="-70" as="offset" />
-            <mxPoint x="840" y="975" as="sourcePoint" />
-            <mxPoint x="840.5" y="1014.5999999999997" as="targetPoint" />
+            <mxPoint x="840" y="1105" as="sourcePoint" />
+            <mxPoint x="840.5" y="1145" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="sqltodal" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;dashed=1;endArrow=block;endFill=1;entryX=0.51;entryY=1.007;entryDx=0;entryDy=0;entryPerimeter=0;fontColor=light-dark(#000000,#000000);labelBackgroundColor=none;" value="">
           <mxGeometry relative="1" x="0.0249" y="-57" as="geometry">
             <mxPoint x="57" y="57" as="offset" />
-            <mxPoint x="880.5" y="1015" as="sourcePoint" />
-            <mxPoint x="880" y="976.4700000000003" as="targetPoint" />
+            <mxPoint x="880.5" y="1145" as="sourcePoint" />
+            <mxPoint x="880" y="1105" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="2BacIDcDXOktlZdrfco--5" edge="1" parent="1" source="business" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#DDE5F0;strokeWidth=2;endArrow=block;endFill=1;fontColor=light-dark(#000000,#000000);labelBackgroundColor=none;entryX=0.005;entryY=0.477;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1.001;exitY=0.52;exitDx=0;exitDy=0;exitPerimeter=0;" target="2BacIDcDXOktlZdrfco--22" value="">
