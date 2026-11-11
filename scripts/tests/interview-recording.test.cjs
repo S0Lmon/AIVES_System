@@ -8,19 +8,20 @@ const source = fs.readFileSync(path.join(__dirname, '../../AIVES.WebRazor/wwwroo
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const turn = id => ({ turnId: id, kind: 'Main', mainIndex: id, mainCount: 2,
     questionText: 'Question ' + id, askedAtUtc: new Date().toISOString(), timeLimitSeconds: 120 });
-const state = id => ({ status: 'InProgress', recording: 'AudioVideo', recordingConsentGiven: true,
-    currentTurn: turn(id), serverNowUtc: new Date().toISOString() });
+const state = (id, options = {}) => ({ status: options.status || 'InProgress', recording: options.recording || 'AudioVideo',
+    recordingConsentGiven: true, currentTurn: options.status === 'NotStarted' ? null : turn(id), serverNowUtc: new Date().toISOString() });
 const response = (data, ok = true) => ({ ok, status: ok ? 200 : 500, json: async () => data });
 
 function browser(options = {}) {
     const elements = new Map();
     const element = name => {
         if (!elements.has(name)) elements.set(name, {
-            value: '', dataset: {}, checked: true, addEventListener(event, callback) { this[event] = callback; }, focus() { }
+            value: '', dataset: {}, checked: false, addEventListener(event, callback) { this[event] = callback; }, focus() { }
         });
         return elements.get(name);
     };
     const uploads = [], requests = [], recorders = [], sessionRecorders = [], sessionUploads = [], recognitions = [];
+    let microphoneRequests = 0;
     class Stream {
         constructor(tracks) { this.tracks = tracks || []; }
         getAudioTracks() { return this.tracks.filter(track => track.kind === 'audio'); }
@@ -46,16 +47,17 @@ function browser(options = {}) {
         };
     }
     const root = {
-        dataset: { baseUrl: '/Interview/1', lang: 'vi-VN', initialState: JSON.stringify(state(1)),
-            textMain: 'Question {0}/{1}', textError: 'Error', textRecordError: 'Recording failed' },
+        dataset: { baseUrl: '/Interview/1', lang: 'vi-VN', initialState: JSON.stringify(options.initialState || state(1)),
+            textMain: 'Question {0}/{1}', textError: 'Error', textRecordError: 'Recording failed',
+            textTypeAnswer: 'Type your answer below.' },
         querySelector: element,
         querySelectorAll: () => []
     };
     vm.runInNewContext(source, {
         document: { getElementById: () => root, querySelector: () => ({ value: 'test-token' }) },
         window, MediaRecorder: Recorder, MediaStream: Stream, Blob, FormData,
-        navigator: { mediaDevices: { getUserMedia: async () => ({ getVideoTracks: () => [{ kind: 'video' }],
-            getAudioTracks: () => [{ kind: 'audio' }], getTracks: () => [{ stop() {} }] }) } },
+        navigator: { mediaDevices: { getUserMedia: async () => { microphoneRequests++; return { getVideoTracks: () => [{ kind: 'video' }],
+            getAudioTracks: () => [{ kind: 'audio' }], getTracks: () => [{ stop() {} }] }; } } },
         fetch: (url, options) => {
             // No server voice in these tests: the question is "read" by the (absent) browser voice at once.
             if (url.includes('/QuestionAudio/')) return Promise.reject(new Error('no server voice'));
@@ -75,6 +77,9 @@ function browser(options = {}) {
         uploads, requests, recorders, sessionRecorders, sessionUploads, recognitions,
         answer: () => element('[data-field="answer"]'),
         typing: () => element('[data-field="typing"]'),
+        speechConsent: () => element('[data-field="speech-consent"]'),
+        start: () => element('[data-action="start"]').click({ target: { disabled: false } }),
+        microphoneRequests: () => microphoneRequests,
         submit: () => element('[data-action="submit"]').click()
     };
 }
@@ -156,7 +161,11 @@ test('the whole viva is recorded by one recorder and uploaded piece by piece', a
 });
 
 test('browser speech recognition uses the exam language and submits recognized text as speech', async () => {
-    const b = browser({ speechRecognition: true });
+    const b = browser({ speechRecognition: true, initialState: state(1, { status: 'NotStarted', recording: 'None' }) });
+    b.speechConsent().checked = true;
+    b.start();
+    await flush();
+    b.requests[0].resolve(response(state(1, { recording: 'None' })));
     await flush();
     const recognition = b.recognitions[0];
     assert.ok(recognition);
@@ -169,23 +178,40 @@ test('browser speech recognition uses the exam language and submits recognized t
     recognition.onresult({ resultIndex: 0, results: [result] });
     b.submit();
 
-    const answer = JSON.parse(b.requests[0].options.body);
+    const answer = JSON.parse(b.requests[1].options.body);
     assert.equal(answer.transcript, 'Ba lớp gồm giao diện, nghiệp vụ và dữ liệu.');
     assert.equal(answer.inputMode, 0);
 });
 
 test('denied or unavailable browser speech recognition leaves a typing fallback', async () => {
-    const denied = browser({ speechRecognition: true });
+    const denied = browser({ speechRecognition: true, initialState: state(1, { status: 'NotStarted', recording: 'None' }) });
+    denied.speechConsent().checked = true;
+    denied.start();
+    await flush();
+    denied.requests[0].resolve(response(state(1, { recording: 'None' })));
     await flush();
     denied.recognitions[0].onerror({ error: 'not-allowed' });
     assert.equal(denied.typing().checked, true);
     assert.equal(denied.answer().readOnly, false);
     denied.answer().value = 'Typed answer';
     denied.submit();
-    assert.equal(JSON.parse(denied.requests[0].options.body).inputMode, 1);
+    assert.equal(JSON.parse(denied.requests[1].options.body).inputMode, 1);
 
     const unsupported = browser();
     await flush();
     assert.equal(unsupported.typing().disabled, true);
     assert.equal(unsupported.answer().readOnly, false);
+});
+
+test('browser speech recognition is opt-in and typing does not request the microphone for STT', async () => {
+    const b = browser({ speechRecognition: true, initialState: state(1, { status: 'NotStarted', recording: 'None' }) });
+    b.start();
+    await flush();
+    assert.equal(b.microphoneRequests(), 0);
+    b.requests[0].resolve(response(state(1, { recording: 'None' })));
+    await flush();
+    assert.equal(b.recognitions.length, 0);
+    assert.equal(b.typing().checked, true);
+    assert.equal(b.typing().disabled, true);
+    assert.equal(b.answer().readOnly, false);
 });

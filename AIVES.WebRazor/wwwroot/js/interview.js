@@ -24,6 +24,7 @@
 
     var answerBox = field('answer');
     var typingBox = field('typing');
+    var speechConsentBox = field('speech-consent');
     var statusLine = field('status');
     var timerLabel = field('timer');
     var errorBox = field('error');
@@ -34,12 +35,13 @@
     var clockOffset = 0;          // server time minus browser time, in ms
     var turn = null;              // the question being answered
     var recognizer = null;
+    var speechConsentGiven = false;
     var listening = false;        // we want the recognizer running
     var finalText = '';
     var timerId = null;
     var pollId = null;
     var submitting = false;
-    var typedMode = !Recognition;
+    var typedMode = true;
 
     // Signals for the current answer.
     var answerOpenedAt = 0;       // question finished being read
@@ -159,7 +161,7 @@
     }
 
     function startListening() {
-        if (typedMode || !Recognition) return;
+        if (typedMode || !Recognition || !speechConsentGiven) return;
         listening = true;
         if (!recognizer) {
             recognizer = new Recognition();
@@ -200,7 +202,7 @@
     function switchToTyping(message) {
         typedMode = true;
         typingBox.checked = true;
-        typingBox.disabled = !Recognition;
+        typingBox.disabled = !Recognition || !speechConsentGiven;
         stopListening();
         answerBox.readOnly = false;
         answerBox.focus();
@@ -443,7 +445,7 @@
         speak(turn.questionText, turn.turnId, function () {
             if (!answerOpenedAt) answerOpenedAt = Date.now();
             startRecording();
-            if (typedMode) { statusLine.textContent = Recognition ? '' : text.textNoSpeech; answerBox.readOnly = false; }
+            if (typedMode) { statusLine.textContent = Recognition ? text.textTypeAnswer : text.textNoSpeech; answerBox.readOnly = false; }
             else startListening();
         });
     }
@@ -504,6 +506,10 @@
         var consentBox = field('consent');
         var consent = !!(consentBox && consentBox.checked);
         if (recordingMode() !== 'None' && !consent) { showError(text.textConsent); return; }
+        speechConsentGiven = !!(speechConsentBox && speechConsentBox.checked && Recognition);
+        typedMode = !speechConsentGiven;
+        typingBox.checked = typedMode;
+        typingBox.disabled = !Recognition || !speechConsentGiven;
         event.target.disabled = true;
         clearError();
         if (consent) ensureMix();
@@ -520,11 +526,14 @@
     root.querySelector('[data-action="submit"]').addEventListener('click', submit);
     root.querySelector('[data-action="repeat"]').addEventListener('click', function () { if (turn) readQuestion(); });
     typingBox.addEventListener('change', function () {
+        if (!speechConsentGiven) { typingBox.checked = true; return; }
         if (typingBox.checked) switchToTyping('');
         else if (Recognition) { typedMode = false; answerBox.readOnly = true; startListening(); }
     });
     if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = function () { };
-    if (!Recognition) { typingBox.checked = true; typingBox.disabled = true; }
+    typingBox.checked = true;
+    typingBox.disabled = !Recognition;
+    if (speechConsentBox) speechConsentBox.disabled = !Recognition;
 
     render(state);
 })();
