@@ -56,6 +56,25 @@ else if (candidate.GradingStatus == GradingStatus.AiFailed) { <div class="alert 
     var q = candidate.Questions[i]; var input = Model.Form.Questions[i];
     <section class="panel p-4 mb-3"><div class="d-flex justify-content-between flex-wrap gap-2 mb-2"><h2 class="h5 mb-0">@L10n.Format("Question {0}", q.Order) <span class="badge text-bg-light ms-1">@q.BloomLevelName</span></h2><span class="small text-muted">@(q.Rubric is null ? L10n.T("No rubric: holistic score") : L10n.Format("Rubric: {0}", q.Rubric.Name))</span></div>
     <p class="mb-2">@q.Content</p><details class="mb-3"><summary class="small">@L10n.T("Expected answer")</summary><p class="small mt-2 mb-0">@q.ExpectedAnswer</p></details>
+    @if (q.Rubric is { } rubric) {
+        <details class="mb-3"><summary class="small">@L10n.Format("Rubric guideline · {0} points", rubric.TotalPoints)</summary>
+            <p class="small text-muted mt-2 mb-2">@L10n.T("Use each criterion and its level descriptors as a scoring guide. The AI proposal is advisory; you decide the final score.")</p>
+            <ul class="small mb-0">
+                @foreach (var criterion in rubric.Criteria) {
+                    <li class="mb-2"><strong>@criterion.Name</strong> · @L10n.Format("up to {0} points", criterion.MaxPoints)
+                        @if (!string.IsNullOrWhiteSpace(criterion.Description)) { <span class="text-muted">— @criterion.Description</span> }
+                        @if (criterion.Cells.Count > 0) {
+                            <ul class="text-muted">
+                                @foreach (var cell in criterion.Cells) {
+                                    <li><strong>@cell.LevelName</strong> (@ViewText.Score(cell.Points)): @cell.Descriptor</li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        </details>
+    }
     <h3 class="h6">@L10n.T("Transcript")</h3>@if (q.Turns.Count == 0) { <p class="small text-muted">@L10n.T("This question was not reached.")</p> }
     <ol class="small ps-3">@foreach (var turn in q.Turns) { <li class="mb-2"><strong>@(turn.Kind == TurnKind.FollowUp ? L10n.T("Follow-up") : L10n.T("Main question")):</strong> @turn.QuestionText
         <div class="mt-1">@(string.IsNullOrEmpty(turn.Answer) ? (turn.AnsweredAtUtc is null ? L10n.T("Waiting for the answer") : L10n.T("No answer")) : turn.Answer)</div>

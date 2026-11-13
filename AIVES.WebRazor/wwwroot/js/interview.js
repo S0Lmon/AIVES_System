@@ -1,5 +1,5 @@
-// AI viva page: reads each question aloud (the server's VieNeu voice, else the browser's), recognises the spoken answer
-// (SpeechRecognition, Chrome/Edge) and exchanges text with the server. Typing is the fallback.
+// AI viva page: reads questions with System.Speech on the server and streams microphone audio
+// to local Vosk models for live recognition. Typing is the fallback.
 // When the exam is recorded, each answer is captured with MediaRecorder and uploaded after it is
 // submitted, and the whole viva is recorded too: the examiner's voice mixed with the microphone (and
 // the camera), uploaded in 15-second pieces so a closed tab loses at most the last piece.
@@ -12,11 +12,12 @@
 
     var baseUrl = root.dataset.baseUrl;
     var lang = root.dataset.lang;
-    // Set when the server reads questions (VieNeu); otherwise the browser's own voice does.
     var audioUrl = root.dataset.audioUrl;
+    var speechHubUrl = root.dataset.speechHubUrl;
+    var candidateId = Number(root.dataset.candidateId);
+    var speechRecognitionAvailable = root.dataset.sttAvailable === 'true';
     var text = root.dataset;
     var token = (document.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
-    var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     var steps = {};
     root.querySelectorAll('[data-step]').forEach(function (el) { steps[el.dataset.step] = el; });
@@ -34,7 +35,13 @@
     var state = JSON.parse(root.dataset.initialState);
     var clockOffset = 0;          // server time minus browser time, in ms
     var turn = null;              // the question being answered
-    var recognizer = null;
+    var speechConnection = null;
+    var speechStartTask = Promise.resolve();
+    var audioContext = null;
+    var audioSource = null;
+    var audioProcessor = null;
+    var audioSink = null;
+    var audioQueue = Promise.resolve();
     var speechConsentGiven = false;
     var listening = false;        // we want the recognizer running
     var finalText = '';
@@ -84,38 +91,23 @@
         });
     }
 
-    function speech() { return state.speech || {}; }
     function recordingMode() { return state.recording || 'None'; }
 
     // ---- Speech output -------------------------------------------------------
-    function pickVoice() {
-        if (!window.speechSynthesis) return null;
-        var voices = window.speechSynthesis.getVoices();
-        var preferred = lang.toLowerCase().indexOf('vi') === 0 ? speech().vietnameseVoice : speech().englishVoice;
-        var prefix = lang.split('-')[0].toLowerCase();
-        return (preferred && voices.find(function (v) { return v.name === preferred; }))
-            || voices.find(function (v) { return v.lang && v.lang.toLowerCase() === lang.toLowerCase(); })
-            || voices.find(function (v) { return v.lang && v.lang.toLowerCase().indexOf(prefix) === 0; })
-            || null;
-    }
-
     var questionAudio = null;
 
     function stopSpeaking() {
         if (questionAudio) { questionAudio.pause(); questionAudio = null; }
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
 
-    // The question as spoken by the server (VieNeu, or Piper when VieNeu is down or slow); the browser's own
-    // voice reads it when the server does not read this language or fails, so the viva never waits on a missing voice.
     function speak(sentence, turnId, done) {
         var finished = false;
         function finish() { if (!finished) { finished = true; done(); } }
         stopSpeaking();
-        if (!audioUrl) { speakInBrowser(sentence, finish); return; }
+        if (!audioUrl) { statusLine.textContent = text.textSpeechUnavailable; finish(); return; }
         fetch(audioUrl + '/' + turnId, { credentials: 'same-origin', headers: { 'RequestVerificationToken': token } })
             .then(function (response) {
-                if (!response.ok) throw new Error('no server voice');
+                if (!response.ok) throw new Error('server voice unavailable');
                 return response.blob();
             })
             .then(function (blob) {
@@ -126,84 +118,123 @@
                 routeIntoMix(audio);
                 function end() { URL.revokeObjectURL(url); if (questionAudio === audio) questionAudio = null; finish(); }
                 audio.onended = end;
-                audio.onerror = function () { URL.revokeObjectURL(url); speakInBrowser(sentence, finish); };
+                audio.onerror = function () { URL.revokeObjectURL(url); statusLine.textContent = text.textSpeechUnavailable; finish(); };
                 var started = audio.play();
-                if (started && started.catch) started.catch(function () { speakInBrowser(sentence, finish); });
+                if (started && started.catch) started.catch(function () { statusLine.textContent = text.textSpeechUnavailable; finish(); });
             })
-            .catch(function () { speakInBrowser(sentence, finish); });
-    }
-
-    function speakInBrowser(sentence, done) {
-        if (!window.speechSynthesis) { done(); return; }
-        window.speechSynthesis.cancel();
-        var utterance = new SpeechSynthesisUtterance(sentence);
-        utterance.lang = lang;
-        var voice = pickVoice();
-        if (voice) utterance.voice = voice;
-        utterance.rate = speech().speechRate || 0.95;
-        var finished = false;
-        function finish() { if (!finished) { finished = true; done(); } }
-        utterance.onend = finish;
-        utterance.onerror = finish;
-        // Some browsers never fire onend; do not leave the candidate waiting.
-        setTimeout(finish, Math.min(60000, 4000 + sentence.length * 120));
-        window.speechSynthesis.speak(utterance);
+            .catch(function () { statusLine.textContent = text.textSpeechUnavailable; finish(); });
     }
 
     // ---- Speech input --------------------------------------------------------
-    function applyPhrases(target) {
-        // Contextual biasing towards subject terms, where the browser supports it.
-        var phrases = state.phrases || [];
-        if (!phrases.length || !('phrases' in target) || typeof window.SpeechRecognitionPhrase !== 'function') return;
+    function ensureSpeechAudioContext() {
+        if (audioContext) return Promise.resolve();
+        var AudioContextType = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextType) return Promise.reject(new Error(text.textMicError));
         try {
-            target.phrases = phrases.map(function (phrase) { return new window.SpeechRecognitionPhrase(phrase, 5.0); });
-        } catch (e) { /* unsupported for this recogniser */ }
+            audioContext = new AudioContextType({ sampleRate: 16000 });
+        } catch (e) {
+            audioContext = new AudioContextType();
+        }
+        return audioContext.state === 'suspended' && audioContext.resume ? audioContext.resume() : Promise.resolve();
     }
 
     function startListening() {
-        if (typedMode || !Recognition || !speechConsentGiven) return;
+        if (typedMode || !speechRecognitionAvailable || !speechConsentGiven || !mediaStream) return;
         listening = true;
-        if (!recognizer) {
-            recognizer = new Recognition();
-            recognizer.lang = lang;
-            recognizer.continuous = true;
-            recognizer.interimResults = true;
-            applyPhrases(recognizer);
-            recognizer.onresult = function (event) {
-                var now = Date.now();
-                if (!firstWordAt) firstWordAt = now;
-                lastWordAt = now;
-                var interim = '';
-                for (var i = event.resultIndex; i < event.results.length; i++) {
-                    var piece = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) finalText += (finalText ? ' ' : '') + piece.trim();
-                    else interim += piece;
-                }
-                answerBox.value = (finalText + (interim ? ' ' + interim : '')).trim();
-            };
-            recognizer.onerror = function (event) {
-                if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
-                    listening = false;
-                    switchToTyping(text.textMicError);
-                }
-            };
-            // Chrome ends recognition after a pause; keep going while the answer is open.
-            recognizer.onend = function () { if (listening) { try { recognizer.start(); } catch (e) { /* already running */ } } };
-        }
         statusLine.textContent = text.textListening;
-        try { recognizer.start(); } catch (e) { /* already running */ }
+        var connection = new signalR.HubConnectionBuilder().withUrl(speechHubUrl).build();
+        audioQueue = Promise.resolve();
+        speechConnection = connection;
+        connection.on('RecognitionResult', function (turnId, update) {
+            if (!turn || turn.turnId !== turnId) return;
+            var now = Date.now();
+            if (!firstWordAt) firstWordAt = now;
+            lastWordAt = now;
+            if (update.isFinal) finalText = (finalText + ' ' + update.text).trim();
+            answerBox.value = (finalText + (update.isFinal ? '' : ' ' + update.text)).trim();
+        });
+        speechStartTask = connection.start()
+            .then(function () { return connection.invoke('StartRecognition', candidateId, turn.turnId); })
+            .then(startAudioCapture)
+            .catch(function (error) {
+                if (speechConnection === connection) speechConnection = null;
+                connection.stop().catch(function () { });
+                switchToTyping(error && error.message || text.textMicError);
+            });
+    }
+
+    function startAudioCapture() {
+        if (!listening || !speechConnection || !mediaStream) return;
+        try {
+            audioSource = audioContext.createMediaStreamSource(mediaStream);
+            audioProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+            audioSink = audioContext.createGain();
+            audioSink.gain.value = 0;
+            audioProcessor.onaudioprocess = function (event) {
+                if (!listening || !speechConnection) return;
+                var connection = speechConnection;
+                var input = event.inputBuffer.getChannelData(0);
+                var ratio = audioContext.sampleRate / 16000;
+                var count = Math.floor(input.length / ratio);
+                if (!count) return;
+                var pcm = new Int16Array(count);
+                for (var i = 0; i < count; i++) {
+                    var start = Math.floor(i * ratio);
+                    var end = Math.floor((i + 1) * ratio);
+                    var total = 0;
+                    for (var j = start; j < end; j++) total += input[j];
+                    var sample = total / Math.max(1, end - start);
+                    pcm[i] = Math.max(-1, Math.min(1, sample)) < 0
+                        ? Math.round(Math.max(-1, Math.min(1, sample)) * 32768)
+                        : Math.round(Math.max(-1, Math.min(1, sample)) * 32767);
+                }
+                var rawBytes = new Uint8Array(pcm.buffer);
+                var binary = '';
+                for (var byteIndex = 0; byteIndex < rawBytes.length; byteIndex++)
+                    binary += String.fromCharCode(rawBytes[byteIndex]);
+                audioQueue = audioQueue.then(function () {
+                    return connection.invoke('SendAudio', window.btoa(binary));
+                }).catch(function (error) {
+                    if (speechConnection === connection)
+                        switchToTyping(error && error.message || text.textMicError);
+                });
+            };
+            audioSource.connect(audioProcessor);
+            audioProcessor.connect(audioSink);
+            audioSink.connect(audioContext.destination);
+        } catch (error) {
+            switchToTyping(text.textMicError);
+        }
     }
 
     function stopListening() {
         listening = false;
-        if (recognizer) { try { recognizer.stop(); } catch (e) { /* not running */ } }
+        if (audioProcessor) { audioProcessor.disconnect(); audioProcessor.onaudioprocess = null; audioProcessor = null; }
+        if (audioSource) { audioSource.disconnect(); audioSource = null; }
+        if (audioSink) { audioSink.disconnect(); audioSink = null; }
+        var connection = speechConnection;
+        if (!connection) return null;
+        speechConnection = null;
+        var starting = speechStartTask;
+        speechStartTask = Promise.resolve();
+        var queuedAudio = audioQueue;
+        return starting
+            .then(function () { return queuedAudio; })
+            .then(function () { return connection.invoke('StopRecognition'); })
+            .catch(function () { })
+            .then(function () { return connection.stop(); })
+            .catch(function () { });
     }
 
     function switchToTyping(message) {
         typedMode = true;
         typingBox.checked = true;
-        typingBox.disabled = !Recognition || !speechConsentGiven;
+        typingBox.disabled = !speechRecognitionAvailable || !speechConsentGiven;
         stopListening();
+        if (recordingMode() === 'None' && mediaStream) {
+            mediaStream.getTracks().forEach(function (track) { track.stop(); });
+            mediaStream = null;
+        }
         answerBox.readOnly = false;
         answerBox.focus();
         statusLine.textContent = message || '';
@@ -218,17 +249,26 @@
 
     // ---- Recording -----------------------------------------------------------
     function ensureMedia() {
-        if (recordingMode() === 'None' || !state.recordingConsentGiven && state.status !== 'NotStarted') return Promise.resolve(null);
+        var needsRecording = recordingMode() !== 'None';
+        if (!needsRecording && (typedMode || !speechConsentGiven)) return Promise.resolve(null);
+        if (needsRecording && !state.recordingConsentGiven && state.status !== 'NotStarted') return Promise.resolve(null);
         if (mediaStream) return Promise.resolve(mediaStream);
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) return Promise.resolve(null);
-        var video = recordingMode() === 'AudioVideo' ? { width: 320, height: 240, frameRate: 15 } : false;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || needsRecording && !window.MediaRecorder) {
+            if (speechConsentGiven) switchToTyping(text.textMicError);
+            return Promise.resolve(null);
+        }
+        var video = needsRecording && recordingMode() === 'AudioVideo' ? { width: 320, height: 240, frameRate: 15 } : false;
         return navigator.mediaDevices.getUserMedia({ audio: true, video: video })
             .then(function (stream) {
                 mediaStream = stream;
                 if (video && preview) { preview.srcObject = stream; preview.hidden = false; }
                 return stream;
             })
-            .catch(function () { showError(text.textRecordError); return null; });
+            .catch(function () {
+                showError(needsRecording ? text.textRecordError : text.textMicError);
+                if (speechConsentGiven) switchToTyping(text.textMicError);
+                return null;
+            });
     }
 
     function pickMimeType(withVideo) {
@@ -239,7 +279,7 @@
     }
 
     function startRecording() {
-        if (!mediaStream || recorder) return;
+        if (!mediaStream || !window.MediaRecorder || recordingMode() === 'None' || !state.recordingConsentGiven || recorder) return;
         var withVideo = mediaStream.getVideoTracks().length > 0;
         var mimeType = pickMimeType(withVideo);
         try {
@@ -394,6 +434,7 @@
         stopSessionRecording();
         if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
         mediaStream = null;
+        if (audioContext) { audioContext.close().catch(function () { }); audioContext = null; }
         if (preview) preview.hidden = true;
     }
 
@@ -445,7 +486,7 @@
         speak(turn.questionText, turn.turnId, function () {
             if (!answerOpenedAt) answerOpenedAt = Date.now();
             startRecording();
-            if (typedMode) { statusLine.textContent = Recognition ? text.textTypeAnswer : text.textNoSpeech; answerBox.readOnly = false; }
+            if (typedMode) { statusLine.textContent = speechRecognitionAvailable ? text.textTypeAnswer : text.textNoSpeech; answerBox.readOnly = false; }
             else startListening();
         });
     }
@@ -473,21 +514,25 @@
         if (!turn || submitting) return;
         submitting = true;
         stopTimer();
-        stopListening();
+        var recognitionStopped = stopListening();
         stopSpeaking();
         field('processing').textContent = text.textProcessing;
         show('processing');
         clearError();
         var answeredTurn = turn.turnId;
         var recording = finishRecording(answeredTurn);
-        var body = {
-            turnId: answeredTurn,
-            transcript: answerBox.value,
-            inputMode: typedMode ? 1 : 0,
-            responseDelayMs: answerOpenedAt && firstWordAt ? Math.max(0, firstWordAt - answerOpenedAt) : null,
-            speakingMs: firstWordAt && lastWordAt > firstWordAt ? lastWordAt - firstWordAt : null
+        var sendAnswer = function () {
+            var body = {
+                turnId: answeredTurn,
+                transcript: answerBox.value,
+                inputMode: typedMode ? 1 : 0,
+                responseDelayMs: answerOpenedAt && firstWordAt ? Math.max(0, firstWordAt - answerOpenedAt) : null,
+                speakingMs: firstWordAt && lastWordAt > firstWordAt ? lastWordAt - firstWordAt : null
+            };
+            return request('POST', '/Answer', body);
         };
-        request('POST', '/Answer', body)
+        var submitted = recognitionStopped ? recognitionStopped.then(sendAnswer) : sendAnswer();
+        submitted
             .then(function (next) {
                 uploadRecording(answeredTurn, recording);
                 render(next);
@@ -506,19 +551,19 @@
         var consentBox = field('consent');
         var consent = !!(consentBox && consentBox.checked);
         if (recordingMode() !== 'None' && !consent) { showError(text.textConsent); return; }
-        speechConsentGiven = !!(speechConsentBox && speechConsentBox.checked && Recognition);
+        speechConsentGiven = !!(speechConsentBox && speechConsentBox.checked && speechRecognitionAvailable);
         typedMode = !speechConsentGiven;
         typingBox.checked = typedMode;
-        typingBox.disabled = !Recognition || !speechConsentGiven;
+        typingBox.disabled = !speechRecognitionAvailable || !speechConsentGiven;
         event.target.disabled = true;
         clearError();
         if (consent) ensureMix();
-        // Ask for the microphone (and camera) up front so the first question is not interrupted by the prompt.
-        var ready = recordingMode() !== 'None'
-            ? ensureMedia()
-            : navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !typedMode
-                ? navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }).catch(function () { switchToTyping(text.textMicError); })
-                : Promise.resolve();
+        var ready = speechConsentGiven || recordingMode() !== 'None' ? ensureMedia() : Promise.resolve(null);
+        if (speechConsentGiven)
+            ready = ready.then(function (stream) {
+                if (stream) return ensureSpeechAudioContext();
+                switchToTyping(text.textMicError);
+            }).catch(function () { switchToTyping(text.textMicError); });
         ready.then(function () { return request('POST', '/Start', { recordingConsent: consent }); })
             .then(render)
             .catch(function (error) { event.target.disabled = false; showError(error.message); });
@@ -528,12 +573,17 @@
     typingBox.addEventListener('change', function () {
         if (!speechConsentGiven) { typingBox.checked = true; return; }
         if (typingBox.checked) switchToTyping('');
-        else if (Recognition) { typedMode = false; answerBox.readOnly = true; startListening(); }
+        else if (speechRecognitionAvailable) {
+            typedMode = false;
+            answerBox.readOnly = true;
+            ensureMedia().then(function (stream) {
+                if (stream) startListening();
+                else switchToTyping(text.textMicError);
+            });
+        }
     });
-    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = function () { };
     typingBox.checked = true;
-    typingBox.disabled = !Recognition;
-    if (speechConsentBox) speechConsentBox.disabled = !Recognition;
+    typingBox.disabled = !speechRecognitionAvailable;
 
     render(state);
 })();

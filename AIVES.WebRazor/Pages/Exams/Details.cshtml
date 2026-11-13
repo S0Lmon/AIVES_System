@@ -81,7 +81,14 @@
             }
         </li>
     } </ol></td>
-    <td>@if (candidate.Interview is null) { <span class="small text-muted">@L10n.T("Not started")</span> } else { var record = candidate.Interview;
+    <td>
+        @if (Model.IsAdmin) {
+            <form method="post" asp-page-handler="TestInterview" class="mb-2">
+                <input type="hidden" name="order" value="@candidate.Order" />
+                <button type="submit" class="btn btn-sm btn-outline-primary">@L10n.T("Test this question set")</button>
+            </form>
+        }
+        @if (candidate.Interview is null) { <span class="small text-muted">@L10n.T("Not started")</span> } else { var record = candidate.Interview;
         <span class="status-label @(record.Status == InterviewStatus.Completed ? "ready" : "warning")">@(record.Status == InterviewStatus.Completed ? L10n.T("Completed") : L10n.T("In progress"))</span>
         <details class="mt-2"><summary class="small">@L10n.Format("Transcript ({0} turns)", record.Turns.Count)</summary><ol class="small mt-2 ps-3 mb-0">@foreach (var turn in record.Turns) {
             <li class="mb-2"><strong>@(turn.Kind == TurnKind.FollowUp ? L10n.T("Follow-up") : L10n.Format("Main question {0}", turn.MainIndex)):</strong> @turn.QuestionText

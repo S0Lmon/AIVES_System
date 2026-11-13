@@ -21,6 +21,7 @@ public sealed class InterviewApiModel(
     IRecordingService recordings,
     IExamService exams,
     ITextToSpeech voice,
+    IVoskSpeechRecognition speechRecognition,
     IHubContext<InterviewHub, IInterviewClient> monitor,
     ILogger<InterviewApiModel> logger) : PageModel
 {
@@ -34,14 +35,18 @@ public sealed class InterviewApiModel(
     /// <summary>
     /// Use the configured server voice when one is available; otherwise the browser reads the question.
     /// </summary>
-    public bool ServerReadsQuestions => voice.IsAvailable(State.Language);
+    public bool ServerReadsQuestions => voice.IsAvailable(State.Language, State.Speech?.VoiceFor(State.Language));
+    public bool QuestionTextSentToOnlineSpeech => voice.UsesOnlineService(State.Language, State.Speech?.VoiceFor(State.Language));
+    public bool ServerRecognizesAnswers => speechRecognition.IsAvailable(State.Language);
     private string Email => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
+    private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+    private bool IsAdmin => User.IsInRole(AppRoles.Admin);
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
         try
         {
-            State = await interviews.GetStateAsync(id, Email, cancellationToken);
+            State = await interviews.GetStateAsync(id, Email, cancellationToken, UserId, IsAdmin);
             return Page();
         }
         catch (KeyNotFoundException) { return NotFound(); }
@@ -49,18 +54,18 @@ public sealed class InterviewApiModel(
 
     /// <summary>GET /Interview/{id}/QuestionAudio/{turnId} â€” the open question as a WAV file.</summary>
     public Task<IActionResult> OnGetQuestionAudioAsync(int id, int turnId, CancellationToken cancellationToken) =>
-        QuestionAudio.ServeAsync(Response, interviews, voice, logger, id, Email, turnId, cancellationToken);
+        QuestionAudio.ServeAsync(Response, interviews, voice, logger, id, Email, turnId, cancellationToken, UserId, IsAdmin);
 
     public Task<IActionResult> OnGetStateAsync(int id, CancellationToken cancellationToken) =>
-        RunAsync(() => interviews.GetStateAsync(id, Email, cancellationToken));
+        RunAsync(() => interviews.GetStateAsync(id, Email, cancellationToken, UserId, IsAdmin));
 
     public async Task<IActionResult> OnPostStartAsync(int id, [FromBody] StartRequest? request, CancellationToken cancellationToken)
     {
         InterviewStatus? before = null;
         return await RunAsync(async () =>
         {
-            before = (await interviews.GetStateAsync(id, Email, cancellationToken)).Status;
-            var state = await interviews.StartAsync(id, Email, request?.RecordingConsent ?? false, cancellationToken);
+            before = (await interviews.GetStateAsync(id, Email, cancellationToken, UserId, IsAdmin)).Status;
+            var state = await interviews.StartAsync(id, Email, request?.RecordingConsent ?? false, cancellationToken, UserId, IsAdmin);
             if (before == InterviewStatus.NotStarted && state.Status != InterviewStatus.NotStarted)
             {
                 await NotifyAsync(id, InterviewEventKinds.Started, L10n.T("Started the viva"), null, cancellationToken);
@@ -73,10 +78,10 @@ public sealed class InterviewApiModel(
     public Task<IActionResult> OnPostAnswerAsync(int id, [FromBody] AnswerRequest request, CancellationToken cancellationToken) =>
         RunAsync(async () =>
         {
-            var before = await interviews.GetStateAsync(id, Email, cancellationToken);
+            var before = await interviews.GetStateAsync(id, Email, cancellationToken, UserId, IsAdmin);
             var state = await interviews.AnswerAsync(id, Email, new InterviewAnswerInput(
                 request.TurnId, request.Transcript ?? string.Empty, request.InputMode,
-                request.ResponseDelayMs, request.SpeakingMs), cancellationToken);
+                request.ResponseDelayMs, request.SpeakingMs), cancellationToken, UserId, IsAdmin);
             if (before.CurrentTurn?.TurnId != request.TurnId)
                 return state;
             var text = (request.Transcript ?? string.Empty).Trim();
@@ -98,7 +103,7 @@ public sealed class InterviewApiModel(
         try
         {
             await using var stream = file.OpenReadStream();
-            await recordings.SaveAsync(id, Email, turnId, stream, file.ContentType ?? string.Empty, cancellationToken);
+            await recordings.SaveAsync(id, Email, turnId, stream, file.ContentType ?? string.Empty, cancellationToken, UserId, IsAdmin);
             return StatusCode(StatusCodes.Status204NoContent);
         }
         catch (KeyNotFoundException) { return NotFound(); }
@@ -116,7 +121,7 @@ public sealed class InterviewApiModel(
         try
         {
             await using var stream = file.OpenReadStream();
-            await recordings.SaveSessionPartAsync(id, Email, segment, index, stream, file.ContentType ?? string.Empty, cancellationToken);
+            await recordings.SaveSessionPartAsync(id, Email, segment, index, stream, file.ContentType ?? string.Empty, cancellationToken, UserId, IsAdmin);
             return StatusCode(StatusCodes.Status204NoContent);
         }
         catch (KeyNotFoundException) { return NotFound(); }
