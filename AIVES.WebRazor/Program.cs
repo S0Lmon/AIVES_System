@@ -34,7 +34,6 @@ app.MapHealthChecks("/health");
 app.MapRazorPages().WithStaticAssets();
 app.MapHub<AivesHub>(AivesHub.Path);
 app.MapHub<InterviewHub>(InterviewHub.Path);
-app.MapHub<SpeechRecognitionHub>(SpeechRecognitionHub.Path);
 
 app.Run();
 

@@ -40,52 +40,34 @@
             <select class="form-select" asp-for="Input.EnglishVoice"><option value="">@L10n.T("Prefer a female voice when available")</option>@foreach (var voice in Model.EnglishVoices) { <option value="@voice.Value">@voice.Label</option> }</select>
         </div>
     </div>
-    <h3 class="h6 mt-3">@L10n.T("Speech recognition (local Vosk)")</h3>
-    <p class="form-text">@L10n.T("Download the Vietnamese and English offline models on the Windows server using scripts/download-vosk-models.ps1. Models are stored under AIVES.WebRazor/App_Data/speech-models.")</p>
-    <div class="row g-2 mb-3">
-        <div class="col-md-6">
-            @if (Model.VietnameseModelAvailable) { <div class="alert alert-success py-2 mb-0">@L10n.T("Vietnamese Vosk model is installed and ready.")</div> }
-            else { <div class="alert alert-warning py-2 mb-0">@L10n.T("Vietnamese Vosk model is missing. Run the model download script on the Windows server.")</div> }
-        </div>
-        <div class="col-md-6">
-            @if (Model.EnglishModelAvailable) { <div class="alert alert-success py-2 mb-0">@L10n.T("English Vosk model is installed and ready.")</div> }
-            else { <div class="alert alert-warning py-2 mb-0">@L10n.T("English Vosk model is missing. Run the model download script on the Windows server.")</div> }
-        </div>
-    </div>
     <h2 class="h6 mt-4">@L10n.T("Speech sandbox")</h2>
-    <p class="form-text">@L10n.T("Test each language using the selected voice and speaking rate. Edge TTS sends the sample text online; microphone audio is streamed to local Vosk and is not saved.")</p>
-    <div id="speechSandbox" data-tts-url="@Url.Page("/Admin/Settings", "TestVoice")" data-hub-url="@Url.Content("~/hubs/speech-recognition")"
+    <p class="form-text">@L10n.T("Test each language using the selected voice and speaking rate. Edge TTS sends the sample text online. Browser speech recognition may send microphone audio to the browser's speech service.")</p>
+    <div id="speechSandbox" data-tts-url="@Url.Page("/Admin/Settings", "TestVoice")"
          data-generating="@L10n.T("Generating sample…")" data-tts-failed="@L10n.T("TTS test failed.")"
          data-playback-failed="@L10n.T("The sample could not be played in this browser.")"
          data-playing="@L10n.T("Playing sample…")" data-finished="@L10n.T("Sample finished.")"
-         data-mic-access="@L10n.T("Requesting microphone access…")"
-         data-unsupported="@L10n.T("This browser does not support microphone speech testing.")"
+         data-unsupported="@L10n.T("This browser does not support speech recognition.")"
          data-listening="@L10n.T("Listening. Speak a short phrase; stop when finished.")"
          data-stt-failed="@L10n.T("Could not start the speech recognition test.")"
-         data-connection-failed="@L10n.T("Speech recognition connection failed.")"
          data-stopped="@L10n.T("Microphone test stopped.")">
         <div class="row g-3">
             @foreach (var language in new[]
             {
-                (Code: AppLanguage.Vi, Name: "Tiếng Việt", Voices: Model.VietnameseVoices, ModelReady: Model.VietnameseModelAvailable),
-                (Code: AppLanguage.En, Name: "English", Voices: Model.EnglishVoices, ModelReady: Model.EnglishModelAvailable)
+                (Code: AppLanguage.Vi, Name: "Tiếng Việt", Voices: Model.VietnameseVoices),
+                (Code: AppLanguage.En, Name: "English", Voices: Model.EnglishVoices)
             })
             {
                 <div class="col-md-6">
-                    <section class="panel p-3 h-100" data-speech-language="@language.Code" data-model-ready="@language.ModelReady.ToString().ToLowerInvariant()">
+                    <section class="panel p-3 h-100" data-speech-language="@language.Code.ToSpeechLocale()">
                         <h3 class="h6">@language.Name (@language.Code.ToSpeechLocale())</h3>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-sm btn-light" data-test-tts disabled="@(language.Voices.Count == 0)">@L10n.T("Play TTS sample")</button>
-                            <button type="button" class="btn btn-sm btn-primary" data-start-stt disabled="@(!language.ModelReady)">@L10n.T("Test STT with microphone")</button>
+                            <button type="button" class="btn btn-sm btn-primary" data-start-stt>@L10n.T("Test STT with microphone")</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-stop-stt disabled>@L10n.T("Stop microphone test")</button>
                         </div>
                         @if (language.Voices.Count == 0)
                         {
                             <p class="small text-danger mb-2">@L10n.T("No matching System.Speech voice is installed on this server.")</p>
-                        }
-                        @if (!language.ModelReady)
-                        {
-                            <p class="small text-warning mb-2">@L10n.T("The Vosk model for this language is not installed.")</p>
                         }
                         <p class="small mb-1" data-tts-status aria-live="polite"></p>
                         <p class="small mb-1" data-stt-status aria-live="polite"></p>

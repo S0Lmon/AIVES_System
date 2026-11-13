@@ -4,6 +4,7 @@
     var sandbox = document.getElementById('speechSandbox');
     if (!sandbox) return;
 
+    var Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     var active = null;
     var audio = null;
 
@@ -14,7 +15,7 @@
     }
 
     function testVoice(card) {
-        var language = card.dataset.speechLanguage;
+        var language = card.dataset.speechLanguage === 'vi-VN' ? 'Vi' : 'En';
         var voiceId = language === 'Vi' ? 'Input_VietnameseVoice' : 'Input_EnglishVoice';
         var voice = document.getElementById(voiceId).value;
         var rate = document.getElementById('Input_SpeechRate').value;
@@ -67,135 +68,99 @@
             });
     }
 
-    function cleanup(session) {
-        if (!session) return Promise.resolve();
-        if (session.processor) {
-            session.processor.disconnect();
-            session.processor.onaudioprocess = null;
-        }
-        if (session.source) session.source.disconnect();
-        if (session.sink) session.sink.disconnect();
-        if (session.stream) session.stream.getTracks().forEach(function (track) { track.stop(); });
-        var stopRecognition = session.connection
-            ? session.connection.invoke('StopRecognition').catch(function () { })
-                .then(function () { return session.connection.stop(); }).catch(function () { })
-            : Promise.resolve();
-        var closeAudio = session.context ? session.context.close().catch(function () { }) : Promise.resolve();
-        return Promise.all([stopRecognition, closeAudio]);
+    function finishTest(session, message, isError) {
+        if (active !== session) return;
+        active = null;
+        session.running = false;
+        session.card.querySelector('[data-start-stt]').disabled = !Recognition;
+        session.card.querySelector('[data-stop-stt]').disabled = true;
+        if (message) setStatus(session.card.querySelector('[data-stt-status]'), message, isError);
     }
 
     function stopTest(session, message, isError) {
-        if (active !== session) return;
-        active = null;
-        session.card.querySelector('[data-start-stt]').disabled = session.card.dataset.modelReady !== 'true';
-        session.card.querySelector('[data-stop-stt]').disabled = true;
-        if (message) setStatus(session.card.querySelector('[data-stt-status]'), message, isError);
-        cleanup(session);
-    }
-
-    function startCapture(session) {
-        var context = session.context;
-        session.source = context.createMediaStreamSource(session.stream);
-        session.processor = context.createScriptProcessor(2048, 1, 1);
-        session.sink = context.createGain();
-        session.sink.gain.value = 0;
-        session.processor.onaudioprocess = function (event) {
-            if (active !== session) return;
-            var input = event.inputBuffer.getChannelData(0);
-            var ratio = context.sampleRate / 16000;
-            var count = Math.floor(input.length / ratio);
-            if (!count) return;
-            var pcm = new Int16Array(count);
-            for (var i = 0; i < count; i++) {
-                var start = Math.floor(i * ratio);
-                var end = Math.floor((i + 1) * ratio);
-                var total = 0;
-                for (var j = start; j < end; j++) total += input[j];
-                var sample = Math.max(-1, Math.min(1, total / Math.max(1, end - start)));
-                pcm[i] = sample < 0 ? Math.round(sample * 32768) : Math.round(sample * 32767);
-            }
-            session.audioQueue = session.audioQueue.then(function () {
-                if (active === session) {
-                    var bytes = new Uint8Array(pcm.buffer);
-                    var binary = '';
-                    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-                    return session.connection.invoke('SendAudio', window.btoa(binary));
-                }
-            }).catch(function (error) {
-                stopTest(session, error.message || sandbox.dataset.connectionFailed, true);
-            });
-        };
-        session.source.connect(session.processor);
-        session.processor.connect(session.sink);
-        session.sink.connect(context.destination);
+        if (active !== session || session.stopping) return;
+        session.stopping = true;
+        session.running = false;
+        session.stopMessage = message;
+        session.stopError = isError;
+        try { session.recognition.stop(); }
+        catch (_) { finishTest(session, message, isError); }
     }
 
     function startTest(card) {
         if (active) return;
+        if (typeof Recognition !== 'function') {
+            setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.unsupported, true);
+            return;
+        }
+
+        var recognition;
+        try { recognition = new Recognition(); }
+        catch (_) {
+            setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.sttFailed, true);
+            return;
+        }
         var session = {
             card: card,
-            language: card.dataset.speechLanguage,
-            stream: null,
-            context: null,
-            source: null,
-            processor: null,
-            sink: null,
-            connection: null,
-            audioQueue: Promise.resolve(),
+            recognition: recognition,
+            running: true,
+            stopping: false,
             finalText: ''
         };
         active = session;
         card.querySelector('[data-start-stt]').disabled = true;
         card.querySelector('[data-stop-stt]').disabled = false;
         card.querySelector('[data-stt-result]').value = '';
-        setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.micAccess, false);
 
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !(window.AudioContext || window.webkitAudioContext) || !window.signalR) {
-            stopTest(session, sandbox.dataset.unsupported, true);
-            return;
-        }
+        var recognition = session.recognition;
+        recognition.lang = card.dataset.speechLanguage;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.onresult = function (event) {
+            if (active !== session) return;
+            var interim = '';
+            for (var i = event.resultIndex; i < event.results.length; i++) {
+                var phrase = event.results[i][0].transcript.trim();
+                if (!phrase) continue;
+                if (event.results[i].isFinal) session.finalText = (session.finalText + ' ' + phrase).trim();
+                else interim += phrase;
+            }
+            card.querySelector('[data-stt-result]').value =
+                (session.finalText + (interim ? ' ' + interim : '')).trim();
+        };
+        recognition.onerror = function () {
+            if (active === session)
+                stopTest(session, sandbox.dataset.sttFailed, true);
+        };
+        recognition.onend = function () {
+            if (active !== session) return;
+            if (session.running) {
+                setTimeout(function () {
+                    if (active === session && session.running) {
+                        try { recognition.start(); }
+                        catch (_) { stopTest(session, sandbox.dataset.sttFailed, true); }
+                    }
+                }, 250);
+            } else {
+                finishTest(session, session.stopMessage || sandbox.dataset.stopped, session.stopError);
+            }
+        };
 
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(function (stream) {
-                if (active !== session) {
-                    stream.getTracks().forEach(function (track) { track.stop(); });
-                    return;
-                }
-                session.stream = stream;
-                var AudioContextType = window.AudioContext || window.webkitAudioContext;
-                try {
-                    session.context = new AudioContextType({ sampleRate: 16000 });
-                } catch (_) {
-                    session.context = new AudioContextType();
-                }
-                return session.context.resume().then(function () {
-                    var connection = new window.signalR.HubConnectionBuilder().withUrl(sandbox.dataset.hubUrl).build();
-                    session.connection = connection;
-                    connection.on('RecognitionResult', function (testId, update) {
-                        if (active !== session || testId !== 0) return;
-                        if (update.isFinal) session.finalText = (session.finalText + ' ' + update.text).trim();
-                        card.querySelector('[data-stt-result]').value =
-                            (session.finalText + (update.isFinal ? '' : ' ' + update.text)).trim();
-                    });
-                    return connection.start()
-                        .then(function () { return connection.invoke('StartAdminTestRecognition', session.language); })
-                        .then(function () {
-                            if (active !== session) return cleanup(session);
-                            setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.listening, false);
-                            startCapture(session);
-                        });
-                });
-            })
-            .catch(function (error) {
-                stopTest(session, error.message || sandbox.dataset.sttFailed, true);
-            });
+        setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.listening, false);
+        try { recognition.start(); }
+        catch (_) { stopTest(session, sandbox.dataset.sttFailed, true); }
     }
 
     sandbox.querySelectorAll('[data-speech-language]').forEach(function (card) {
+        var startButton = card.querySelector('[data-start-stt]');
+        startButton.disabled = typeof Recognition !== 'function';
+        if (!Recognition)
+            setStatus(card.querySelector('[data-stt-status]'), sandbox.dataset.unsupported, true);
         card.querySelector('[data-test-tts]').addEventListener('click', function () { testVoice(card); });
-        card.querySelector('[data-start-stt]').addEventListener('click', function () { startTest(card); });
+        startButton.addEventListener('click', function () { startTest(card); });
         card.querySelector('[data-stop-stt]').addEventListener('click', function () {
-            if (active && active.card === card) stopTest(active, sandbox.dataset.stopped, false);
+            if (active && active.card === card)
+                stopTest(active, sandbox.dataset.stopped, false);
         });
     });
 
@@ -203,7 +168,8 @@
         if (active) {
             var session = active;
             active = null;
-            cleanup(session);
+            session.running = false;
+            try { session.recognition.abort(); } catch (_) { }
         }
         if (audio) {
             audio.pause();

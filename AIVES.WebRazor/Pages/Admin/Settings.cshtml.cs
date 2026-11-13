@@ -14,7 +14,6 @@ public sealed class SettingsModel(
     IAuditService audit,
     ISystemSpeechCatalog speechCatalog,
     IEdgeTtsProvider edgeTts,
-    IVoskSpeechRecognition speechRecognition,
     ITextToSpeech voice) : PageModel
 {
     [BindProperty]
@@ -28,9 +27,6 @@ public sealed class SettingsModel(
     public IReadOnlyList<TtsVoiceOption> VietnameseVoices { get; private set; } = [];
     public IReadOnlyList<TtsVoiceOption> EnglishVoices { get; private set; } = [];
     public bool EdgeTtsAvailable => edgeTts.IsAvailable;
-    public bool VietnameseModelAvailable { get; private set; }
-    public bool EnglishModelAvailable { get; private set; }
-
     private string? ActingEmail => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name;
 
     public sealed class SettingsInput
@@ -177,8 +173,6 @@ public sealed class SettingsModel(
     {
         VietnameseVoices = BuildVoiceOptions(AppLanguage.Vi);
         EnglishVoices = BuildVoiceOptions(AppLanguage.En);
-        VietnameseModelAvailable = speechRecognition.IsAvailable(AppLanguage.Vi);
-        EnglishModelAvailable = speechRecognition.IsAvailable(AppLanguage.En);
     }
 
     private IReadOnlyList<TtsVoiceOption> BuildVoiceOptions(AppLanguage language)

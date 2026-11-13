@@ -21,7 +21,6 @@ public sealed class InterviewApiModel(
     IRecordingService recordings,
     IExamService exams,
     ITextToSpeech voice,
-    IVoskSpeechRecognition speechRecognition,
     IHubContext<InterviewHub, IInterviewClient> monitor,
     ILogger<InterviewApiModel> logger) : PageModel
 {
@@ -37,7 +36,6 @@ public sealed class InterviewApiModel(
     /// </summary>
     public bool ServerReadsQuestions => voice.IsAvailable(State.Language, State.Speech?.VoiceFor(State.Language));
     public bool QuestionTextSentToOnlineSpeech => voice.UsesOnlineService(State.Language, State.Speech?.VoiceFor(State.Language));
-    public bool ServerRecognizesAnswers => speechRecognition.IsAvailable(State.Language);
     private string Email => User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty;
     private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
     private bool IsAdmin => User.IsInRole(AppRoles.Admin);
