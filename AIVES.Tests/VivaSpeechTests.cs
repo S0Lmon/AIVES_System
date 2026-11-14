@@ -232,14 +232,16 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
             }
         }
 
-        public Task<InterviewStateDto> GetStateAsync(int candidateId, string email, CancellationToken cancellationToken = default)
+        public Task<InterviewStateDto> GetStateAsync(int candidateId, string email, CancellationToken cancellationToken = default,
+            string? adminUserId = null, bool isAdmin = false)
         {
             Check(candidateId, email);
             lock (gate)
                 return Task.FromResult(State());
         }
 
-        public Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false, CancellationToken cancellationToken = default)
+        public Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false,
+            CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false)
         {
             Check(candidateId, email);
             lock (gate)
@@ -253,7 +255,8 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
             }
         }
 
-        public Task<InterviewStateDto> AnswerAsync(int candidateId, string email, InterviewAnswerInput input, CancellationToken cancellationToken = default)
+        public Task<InterviewStateDto> AnswerAsync(int candidateId, string email, InterviewAnswerInput input,
+            CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false)
         {
             Check(candidateId, email);
             lock (gate)
@@ -278,7 +281,7 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 
         private InterviewStateDto State() =>
             new(CandidateId, "Kỳ thi thử", AppLanguage.Vi, status, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(30), current, DateTime.UtcNow,
-                Phrases: ["Razor Pages"]);
+                Speech: new SpeechSettingsDto(AppLanguage.Vi, [AppLanguage.Vi], 1, null, null, 90));
 
         private static void Check(int candidateId, string email)
         {
@@ -293,6 +296,8 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
             Task.FromResult<IReadOnlyList<StudentExamDto>>(string.Equals(email, Student, StringComparison.OrdinalIgnoreCase)
                 ? [new StudentExamDto(ExamId, "Kỳ thi thử", "PRN222", null, 1, 1, DateTime.UtcNow, DateTime.UtcNow.AddHours(1), 2, 2, CandidateId)]
                 : []);
+        public Task<int> CreateAdminTestCandidateAsync(int examId, int sourceCandidateOrder, ExamActor actor,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<ExamDetailsDto?> GetAsync(int id, ExamActor actor, CancellationToken cancellationToken = default) =>
             Task.FromResult<ExamDetailsDto?>(id == ExamId && actor.UserId == "u-lecturer"
@@ -315,10 +320,11 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
 
     internal sealed class FakeRecordingService : IRecordingService
     {
-        public Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType,
+            CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false) => Task.CompletedTask;
         public Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default) => Task.FromResult<RecordingContent?>(null);
         public Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
+            CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false) => Task.CompletedTask;
         public Task<IReadOnlyList<SessionSegmentDto>> ListSessionAsync(int candidateId, ExamActor actor, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<SessionSegmentDto>>([]);
         public Task<RecordingContent?> OpenSessionAsync(int candidateId, long segment, ExamActor actor, bool logPlayback = true, CancellationToken cancellationToken = default) =>
@@ -328,20 +334,20 @@ public sealed class InterviewHubTests : IClassFixture<InterviewHubTests.VivaApp>
     }
 }
 
-/// <summary>With VieNeu switched on, the viva page plays the question from the server instead of the browser voice.</summary>
-public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.VieNeuApp>
+/// <summary>When a server voice is available, the viva page plays the question from the server.</summary>
+public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudioTests.ServerVoiceApp>
 {
     private const string Student = "sinhvien@fpt.edu.vn";
-    private readonly VieNeuApp app;
+    private readonly ServerVoiceApp app;
 
-    public ServerQuestionAudioTests(VieNeuApp app)
+    public ServerQuestionAudioTests(ServerVoiceApp app)
     {
         this.app = app;
         app.Interviews.Reset();
     }
 
     [Fact]
-    public async Task TheVivaPageReadsTheOpenQuestionFromTheServerOnly()
+    public async Task TheVivaPageOffersServerAudioForAGeminiVoiceWhenAvailable()
     {
         using var student = Browser("u-student", Student);
         var page = await student.GetStringAsync("/Interview/11");
@@ -369,7 +375,7 @@ public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudio
         return client;
     }
 
-    public sealed class VieNeuApp : RazorRealtimeTests.RazorApp
+    public sealed class ServerVoiceApp : RazorRealtimeTests.RazorApp
     {
         public InterviewHubTests.FakeInterviewService Interviews { get; } = new();
         public FakeVoice Voice { get; } = new();
@@ -387,11 +393,6 @@ public sealed class ServerQuestionAudioTests : IClassFixture<ServerQuestionAudio
             // The page renders an antiforgery token; keep its keys in memory, as this host has no database.
             services.RemoveAll<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>();
             services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
-            services.Configure<SpeechOptions>(options =>
-            {
-                options.TtsProvider = SpeechProvider.VieNeu;
-                options.VieNeuUrl = "http://vieneu.invalid:8000/";
-            });
         }
     }
 

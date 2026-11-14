@@ -40,7 +40,9 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             candidate.Attempt?.RecordingConsentAtUtc,
             exam.SubjectId,
             candidate.StatusOverride,
-            exam.Strategy);
+            exam.Strategy,
+            candidate.IsAdminTest,
+            candidate.AdminTestOwnerId);
     }
 
     /// <summary>Candidates this many places before or after count as sitting close by.</summary>
@@ -60,7 +62,8 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             return null;
 
         var assigned = await context.ExamCandidateQuestions.AsNoTracking()
-            .Where(item => item.Candidate.ExamId == candidate.ExamId && item.ExamCandidateId != candidateId && item.QuestionId != null)
+            .Where(item => item.Candidate.ExamId == candidate.ExamId && !item.Candidate.IsAdminTest
+                && item.ExamCandidateId != candidateId && item.QuestionId != null)
             .Select(item => new { QuestionId = item.QuestionId!.Value, item.Candidate.Order })
             .ToListAsync(cancellationToken);
         var neighbours = assigned.Where(item => Math.Abs(item.Order - candidate.Order) <= NeighbourWindow).Select(item => item.QuestionId).ToHashSet();
@@ -90,7 +93,8 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
         return true;
     }
 
-    public async Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false, CancellationToken cancellationToken = default)
+    public async Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false,
+        CancellationToken cancellationToken = default)
     {
         if (await context.ExamAttempts.AnyAsync(attempt => attempt.ExamCandidateId == candidateId, cancellationToken))
             return false;
@@ -169,6 +173,7 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
     {
         var rows = await context.ExamAttempts.AsNoTracking()
             .Where(attempt => attempt.Status == InterviewStatus.InProgress
+                && !attempt.Candidate.IsAdminTest
                 && (attempt.Candidate.SlotStartsAtUtc ?? attempt.Candidate.Exam.StartsAtUtc.AddMinutes(attempt.Candidate.Exam.SlotMinutes * (attempt.Candidate.Order - 1)))
                     .AddMinutes(attempt.Candidate.Exam.SlotMinutes) < cutoffUtc)
             .OrderBy(attempt => attempt.Id)
@@ -186,6 +191,7 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
             {
                 question.Content,
                 question.Order,
+                question.Candidate.IsAdminTest,
                 question.Candidate.Exam.Language,
                 question.Candidate.StatusOverride,
                 Finished = question.Candidate.Attempt != null && question.Candidate.Attempt.Status == InterviewStatus.Completed,
@@ -193,7 +199,7 @@ public sealed class InterviewRepository(ApplicationDbContext context) : IIntervi
                     ?? question.Candidate.Exam.StartsAtUtc.AddMinutes(question.Candidate.Exam.SlotMinutes * (question.Candidate.Order - 1)),
                 question.Candidate.Exam.SlotMinutes
             })
-            .Where(row => !row.Finished
+            .Where(row => !row.IsAdminTest && !row.Finished
                 && row.StatusOverride != CandidateStatus.Absent && row.StatusOverride != CandidateStatus.Cancelled
                 && row.StartsAt < beforeUtc && row.StartsAt.AddMinutes(row.SlotMinutes) > nowUtc)
             .OrderBy(row => row.StartsAt).ThenBy(row => row.Order)

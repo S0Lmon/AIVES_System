@@ -13,6 +13,8 @@ public interface IExamRepository
     Task<IReadOnlyList<ExamSummaryDto>> ListAsync(string? createdById, CancellationToken cancellationToken = default);
     Task<ExamDetailsDto?> GetAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default);
+    Task<int> CreateAdminTestCandidateAsync(int examId, int sourceCandidateOrder, string adminUserId, DateTime slotStartsAtUtc,
+        CancellationToken cancellationToken = default);
     /// <summary>Moves one candidate's slot to a new start time (manual adjustment, plan §6).</summary>
     Task UpdateSlotAsync(int examId, int order, DateTime slotStartsAtUtc, CancellationToken cancellationToken = default);
     /// <summary>Regenerates every slot from the exam's schedule settings, in sitting order (index 0 is candidate #1).</summary>

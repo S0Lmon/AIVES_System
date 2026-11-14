@@ -154,7 +154,8 @@ public sealed record ExamCandidateDto(
     /// <summary>
     /// Where the candidate stands at <paramref name="nowUtc"/> (plan §5). A lecturer's override wins,
     /// then the attempt, then the clock: their slot open means Waiting, a passed slot without an
-    /// attempt means Absent, anything earlier means Scheduled.
+    /// attempt means Absent, anything earlier means Scheduled. The slot counts as open from
+    /// <see cref="ExamSchedule.JoinOpensAt"/>, because the candidate may already sit the viva then.
     /// </summary>
     public CandidateStatus StatusAt(DateTime nowUtc)
     {
@@ -166,7 +167,7 @@ public sealed record ExamCandidateDto(
             return CandidateStatus.Completed;
         if (nowUtc >= EndsAtUtc)
             return CandidateStatus.Absent;
-        if (nowUtc >= StartsAtUtc)
+        if (nowUtc >= ExamSchedule.JoinOpensAt(StartsAtUtc))
             return CandidateStatus.Waiting;
         return CandidateStatus.Scheduled;
     }

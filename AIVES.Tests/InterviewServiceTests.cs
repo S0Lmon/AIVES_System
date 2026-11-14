@@ -40,15 +40,36 @@ public sealed class InterviewServiceTests
 
     private sealed record Harness(InterviewService Service, ApplicationDbContext Db, FixedClock Clock, ScriptedGenerator Ai, int CandidateId);
 
-    private static Harness Build(int followUpsPerQuestion = 2, int followUpsTotal = 3, int questions = 2, int aiTimeoutSeconds = 12)
+    private static Harness Build(int followUpsPerQuestion = 2, int followUpsTotal = 3, int questions = 2, int aiTimeoutSeconds = 12,
+        bool adminTest = false)
     {
         var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options);
-        var candidate = new ExamCandidate { Order = 1, Email = Email };
+        var candidate = new ExamCandidate
+        {
+            Order = adminTest ? -1 : 1,
+            Email = adminTest ? "admin-test@aives.local" : Email,
+            IsAdminTest = adminTest,
+            AdminTestOwnerId = adminTest ? "admin-id" : null
+        };
         for (var i = 1; i <= questions; i++)
             candidate.Questions.Add(new ExamCandidateQuestion { Order = i, Content = $"Main question {i}?", ExpectedAnswer = $"Expected {i}", BloomLevelName = "Understand" });
+        var candidates = new List<ExamCandidate> { candidate };
+        if (adminTest)
+        {
+            var student = new ExamCandidate { Order = 1, Email = Email };
+            foreach (var question in candidate.Questions)
+                student.Questions.Add(new ExamCandidateQuestion
+                {
+                    Order = question.Order,
+                    Content = question.Content,
+                    ExpectedAnswer = question.ExpectedAnswer,
+                    BloomLevelName = question.BloomLevelName
+                });
+            candidates.Add(student);
+        }
         db.Exams.Add(new Exam
         {
             Title = "Viva",
@@ -61,7 +82,7 @@ public sealed class InterviewServiceTests
             AnswerTimeLimitSeconds = 60,
             Language = "vi-VN",
             CreatedById = "lecturer",
-            Candidates = { candidate }
+            Candidates = candidates
         });
         db.SaveChanges();
         var clock = new FixedClock(Now);
@@ -88,7 +109,7 @@ public sealed class InterviewServiceTests
     public async Task TheVivaCanOnlyStartDuringTheSlot()
     {
         var h = Build();
-        h.Clock.Current = Now.AddMinutes(-5);
+        h.Clock.Current = Now.AddMinutes(-7);   // earlier than the five-minute join window before the slot
         await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
         h.Clock.Current = Now.AddMinutes(40);
         await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
@@ -100,6 +121,83 @@ public sealed class InterviewServiceTests
         // Starting again resumes the same question instead of creating a second attempt.
         Assert.Equal(state.CurrentTurn.TurnId, (await h.Service.StartAsync(h.CandidateId, Email)).CurrentTurn!.TurnId);
         Assert.Single(h.Db.ExamAttempts);
+    }
+
+    [Fact]
+    public async Task TheVivaOpensFiveMinutesBeforeTheSlot()
+    {
+        var h = Build();
+        var slotStart = Now.AddMinutes(-1);   // the slot the fixture stored
+        h.Clock.Current = ExamSchedule.JoinOpensAt(slotStart).AddSeconds(-1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
+
+        h.Clock.Current = ExamSchedule.JoinOpensAt(slotStart);
+        var state = await h.Service.StartAsync(h.CandidateId, Email);
+        Assert.Equal(InterviewStatus.InProgress, state.Status);
+        Assert.Equal(slotStart, state.SlotStartsAtUtc);
+        Assert.Equal("Main question 1?", state.CurrentTurn!.QuestionText);
+    }
+
+    [Fact]
+    public async Task AdminTestRunsBypassTheSlotWithoutChangingTheStudentAttempt()
+    {
+        var h = Build(adminTest: true);
+        h.Clock.Current = Now.AddHours(1);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => h.Service.GetStateAsync(h.CandidateId, Email));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => h.Service.GetStateAsync(h.CandidateId, Email, default, "other-admin", true));
+
+        var state = await h.Service.StartAsync(h.CandidateId, Email, cancellationToken: default, adminUserId: "admin-id", isAdmin: true);
+        Assert.True(state.AdminTestMode);
+        Assert.Equal(InterviewStatus.InProgress, state.Status);
+
+        state = await h.Service.AnswerAsync(h.CandidateId, Email,
+            new InterviewAnswerInput(state.CurrentTurn!.TurnId, "Answer one", AnswerInputMode.Typed),
+            default, "admin-id", true);
+        state = await h.Service.AnswerAsync(h.CandidateId, Email,
+            new InterviewAnswerInput(state.CurrentTurn!.TurnId, "Answer two", AnswerInputMode.Typed),
+            default, "admin-id", true);
+
+        Assert.Equal(InterviewStatus.Completed, state.Status);
+        Assert.True(state.AdminTestMode);
+        Assert.Null(h.Db.ExamCandidates.Single(candidate => !candidate.IsAdminTest).Attempt);
+        Assert.Single(await new GradingRepository(h.Db).GetExamCandidatesAsync(1));
+        var exam = await new ExamRepository(h.Db).GetAsync(1);
+        Assert.NotNull(exam);
+        Assert.Single(exam.Candidates);
+    }
+
+    [Fact]
+    public async Task AdminTestCandidateCopiesOnlyTheSelectedSetAndStaysOutOfExamAndGradingLists()
+    {
+        var h = Build(questions: 1);
+        var examId = h.Db.Exams.Single().Id;
+
+        var testCandidateId = await new ExamRepository(h.Db).CreateAdminTestCandidateAsync(examId, 1, "admin-id", Now.AddHours(1));
+
+        var context = await new InterviewRepository(h.Db).GetContextAsync(testCandidateId);
+        Assert.NotNull(context);
+        Assert.True(context.IsAdminTest);
+        Assert.Equal("admin-id", context.AdminTestOwnerId);
+        Assert.Equal("Main question 1?", Assert.Single(context.Questions).Content);
+        Assert.Null(h.Db.ExamCandidates.Single(candidate => candidate.Email == Email).Attempt);
+
+        var exam = await new ExamRepository(h.Db).GetAsync(examId);
+        Assert.NotNull(exam);
+        Assert.Single(exam.Candidates);
+        Assert.Single(await new GradingRepository(h.Db).GetExamCandidatesAsync(examId));
+        Assert.Empty(await new ExamRepository(h.Db).ListForCandidateAsync("admin-test@aives.local"));
+    }
+
+    [Fact]
+    public void AdminTestCandidateMigrationIsDiscoverable()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlServer("Server=localhost;Database=Aives;Trusted_Connection=True;TrustServerCertificate=True")
+            .Options;
+        using var db = new ApplicationDbContext(options);
+
+        Assert.Contains("20261113190000_AdminInterviewTestCandidates", db.Database.GetMigrations());
     }
 
     [Fact]

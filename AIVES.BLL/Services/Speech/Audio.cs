@@ -5,7 +5,7 @@ namespace AIVES.BLL.Services.Speech;
 /// <summary>Writes synthesised speech as a WAV file.</summary>
 public static class Audio
 {
-    /// <summary>Little-endian 16-bit PCM bytes (as VieNeu returns them) to floats in [-1, 1].</summary>
+    /// <summary>Converts little-endian 16-bit PCM bytes to floats in [-1, 1].</summary>
     public static float[] FromPcm16(ReadOnlySpan<byte> bytes)
     {
         var samples = new float[bytes.Length / 2];

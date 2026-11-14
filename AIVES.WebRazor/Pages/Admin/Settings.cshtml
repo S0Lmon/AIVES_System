@@ -18,47 +18,71 @@
     <select class="form-select mb-3" asp-for="Input.DefaultLanguage" style="max-width:260px">
         <option value="@AppLanguage.Vi">Tiếng Việt</option><option value="@AppLanguage.En">English</option>
     </select>
-    <h2 class="h6 mt-4">@L10n.T("Text-to-speech")</h2>
+    <h2 class="h6 mt-4">@L10n.T("Text-to-speech voices")</h2>
+    <p class="form-text">@L10n.T("Choose an installed System.Speech voice or one of four Edge TTS online voices. Edge TTS requires Python and an internet connection; selected question text is sent to Microsoft's online speech service. Edge TTS is an unofficial client and may stop working if Microsoft changes its service.")</p>
+    @if (Model.EdgeTtsAvailable)
+    {
+        <div class="alert alert-success py-2">@L10n.T("Edge TTS is installed and ready.")</div>
+    }
+    else
+    {
+        <div class="alert alert-warning py-2">@L10n.T("Edge TTS is not installed. Run scripts/install-edge-tts.ps1 on the application server, then restart AIVES.")</div>
+    }
     <label class="form-label" asp-for="Input.SpeechRate">@L10n.T("Speaking rate (0.6 – 1.4, 1 is normal)")</label>
     <input class="form-control mb-3" asp-for="Input.SpeechRate" type="number" step="0.05" min="0.6" max="1.4" style="max-width:160px" />
     <div class="row g-3">
-        <div class="col-md-6"><label class="form-label" asp-for="Input.VietnameseVoice">@L10n.T("Preferred Vietnamese voice (optional)")</label><input class="form-control" asp-for="Input.VietnameseVoice" list="voiceList" placeholder="Microsoft HoaiMy Online (Natural)" /></div>
-        <div class="col-md-6"><label class="form-label" asp-for="Input.EnglishVoice">@L10n.T("Preferred English voice (optional)")</label><input class="form-control" asp-for="Input.EnglishVoice" list="voiceList" placeholder="Google US English" /></div>
+        <div class="col-md-6">
+            <label class="form-label" asp-for="Input.VietnameseVoice">@L10n.T("Vietnamese TTS voice")</label>
+            <select class="form-select" asp-for="Input.VietnameseVoice"><option value="">@L10n.T("Prefer a female voice when available")</option>@foreach (var voice in Model.VietnameseVoices) { <option value="@voice.Value">@voice.Label</option> }</select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" asp-for="Input.EnglishVoice">@L10n.T("English TTS voice")</label>
+            <select class="form-select" asp-for="Input.EnglishVoice"><option value="">@L10n.T("Prefer a female voice when available")</option>@foreach (var voice in Model.EnglishVoices) { <option value="@voice.Value">@voice.Label</option> }</select>
+        </div>
     </div>
-    <datalist id="voiceList"></datalist>
-    <div class="form-text mb-3">@L10n.T("Voices come from the student's browser. When the named voice is missing, the best voice for the language is used. The list offers the voices of this browser.")</div>
-    <button type="button" class="btn btn-sm btn-light mb-3" id="testVoice">@L10n.T("Listen to a sample")</button>
+    <h2 class="h6 mt-4">@L10n.T("Speech sandbox")</h2>
+    <p class="form-text">@L10n.T("Test each language using the selected voice and speaking rate. Edge TTS sends the sample text online. Browser speech recognition may send microphone audio to the browser's speech service.")</p>
+    <div id="speechSandbox" data-tts-url="@Url.Page("/Admin/Settings", "TestVoice")"
+         data-generating="@L10n.T("Generating sample…")" data-tts-failed="@L10n.T("TTS test failed.")"
+         data-playback-failed="@L10n.T("The sample could not be played in this browser.")"
+         data-playing="@L10n.T("Playing sample…")" data-finished="@L10n.T("Sample finished.")"
+         data-unsupported="@L10n.T("This browser does not support speech recognition.")"
+         data-listening="@L10n.T("Listening. Speak a short phrase; stop when finished.")"
+         data-stt-failed="@L10n.T("Could not start the speech recognition test.")"
+         data-stopped="@L10n.T("Microphone test stopped.")">
+        <div class="row g-3">
+            @foreach (var language in new[]
+            {
+                (Code: AppLanguage.Vi, Name: "Tiếng Việt", Voices: Model.VietnameseVoices),
+                (Code: AppLanguage.En, Name: "English", Voices: Model.EnglishVoices)
+            })
+            {
+                <div class="col-md-6">
+                    <section class="panel p-3 h-100" data-speech-language="@language.Code.ToSpeechLocale()">
+                        <h3 class="h6">@language.Name (@language.Code.ToSpeechLocale())</h3>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-light" data-test-tts disabled="@(language.Voices.Count == 0)">@L10n.T("Play TTS sample")</button>
+                            <button type="button" class="btn btn-sm btn-primary" data-start-stt>@L10n.T("Test STT with microphone")</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-stop-stt disabled>@L10n.T("Stop microphone test")</button>
+                        </div>
+                        @if (language.Voices.Count == 0)
+                        {
+                            <p class="small text-danger mb-2">@L10n.T("No matching System.Speech voice is installed on this server.")</p>
+                        }
+                        <p class="small mb-1" data-tts-status aria-live="polite"></p>
+                        <p class="small mb-1" data-stt-status aria-live="polite"></p>
+                        <textarea class="form-control" rows="3" readonly data-stt-result aria-label="@L10n.Format("{0} speech recognition test result", language.Name)"></textarea>
+                    </section>
+                </div>
+            }
+        </div>
+    </div>
     <h2 class="h6 mt-4">@L10n.T("Recordings")</h2>
     <label class="form-label" asp-for="Input.RecordingRetentionDays">@L10n.T("Delete recordings after (days)")</label>
     <input class="form-control mb-1" asp-for="Input.RecordingRetentionDays" type="number" min="7" max="3650" style="max-width:160px" />
     <div class="form-text mb-3">@L10n.T("Recordings are encrypted at rest, can only be played by the exam's lecturer and administrators (each playback is logged), and are deleted automatically after this period.")</div>
     <button type="submit" class="btn btn-primary">@L10n.T("Save")</button>
 </form>
-<script>
-    (function () {
-        if (!window.speechSynthesis) return;
-        function fill() {
-            var list = document.getElementById('voiceList');
-            list.innerHTML = '';
-            speechSynthesis.getVoices().forEach(function (voice) {
-                var option = document.createElement('option');
-                option.value = voice.name;
-                option.label = voice.lang;
-                list.appendChild(option);
-            });
-        }
-        fill();
-        speechSynthesis.onvoiceschanged = fill;
-        document.getElementById('testVoice').addEventListener('click', function () {
-            var vi = document.getElementById('Input_DefaultLanguage').value === 'Vi';
-            var utterance = new SpeechSynthesisUtterance(vi ? 'Xin chào, tôi là giám khảo ảo. Câu hỏi thứ nhất.' : 'Hello, I am the virtual examiner. Question one.');
-            utterance.lang = vi ? 'vi-VN' : 'en-US';
-            utterance.rate = parseFloat(document.getElementById('Input_SpeechRate').value) || 1;
-            var name = document.getElementById(vi ? 'Input_VietnameseVoice' : 'Input_EnglishVoice').value;
-            var voice = speechSynthesis.getVoices().find(function (item) { return item.name === name; });
-            if (voice) utterance.voice = voice;
-            speechSynthesis.cancel();
-            speechSynthesis.speak(utterance);
-        });
-    })();
-</script>
+@section Scripts {
+    <script src="~/js/admin-speech-sandbox.js" asp-append-version="true"></script>
+}

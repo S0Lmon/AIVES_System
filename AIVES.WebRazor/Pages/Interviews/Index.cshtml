@@ -8,7 +8,7 @@
     <div>
         <span class="page-kicker">@L10n.T("Viva with the AI examiner")</span>
         <h1>@L10n.T("My exam room")</h1>
-        <p>@L10n.T("The AI examiner reads each question and you answer by voice. The room opens during your time slot.")</p>
+        <p>@L10n.Format("The AI examiner reads each question and you answer by voice. The room opens {0} minutes before your time slot.", ExamSchedule.JoinEarlyMinutes)</p>
     </div>
 </div>
 <section class="panel">
@@ -34,7 +34,7 @@
                                     case InterviewStatus.Completed: <span class="status-badge active">@L10n.T("Completed")</span>; break;
                                     case InterviewStatus.InProgress: <span class="status-badge active">@L10n.T("In progress")</span>; break;
                                     default:
-                                        if (Model.NowUtc < exam.StartsAtUtc) { <span class="status-badge inactive">@L10n.T("Not open yet")</span> }
+                                        if (Model.NowUtc < ExamSchedule.JoinOpensAt(exam.StartsAtUtc)) { <span class="status-badge inactive">@L10n.T("Not open yet")</span> }
                                         else if (Model.NowUtc >= exam.EndsAtUtc) { <span class="status-badge inactive">@L10n.T("Closed")</span> }
                                         else { <span class="badge-soft">@L10n.T("Open now")</span> }
                                         break;

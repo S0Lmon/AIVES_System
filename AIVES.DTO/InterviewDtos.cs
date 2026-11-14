@@ -66,7 +66,8 @@ public sealed record InterviewStateDto(
     RecordingMode Recording = RecordingMode.None,
     bool RecordingConsentGiven = false,
     SpeechSettingsDto? Speech = null,
-    IReadOnlyList<string>? Phrases = null);
+    bool AdminTestMode = false,
+    int ExamId = 0);
 
 /// <summary>What is recorded of each answer as evidence.</summary>
 public enum RecordingMode
@@ -138,9 +139,13 @@ public sealed record InterviewContext(
     RecordingMode Recording = RecordingMode.None,
     DateTime? RecordingConsentAtUtc = null,
     int? SubjectId = null,
-    /// <summary>Lecturer-set status (absent, cancelled, unscheduled); blocks starting the viva.</summary>
+    /// <summary>Lecturer-set status (absent, cancelled, unscheduled); blocks starting a candidate viva.</summary>
     CandidateStatus? StatusOverride = null,
-    QuestionSelectionStrategy Strategy = QuestionSelectionStrategy.Balanced);
+    QuestionSelectionStrategy Strategy = QuestionSelectionStrategy.Balanced,
+    /// <summary>True for an isolated administrator test copy of a candidate's assigned questions.</summary>
+    bool IsAdminTest = false,
+    /// <summary>Identity ID of the administrator who owns a test copy.</summary>
+    string? AdminTestOwnerId = null);
 
 /// <summary>
 /// What adaptive selection may choose from for one candidate: the exam's question pool, the order

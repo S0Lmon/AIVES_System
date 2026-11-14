@@ -370,9 +370,11 @@ namespace AIVES.DAL.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
+                entity.Property(e => e.AdminTestOwnerId).HasMaxLength(450);
                 entity.HasIndex(e => new { e.ExamId, e.Email }).IsUnique();
                 entity.HasIndex(e => new { e.ExamId, e.Order }).IsUnique();
                 entity.HasIndex(e => e.Email);
+                entity.HasIndex(e => new { e.IsAdminTest, e.AdminTestOwnerId });
                 entity.HasOne(e => e.Exam)
                     .WithMany(e => e.Candidates)
                     .HasForeignKey(e => e.ExamId)

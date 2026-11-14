@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace AIVES.BLL.Services.Interview;
 
 /// <summary>
-/// Corrects how browser speech recognition writes subject terms. Vietnamese recognisers spell
+/// Corrects how speech recognition writes subject terms. Vietnamese recognisers spell
 /// English terms phonetically ("ây pi ai" for API, "ét kiu eo" for SQL), which both the examiner
 /// prompt and the lecturer then misread. Each glossary term lists such spoken forms; they are
 /// replaced as whole words, ignoring case, and the term itself is restored to its canonical casing.
@@ -33,8 +33,4 @@ public static class TranscriptNormalizer
         }
         return text;
     }
-
-    /// <summary>Terms to bias the recogniser towards, for browsers that support phrase hints.</summary>
-    public static IReadOnlyList<string> Phrases(IReadOnlyList<GlossaryTermDto> glossary) =>
-        glossary.Select(term => term.Term).Distinct(StringComparer.OrdinalIgnoreCase).Take(200).ToList();
 }

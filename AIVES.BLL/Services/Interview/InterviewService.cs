@@ -24,59 +24,67 @@ public sealed class InterviewService(
     private TimeSpan Grace => TimeSpan.FromSeconds(Math.Max(0, options.Value.AnswerGraceSeconds));
     private TimeSpan RecoveryDelay => TimeSpan.FromSeconds(Math.Max(1, options.Value.AiTimeoutSeconds) + 10);
 
-    public async Task<InterviewStateDto> GetStateAsync(int candidateId, string email, CancellationToken cancellationToken = default)
+    public async Task<InterviewStateDto> GetStateAsync(int candidateId, string email, CancellationToken cancellationToken = default,
+        string? adminUserId = null, bool isAdmin = false)
     {
-        var context = await LoadAsync(candidateId, email, cancellationToken);
+        var context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
         if (context.Record is { Status: InterviewStatus.InProgress } record)
         {
             var last = record.Turns[^1];
-            if (Now >= context.SlotEndsAtUtc + Grace)
+            if (!context.IsAdminTest && Now >= context.SlotEndsAtUtc + Grace)
             {
                 // Close the slot first, including answers whose AI request was interrupted.
                 // SaveAnswerAsync only fills an unanswered turn, preserving submitted evidence.
                 await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
                 if (await interviews.AdvanceAsync(last.TurnId, last.Decision ?? FollowUpReason.LimitReached, null, Now, cancellationToken))
                     await AuditCompletedAsync(context, "slot ended", cancellationToken);
-                context = await LoadAsync(candidateId, email, cancellationToken);
+                context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
             }
             else if (last.AnsweredAtUtc is { } answeredAt && Now - answeredAt > RecoveryDelay)
             {
                 // Answered but never advanced (the request died mid-way): move on without a follow-up.
                 // Waiting past the AI timeout first keeps this from racing an answer still being processed.
                 var decision = last.Decision ?? FollowUpReason.AiUnavailable;
-                var next = Now >= context.SlotEndsAtUtc ? null : await NextMainTurnAsync(context, record, last, decision, last.TimedOut, cancellationToken);
+                var next = context.IsAdminTest || Now < context.SlotEndsAtUtc
+                    ? await NextMainTurnAsync(context, record, last, decision, last.TimedOut, cancellationToken)
+                    : null;
                 if (await interviews.AdvanceAsync(last.TurnId, decision, next, Now, cancellationToken))
                     await AuditCompletedAsync(context, "recovered interrupted answer", cancellationToken);
-                context = await LoadAsync(candidateId, email, cancellationToken);
+                context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
             }
             else if (last.AnsweredAtUtc is null && Now > last.AskedAtUtc.AddSeconds(context.AnswerTimeLimitSeconds) + Grace)
             {
                 // Enforce the answer timer on the server too, even if the browser was suspended.
                 await interviews.SaveAnswerAsync(last.TurnId, string.Empty, null, Now, timedOut: true, cancellationToken);
-                var next = Now >= context.SlotEndsAtUtc ? null : await NextMainTurnAsync(context, record, last, FollowUpReason.NoAnswer, true, cancellationToken);
+                var next = context.IsAdminTest || Now < context.SlotEndsAtUtc
+                    ? await NextMainTurnAsync(context, record, last, FollowUpReason.NoAnswer, true, cancellationToken)
+                    : null;
                 if (await interviews.AdvanceAsync(last.TurnId, FollowUpReason.NoAnswer, next, Now, cancellationToken))
                     await AuditCompletedAsync(context, "answer time expired", cancellationToken);
-                context = await LoadAsync(candidateId, email, cancellationToken);
+                context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
             }
         }
         return await ToStateAsync(context, cancellationToken);
     }
 
-    public async Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false, CancellationToken cancellationToken = default)
+    public async Task<InterviewStateDto> StartAsync(int candidateId, string email, bool recordingConsent = false,
+        CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false)
     {
-        var context = await LoadAsync(candidateId, email, cancellationToken);
+        var context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
         if (context.Record is not null)
-            return await GetStateAsync(candidateId, email, cancellationToken);
+            return await GetStateAsync(candidateId, email, cancellationToken, adminUserId, isAdmin);
+        var adminTest = context.IsAdminTest;
         // A lecturer-set status (plan §5) decides before the clock does; "requires review" does not block.
-        if (context.StatusOverride == CandidateStatus.NotScheduled)
+        if (!adminTest && context.StatusOverride == CandidateStatus.NotScheduled)
             throw new InvalidOperationException(L10n.T("You have no slot for this exam. Please contact your lecturer."));
-        if (context.StatusOverride == CandidateStatus.Absent)
+        if (!adminTest && context.StatusOverride == CandidateStatus.Absent)
             throw new InvalidOperationException(L10n.T("You have been marked absent for this exam. Please contact your lecturer."));
-        if (context.StatusOverride == CandidateStatus.Cancelled)
+        if (!adminTest && context.StatusOverride == CandidateStatus.Cancelled)
             throw new InvalidOperationException(L10n.T("Your participation in this exam was cancelled. Please contact your lecturer."));
-        if (Now < context.SlotStartsAtUtc)
+        // The candidate may open the viva a few minutes early to check their setup; the slot end stays fixed.
+        if (!adminTest && Now < ExamSchedule.JoinOpensAt(context.SlotStartsAtUtc))
             throw new InvalidOperationException(L10n.T("Your exam slot has not started yet."));
-        if (Now >= context.SlotEndsAtUtc)
+        if (!adminTest && Now >= context.SlotEndsAtUtc)
             throw new InvalidOperationException(L10n.T("Your exam slot has ended."));
         if (context.Questions.Count == 0)
             throw new InvalidOperationException(L10n.T("No questions were assigned to you. Please contact your lecturer."));
@@ -87,24 +95,30 @@ public sealed class InterviewService(
         var consent = context.Recording != RecordingMode.None && recordingConsent;
         if (await interviews.StartAsync(candidateId, Now, first, consent, cancellationToken))
         {
-            logger.LogInformation("Candidate {CandidateId} started the interview", candidateId);
-            await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewStarted, null, context.CandidateEmail, context.ExamId, candidateId,
-                consent ? $"Agreed to {context.Recording} recording" : null), cancellationToken);
+            logger.LogInformation("{Actor} started the interview for candidate slot {CandidateId}",
+                adminTest ? "Administrator test" : "Candidate", candidateId);
+            await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewStarted,
+                adminTest ? context.AdminTestOwnerId : null, adminTest ? null : context.CandidateEmail, context.ExamId, candidateId,
+                adminTest
+                    ? $"Administrator test run{(consent ? $"; agreed to {context.Recording} recording" : string.Empty)}"
+                    : consent ? $"Agreed to {context.Recording} recording" : null), cancellationToken);
         }
-        return await GetStateAsync(candidateId, email, cancellationToken);
+        return await GetStateAsync(candidateId, email, cancellationToken, adminUserId, isAdmin);
     }
 
-    public async Task<InterviewStateDto> AnswerAsync(int candidateId, string email, InterviewAnswerInput input, CancellationToken cancellationToken = default)
+    public async Task<InterviewStateDto> AnswerAsync(int candidateId, string email, InterviewAnswerInput input, CancellationToken cancellationToken = default,
+        string? adminUserId = null, bool isAdmin = false)
     {
-        var context = await LoadAsync(candidateId, email, cancellationToken);
+        var context = await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken);
         if (context.Record is not { Status: InterviewStatus.InProgress } record)
             return await ToStateAsync(context, cancellationToken);
         var current = record.Turns[^1];
         if (current.TurnId != input.TurnId || current.AnsweredAtUtc is not null)
-            return await GetStateAsync(candidateId, email, cancellationToken);
+            return await GetStateAsync(candidateId, email, cancellationToken, adminUserId, isAdmin);
 
-        if (Now >= context.SlotEndsAtUtc + Grace)
-            return await GetStateAsync(candidateId, email, cancellationToken);
+        var adminTest = context.IsAdminTest;
+        if (!adminTest && Now >= context.SlotEndsAtUtc + Grace)
+            return await GetStateAsync(candidateId, email, cancellationToken, adminUserId, isAdmin);
         if (!Enum.IsDefined(input.InputMode))
             throw new ArgumentException(L10n.T("Choose how to answer the question."));
 
@@ -122,13 +136,13 @@ public sealed class InterviewService(
         var now = Now;
         var timedOut = now > current.AskedAtUtc.AddSeconds(context.AnswerTimeLimitSeconds) + Grace;
         if (!await interviews.SaveAnswerAsync(current.TurnId, transcript, input.InputMode, now, timedOut, cancellationToken, metrics))
-            return await GetStateAsync(candidateId, email, cancellationToken);
+            return await GetStateAsync(candidateId, email, cancellationToken, adminUserId, isAdmin);
 
         var stopwatch = Stopwatch.StartNew();
         var (decision, next) = await DecideAsync(context, record, current, transcript, now, timedOut, terms, cancellationToken);
         // An AI call can cross the slot boundary. Never issue a fresh question after it ends,
         // and start the next answer's timer after the AI finishes, not before the call.
-        if (Now >= context.SlotEndsAtUtc)
+        if (!context.IsAdminTest && Now >= context.SlotEndsAtUtc)
             (decision, next) = (FollowUpReason.LimitReached, null);
         else if (next is not null)
             next = next with { AskedAtUtc = Now };
@@ -137,11 +151,13 @@ public sealed class InterviewService(
             await AuditCompletedAsync(context, "all questions asked", cancellationToken);
         logger.LogInformation("Candidate {CandidateId} answered turn {TurnId}: {Decision} in {Latency} ms, next {Next}", candidateId, current.TurnId, decision,
             latency, next is null ? "end" : next.Kind.ToString());
-        return await ToStateAsync(await LoadAsync(candidateId, email, cancellationToken), cancellationToken);
+        return await ToStateAsync(await LoadAsync(candidateId, email, adminUserId, isAdmin, cancellationToken), cancellationToken);
     }
 
     private Task AuditCompletedAsync(InterviewContext context, string reason, CancellationToken cancellationToken) =>
-        audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewCompleted, null, context.CandidateEmail, context.ExamId, context.CandidateId, reason), cancellationToken);
+        audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewCompleted,
+            context.IsAdminTest ? context.AdminTestOwnerId : null, context.IsAdminTest ? null : context.CandidateEmail,
+            context.ExamId, context.CandidateId, context.IsAdminTest ? $"Administrator test: {reason}" : reason), cancellationToken);
 
     private async Task<IReadOnlyList<GlossaryTermDto>> GlossaryAsync(InterviewContext context, CancellationToken cancellationToken) =>
         context.SubjectId is { } subjectId ? await glossary.ListAsync(subjectId, cancellationToken) : [];
@@ -153,7 +169,7 @@ public sealed class InterviewService(
         async Task<(FollowUpReason, NewInterviewTurn?)> MoveOn(FollowUpReason reason) =>
             (reason, await NextMainTurnAsync(context, record, current, reason, timedOut, cancellationToken));
 
-        if (now >= context.SlotEndsAtUtc)
+        if (!context.IsAdminTest && now >= context.SlotEndsAtUtc)
             return (FollowUpReason.LimitReached, null);
         if (transcript.Length == 0)
             return await MoveOn(FollowUpReason.NoAnswer);
@@ -250,8 +266,10 @@ public sealed class InterviewService(
 
         logger.LogInformation("Candidate {CandidateId}: question {Order} adapted {Step} to bank question {QuestionId} ({Level})",
             context.CandidateId, mainIndex + 1, step, chosen.Id, chosen.BloomLevelName);
-        await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewQuestionAdapted, null, context.CandidateEmail, context.ExamId, context.CandidateId,
-            $"Question {mainIndex + 1}: {(step == AdaptiveStep.Harder ? "harder" : "easier")} after question {mainIndex} ({finished.BloomLevelName} -> {chosen.BloomLevelName}; was {planned.BloomLevelName})"),
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewQuestionAdapted,
+            context.IsAdminTest ? context.AdminTestOwnerId : null, context.IsAdminTest ? null : context.CandidateEmail,
+            context.ExamId, context.CandidateId,
+            $"{(context.IsAdminTest ? "Administrator test: " : string.Empty)}Question {mainIndex + 1}: {(step == AdaptiveStep.Harder ? "harder" : "easier")} after question {mainIndex} ({finished.BloomLevelName} -> {chosen.BloomLevelName}; was {planned.BloomLevelName})"),
             cancellationToken);
         return chosen.Content;
     }
@@ -259,10 +277,14 @@ public sealed class InterviewService(
     private static int OrderOf(AdaptivePool pool, ExamAssignedQuestion question) =>
         pool.BloomOrders.TryGetValue(question.BloomLevelName, out var order) ? order : 0;
 
-    private async Task<InterviewContext> LoadAsync(int candidateId, string email, CancellationToken cancellationToken)
+    private async Task<InterviewContext> LoadAsync(int candidateId, string email, string? adminUserId, bool isAdmin,
+        CancellationToken cancellationToken)
     {
         var context = await interviews.GetContextAsync(candidateId, cancellationToken);
-        if (context is null || string.IsNullOrWhiteSpace(email) || !string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (context is null
+            || (context.IsAdminTest
+                ? !isAdmin || string.IsNullOrWhiteSpace(adminUserId) || context.AdminTestOwnerId != adminUserId
+                : string.IsNullOrWhiteSpace(email) || !string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase)))
             throw new KeyNotFoundException(L10n.T("This exam slot was not found."));
         return context;
     }
@@ -273,11 +295,9 @@ public sealed class InterviewService(
         if (state.Status == InterviewStatus.Completed)
             return state;
         var speech = await settings.GetSpeechAsync(cancellationToken);
-        var phrases = TranscriptNormalizer.Phrases(await GlossaryAsync(context, cancellationToken));
         return state with
         {
-            Speech = speech,
-            Phrases = phrases
+            Speech = speech
         };
     }
 
@@ -290,6 +310,6 @@ public sealed class InterviewService(
             current = new InterviewTurnDto(open.TurnId, open.Kind, open.QuestionText, open.MainIndex, context.Questions.Count,
                 open.FollowUpIndex, open.AskedAtUtc, context.AnswerTimeLimitSeconds, context.MaxFollowUpsPerQuestion);
         return new InterviewStateDto(context.CandidateId, context.ExamTitle, context.Language, status, context.SlotStartsAtUtc, context.SlotEndsAtUtc, current, now,
-            context.Recording, context.RecordingConsentAtUtc is not null);
+            context.Recording, context.RecordingConsentAtUtc is not null, AdminTestMode: context.IsAdminTest, ExamId: context.ExamId);
     }
 }

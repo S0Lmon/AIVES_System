@@ -44,7 +44,9 @@ public sealed class CandidateModel(
     IGradingService grading,
     IRecordingService recordings,
     DisplayTimeZone timeZone,
-    ILiveUpdates liveUpdates) : PageModel
+    ILiveUpdates liveUpdates,
+    IGradingWorkSignal gradingWorkSignal,
+    IOptions<GradingOptions> gradingOptions) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     public int Id
@@ -101,8 +103,14 @@ public sealed class CandidateModel(
     {
         try
         {
+            if (!gradingOptions.Value.WorkerEnabled)
+            {
+                TempData["GradeError"] = L10n.T("AI grading is disabled on this server.");
+                return RedirectToPage(new { id = Id });
+            }
             await grading.RequestAiGradingAsync(Id, ExamPageActors.From(User), cancellationToken);
-            TempData["GradeMessage"] = L10n.T("The AI will grade this viva again within a minute. Your own scores are kept.");
+            gradingWorkSignal.Signal();
+            TempData["GradeMessage"] = L10n.T("AI grading has been queued and will start shortly. Reload this page to see the result.");
         }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (InvalidOperationException ex) { TempData["GradeError"] = ex.Message; }

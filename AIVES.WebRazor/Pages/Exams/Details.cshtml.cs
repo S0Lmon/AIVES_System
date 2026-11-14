@@ -27,6 +27,7 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         get; private set;
     }
     public bool Started => Exam.HasStarted(NowUtc);
+    public bool IsAdmin => User.IsInRole(AppRoles.Admin);
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken) =>
         await LoadAsync(cancellationToken) ? Page() : NotFound();
@@ -142,6 +143,18 @@ public sealed class DetailsModel(IExamService exams, DisplayTimeZone timeZone, T
         {
             id = Id
         });
+    }
+
+    public async Task<IActionResult> OnPostTestInterviewAsync(int order, CancellationToken cancellationToken)
+    {
+        if (!IsAdmin)
+            return Forbid();
+        try
+        {
+            var candidateId = await exams.CreateAdminTestCandidateAsync(Id, order, ExamPageActors.From(User), cancellationToken);
+            return RedirectToPage("/Interviews/Interview", new { id = candidateId });
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
     }
 
     private async Task<bool> LoadAsync(CancellationToken cancellationToken)

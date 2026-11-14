@@ -75,6 +75,41 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         return exam.Id;
     }
 
+    public async Task<int> CreateAdminTestCandidateAsync(int examId, int sourceCandidateOrder, string adminUserId, DateTime slotStartsAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var source = await context.ExamCandidates.AsNoTracking()
+            .Include(candidate => candidate.Questions)
+            .FirstOrDefaultAsync(candidate => candidate.ExamId == examId && candidate.Order == sourceCandidateOrder && !candidate.IsAdminTest,
+                cancellationToken)
+            ?? throw new KeyNotFoundException($"Candidate {sourceCandidateOrder} was not found.");
+        var nextOrder = await context.ExamCandidates
+            .Where(candidate => candidate.ExamId == examId && candidate.IsAdminTest)
+            .Select(candidate => (int?)candidate.Order)
+            .MinAsync(cancellationToken) ?? 0;
+        var testCandidate = new ExamCandidate
+        {
+            ExamId = examId,
+            Order = nextOrder <= 0 ? nextOrder - 1 : -1,
+            Email = $"admin-test-{Guid.NewGuid():N}@aives.local",
+            IsAdminTest = true,
+            AdminTestOwnerId = adminUserId,
+            SlotStartsAtUtc = slotStartsAtUtc,
+            Questions = source.Questions.OrderBy(question => question.Order).Select(question => new ExamCandidateQuestion
+            {
+                Order = question.Order,
+                QuestionId = question.QuestionId,
+                Content = question.Content,
+                ExpectedAnswer = question.ExpectedAnswer,
+                BloomLevelName = question.BloomLevelName,
+                RubricJson = question.RubricJson
+            }).ToList()
+        };
+        context.ExamCandidates.Add(testCandidate);
+        await context.SaveChangesAsync(cancellationToken);
+        return testCandidate.Id;
+    }
+
     public async Task UpdateAsync(int id, ExamDraft draft, CancellationToken cancellationToken = default)
     {
         var exam = await context.Exams.Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
@@ -128,7 +163,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
         var rows = await context.Exams.AsNoTracking()
             .Where(exam => createdById == null || exam.CreatedById == createdById)
             .OrderByDescending(exam => exam.StartsAtUtc)
-            .Select(exam => new { exam.Id, exam.Title, exam.SubjectName, exam.TopicName, exam.StartsAtUtc, exam.EndsAtUtc, exam.SlotMinutes, exam.CreatedById, Count = exam.Candidates.Count })
+            .Select(exam => new { exam.Id, exam.Title, exam.SubjectName, exam.TopicName, exam.StartsAtUtc, exam.EndsAtUtc, exam.SlotMinutes, exam.CreatedById, Count = exam.Candidates.Count(candidate => !candidate.IsAdminTest) })
             .ToListAsync(cancellationToken);
         return rows.Select(row => new ExamSummaryDto(row.Id, row.Title, row.SubjectName, row.TopicName, row.StartsAtUtc,
             row.EndsAtUtc ?? ExamSchedule.LegacyEndsAt(row.StartsAtUtc, row.SlotMinutes, row.Count), row.SlotMinutes, row.Count, row.CreatedById)).ToList();
@@ -137,9 +172,9 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     public async Task<ExamDetailsDto?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
         var exam = await context.Exams.AsNoTracking()
-            .Include(item => item.Candidates).ThenInclude(candidate => candidate.Questions)
+            .Include(item => item.Candidates.Where(candidate => !candidate.IsAdminTest)).ThenInclude(candidate => candidate.Questions)
             .Include(item => item.QuestionPool)
-            .Include(item => item.Candidates).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns).ThenInclude(turn => turn.Recording)
+            .Include(item => item.Candidates.Where(candidate => !candidate.IsAdminTest)).ThenInclude(candidate => candidate.Attempt).ThenInclude(attempt => attempt!.Turns).ThenInclude(turn => turn.Recording)
             .AsSplitQuery()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (exam is null)
@@ -186,7 +221,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
     {
         var normalized = email.Trim().ToLowerInvariant();
         var rows = await context.ExamCandidates.AsNoTracking()
-            .Where(candidate => candidate.Email == normalized)
+            .Where(candidate => !candidate.IsAdminTest && candidate.Email == normalized)
             .Select(candidate => new
             {
                 CandidateId = candidate.Id,
@@ -204,7 +239,7 @@ public sealed class ExamRepository(ApplicationDbContext context) : IExamReposito
                 candidate.Exam.SlotMinutes,
                 candidate.Exam.MainQuestionCount,
                 candidate.Exam.MaxFollowUpQuestions,
-                Count = candidate.Exam.Candidates.Count
+                Count = candidate.Exam.Candidates.Count(item => !item.IsAdminTest)
             })
             .ToListAsync(cancellationToken);
         return rows.Select(row =>

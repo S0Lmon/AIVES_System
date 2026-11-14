@@ -1,9 +1,4 @@
-# Builds the solution and runs the whole test suite on every push to main and every pull request.
-# The HTTP and SQL integration tests run against a throwaway SQL Server service container; the
-# live Gemini test and the real speech-model test stay skipped because they need a key or ~600 MB
-# of models (see AIVES.Tests: LiveGeminiTests, SpeechModelTests).
-# Two more jobs run alongside: the Node tests for the viva page script (scripts/tests) and a build of
-# the web Docker image (not pushed), so a broken Dockerfile shows up before a deploy.
+# Builds the Windows-targeted solution and runs its tests on pushes and pull requests.
 name: Tests
 
 on:
@@ -22,28 +17,11 @@ permissions:
 env:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
-  # Only used by the service container below, which is discarded after the run.
-  SQL_PASSWORD: Ci_${{ github.run_id }}_Aa1!
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 30
-
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          ACCEPT_EULA: "Y"
-          MSSQL_SA_PASSWORD: Ci_${{ github.run_id }}_Aa1!
-        ports:
-          - 1433:1433
-        options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci_${{ github.run_id }}_Aa1! -Q 'SELECT 1' -b"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 12
-          --health-start-period 20s
 
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +44,7 @@ jobs:
 
       - name: Test
         env:
-          AIVES_TEST_SQL_CONNECTION: Server=127.0.0.1,1433;Database=AIVES_Test;User Id=sa;Password=${{ env.SQL_PASSWORD }};TrustServerCertificate=True
+          AIVES_TEST_SQL_CONNECTION: Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=True
         run: >-
           dotnet test AIVES.Tests/AIVES.Tests.csproj --configuration Release --no-build
           --logger "trx;LogFileName=results.trx" --logger "console;verbosity=normal"
@@ -99,7 +77,7 @@ jobs:
           if-no-files-found: ignore
 
   javascript:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
 
     steps:
@@ -109,25 +87,6 @@ jobs:
         with:
           node-version: 22
 
-      # Runs wwwroot/js/interview.js in a fake browser (node:vm): recording, upload and retry paths.
+      # Runs wwwroot/js/interview.js in a fake browser (node:vm): recording and speech stream paths.
       - name: Test the viva page script
         run: node --test scripts/tests/*.test.cjs
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build the web image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: AIVES.WebRazor/Dockerfile
-          push: false
-          tags: aives-web:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

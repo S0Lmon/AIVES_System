@@ -28,7 +28,7 @@ public static class DependencyInjection
         if (!string.IsNullOrWhiteSpace(certificatePath))
         {
             var certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, configuration["DataProtection:CertificatePassword"]);
-            // Linux has no certificate store lookup for decryption, so name the certificate explicitly too.
+            // Explicitly name the certificate so persisted keys remain decryptable after a restart.
             dataProtection.ProtectKeysWithCertificate(certificate).UnprotectKeysWithAnyCertificate(certificate);
         }
         services.AddHealthChecks()

@@ -22,6 +22,8 @@ namespace AIVES.DAL.Entities
             get; set;
         }
         public string Email { get; set; } = string.Empty;
+        public bool IsAdminTest { get; set; }
+        public string? AdminTestOwnerId { get; set; }
         /// <summary>
         /// Start of this candidate's slot. Set when the schedule is generated and whenever the
         /// lecturer moves the slot by hand (plan §6). Null for rows created before slots were

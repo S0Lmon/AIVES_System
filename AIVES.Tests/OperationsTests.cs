@@ -83,7 +83,6 @@ public sealed class RecordingAndInterviewTests
 
         Assert.Equal(RecordingMode.Audio, state.Recording);
         Assert.True(state.RecordingConsentGiven);
-        Assert.Equal(["SQL"], state.Phrases);
         Assert.NotNull(state.Speech);
         Assert.Contains(db.AuditEntries, entry => entry.Action == AuditActions.InterviewStarted && entry.Details!.Contains("Audio"));
     }
@@ -179,12 +178,12 @@ public sealed class RecordingAndInterviewTests
         Assert.Equal(SpeechSettingsDto.Default.DefaultLanguage, (await settings.GetSpeechAsync()).DefaultLanguage);
 
         await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveSpeechAsync(SpeechSettingsDto.Default with { EnabledLanguages = [AppLanguage.En] }));
-        await settings.SaveSpeechAsync(new SpeechSettingsDto(AppLanguage.En, [AppLanguage.En], 1.1, null, "Google US English", 90));
+        await settings.SaveSpeechAsync(new SpeechSettingsDto(AppLanguage.En, [AppLanguage.En], 1.1, null, "Microsoft David Desktop", 90));
         var saved = await TestServices.Settings(db, clock).GetSpeechAsync();
         Assert.Equal(AppLanguage.En, saved.DefaultLanguage);
         Assert.Equal([AppLanguage.En], saved.EnabledLanguages);
         Assert.Equal(1.1, saved.SpeechRate, 3);
-        Assert.Equal("Google US English", saved.EnglishVoice);
+        Assert.Equal("Microsoft David Desktop", saved.EnglishVoice);
         Assert.Equal(90, saved.RecordingRetentionDays);
     }
 }

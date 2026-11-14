@@ -5,15 +5,50 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Threading.Channels;
 
 namespace AIVES.BLL.Services.Grading;
+
+public interface IGradingWorkSignal
+{
+    void Signal();
+    Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken);
+}
+
+public sealed class GradingWorkSignal : IGradingWorkSignal
+{
+    private readonly Channel<bool> _signals = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false
+    });
+
+    public void Signal() => _signals.Writer.TryWrite(true);
+
+    public async Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        try
+        {
+            await _signals.Reader.ReadAsync(timeoutSource.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+}
 
 /// <summary>
 /// Background housekeeping on every web instance: closes interviews whose slot ended while the
 /// candidate was away, asks the AI to grade finished interviews, and deletes recordings past their
 /// retention period. Claims in the database keep instances from grading the same interview twice.
 /// </summary>
-public sealed class GradingWorker(IServiceScopeFactory scopes, IOptions<GradingOptions> options, TimeProvider clock, ILogger<GradingWorker> logger) : BackgroundService
+public sealed class GradingWorker(IServiceScopeFactory scopes, IOptions<GradingOptions> options, IGradingWorkSignal workSignal,
+    TimeProvider clock, ILogger<GradingWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan PurgeInterval = TimeSpan.FromHours(6);
     private DateTime _nextPurgeUtc = DateTime.MinValue;
@@ -35,7 +70,7 @@ public sealed class GradingWorker(IServiceScopeFactory scopes, IOptions<GradingO
             {
                 logger.LogError(ex, "Grading worker pass failed");
             }
-            await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
+            await workSignal.WaitAsync(interval, stoppingToken).ConfigureAwait(false);
         }
     }
 

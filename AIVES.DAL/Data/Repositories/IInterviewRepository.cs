@@ -9,7 +9,8 @@ public interface IInterviewRepository
     /// Creates the attempt with its first question. Returns false when an attempt already exists
     /// (for example a second tab started at the same moment); the caller then reads the existing one.
     /// </summary>
-    Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false, CancellationToken cancellationToken = default);
+    Task<bool> StartAsync(int candidateId, DateTime startedAtUtc, NewInterviewTurn firstTurn, bool recordingConsent = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stores the answer to a turn. Returns false when the turn was already answered, so a repeated

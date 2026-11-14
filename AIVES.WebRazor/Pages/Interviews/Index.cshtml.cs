@@ -23,5 +23,6 @@ public sealed class IndexModel(IExamService exams, TimeProvider clock) : PageMod
 
     public bool CanEnter(StudentExamDto exam) =>
         exam.InterviewStatus == InterviewStatus.InProgress
-        || (exam.InterviewStatus is null or InterviewStatus.NotStarted && NowUtc >= exam.StartsAtUtc && NowUtc < exam.EndsAtUtc);
+        || (exam.InterviewStatus is null or InterviewStatus.NotStarted
+            && NowUtc >= ExamSchedule.JoinOpensAt(exam.StartsAtUtc) && NowUtc < exam.EndsAtUtc);
 }

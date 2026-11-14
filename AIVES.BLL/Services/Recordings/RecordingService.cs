@@ -13,8 +13,8 @@ public sealed class RecordingOptions
     public const string SectionName = "Recordings";
 
     /// <summary>
-    /// Folder for the encrypted files. Every web instance must see the same folder (a shared volume in
-    /// compose.yaml). Relative paths are resolved against the application's content root.
+    /// Folder for the encrypted files. Every web instance must see the same folder.
+    /// Relative paths are resolved against the application's content root.
     /// </summary>
     public string Path { get; set; } = "App_Data/recordings";
 
@@ -50,11 +50,13 @@ public sealed record SessionSegmentDto(long Segment, DateTime FirstPartAtUtc, in
 /// </summary>
 public interface IRecordingService
 {
-    Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default);
+    Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default,
+        string? adminUserId = null, bool isAdmin = false);
     Task<RecordingContent?> OpenAsync(int recordingId, ExamActor actor, CancellationToken cancellationToken = default);
 
     /// <summary>Stores one piece of the whole-viva recording; a piece uploaded twice is stored once.</summary>
-    Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType, CancellationToken cancellationToken = default);
+    Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType,
+        CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false);
 
     /// <summary>The whole-viva recording's segments, empty when there is none or <paramref name="actor"/> may not play it.</summary>
     Task<IReadOnlyList<SessionSegmentDto>> ListSessionAsync(int candidateId, ExamActor actor, CancellationToken cancellationToken = default);
@@ -83,10 +85,11 @@ public sealed class RecordingService(
     private static readonly string[] AllowedTypes = ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "video/webm", "video/mp4"];
     private IDataProtector Protector => protection.CreateProtector("AIVES.Recordings.v1");
 
-    public async Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(int candidateId, string email, int turnId, Stream content, string contentType,
+        CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false)
     {
         var context = await interviews.GetContextAsync(candidateId, cancellationToken);
-        if (context is null || string.IsNullOrWhiteSpace(email) || !string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (context is null || !CanAccess(context, email, adminUserId, isAdmin))
             throw new KeyNotFoundException(L10n.T("This exam slot was not found."));
         if (context.Recording == RecordingMode.None || context.RecordingConsentAtUtc is null)
             throw new InvalidOperationException(L10n.T("This viva is not being recorded."));
@@ -140,15 +143,15 @@ public sealed class RecordingService(
     }
 
     public async Task SaveSessionPartAsync(int candidateId, string email, long segment, int partIndex, Stream content, string contentType,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, string? adminUserId = null, bool isAdmin = false)
     {
         var context = await interviews.GetContextAsync(candidateId, cancellationToken);
-        if (context is null || string.IsNullOrWhiteSpace(email) || !string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (context is null || !CanAccess(context, email, adminUserId, isAdmin))
             throw new KeyNotFoundException(L10n.T("This exam slot was not found."));
         if (context.Recording == RecordingMode.None || context.RecordingConsentAtUtc is null || context.AttemptId is not { } attemptId)
             throw new InvalidOperationException(L10n.T("This viva is not being recorded."));
         // The final piece arrives just after the viva ends; nothing is accepted long after the slot.
-        if (clock.GetUtcNow().UtcDateTime > context.SlotEndsAtUtc.AddMinutes(Math.Max(0, options.Value.SessionUploadGraceMinutes)))
+        if (!context.IsAdminTest && clock.GetUtcNow().UtcDateTime > context.SlotEndsAtUtc.AddMinutes(Math.Max(0, options.Value.SessionUploadGraceMinutes)))
             throw new InvalidOperationException(L10n.T("This viva is not being recorded."));
         if (segment <= 0 || partIndex < 0 || partIndex >= options.Value.MaxSessionParts)
             throw new ArgumentException(L10n.T("Unsupported recording format."));
@@ -279,6 +282,12 @@ public sealed class RecordingService(
             throw new ArgumentException(L10n.T("Unsupported recording format."));
         return (mediaType, hasVideo);
     }
+
+    private static bool CanAccess(InterviewContext context, string email, string? adminUserId, bool isAdmin) =>
+        context.IsAdminTest
+            ? isAdmin && !string.IsNullOrWhiteSpace(adminUserId) && context.AdminTestOwnerId == adminUserId
+            : !string.IsNullOrWhiteSpace(email)
+                && string.Equals(context.CandidateEmail, email.Trim(), StringComparison.OrdinalIgnoreCase);
 
     public async Task DeleteForExamAsync(int examId, CancellationToken cancellationToken = default)
     {

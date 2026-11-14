@@ -183,6 +183,22 @@ public sealed class ExamService(
     public Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default) =>
         string.IsNullOrWhiteSpace(email) ? Task.FromResult<IReadOnlyList<StudentExamDto>>([]) : exams.ListForCandidateAsync(email, cancellationToken);
 
+    public async Task<int> CreateAdminTestCandidateAsync(int examId, int sourceCandidateOrder, ExamActor actor,
+        CancellationToken cancellationToken = default)
+    {
+        if (!actor.IsAdmin)
+            throw new UnauthorizedAccessException("Only administrators can start an interview test.");
+        var exam = await GetAsync(examId, actor, cancellationToken)
+            ?? throw new KeyNotFoundException(L10n.T("The exam was not found."));
+        if (exam.Candidates.All(candidate => candidate.Order != sourceCandidateOrder))
+            throw new KeyNotFoundException(L10n.T("The candidate set was not found."));
+        var candidateId = await exams.CreateAdminTestCandidateAsync(examId, sourceCandidateOrder, actor.UserId,
+            clock.GetUtcNow().UtcDateTime, cancellationToken);
+        await audit.WriteAsync(new AuditEntryInput(AuditActions.InterviewStarted, actor.UserId, actor.Email, examId, candidateId,
+            $"Administrator test copy of candidate set #{sourceCandidateOrder}"), cancellationToken);
+        return candidateId;
+    }
+
     public IReadOnlyList<string> ParseCandidateEmails(string? text) =>
         (text ?? string.Empty).Split(EmailSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(email => email.ToLowerInvariant())

@@ -15,7 +15,10 @@ public sealed class CandidateStatusTests
     {
         var candidate = Candidate();
 
-        Assert.Equal(CandidateStatus.Scheduled, candidate.StatusAt(Start.AddMinutes(-1)));
+        Assert.Equal(CandidateStatus.Scheduled, candidate.StatusAt(Start.AddMinutes(-6)));
+        // The slot counts as open five minutes early, because the candidate may already sit the viva then.
+        Assert.Equal(CandidateStatus.Scheduled, candidate.StatusAt(ExamSchedule.JoinOpensAt(Start).AddSeconds(-1)));
+        Assert.Equal(CandidateStatus.Waiting, candidate.StatusAt(ExamSchedule.JoinOpensAt(Start)));
         Assert.Equal(CandidateStatus.Waiting, candidate.StatusAt(Start));
         Assert.Equal(CandidateStatus.Waiting, candidate.StatusAt(Start.AddMinutes(19)));
         Assert.Equal(CandidateStatus.Absent, candidate.StatusAt(Start.AddMinutes(20)));
