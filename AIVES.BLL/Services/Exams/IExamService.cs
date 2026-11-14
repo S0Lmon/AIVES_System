@@ -38,6 +38,8 @@ public interface IExamService
     Task<int> CountPoolAsync(int subjectId, int? topicId, int? rubricId = null, CancellationToken cancellationToken = default);
     /// <summary>Exams the given email sits, with that candidate's own slot.</summary>
     Task<IReadOnlyList<StudentExamDto>> ListForCandidateAsync(string email, CancellationToken cancellationToken = default);
+    /// <summary>Creates an isolated, ungraded copy of one candidate's assigned question set for an administrator.</summary>
+    Task<int> CreateAdminTestCandidateAsync(int examId, int sourceCandidateOrder, ExamActor actor, CancellationToken cancellationToken = default);
     /// <summary>Splits pasted text (lines, commas or semicolons) into trimmed, lower-case, de-duplicated emails.</summary>
     IReadOnlyList<string> ParseCandidateEmails(string? text);
 }

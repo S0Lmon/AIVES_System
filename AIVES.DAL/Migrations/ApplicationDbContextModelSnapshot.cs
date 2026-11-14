@@ -441,8 +441,15 @@ namespace AIVES.DAL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("AdminTestOwnerId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("ExamId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsAdminTest")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -456,6 +463,8 @@ namespace AIVES.DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email");
+
+                    b.HasIndex("IsAdminTest", "AdminTestOwnerId");
 
                     b.HasIndex("ExamId", "Email")
                         .IsUnique();

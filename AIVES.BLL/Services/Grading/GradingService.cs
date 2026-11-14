@@ -108,6 +108,7 @@ public sealed class GradingService(
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(10, options.Value.TimeoutSeconds)));
+        //Rubric mapping -> 
         return await grader.GradeAsync(new GradingRequest(language, subjectName, question.Content, question.ExpectedAnswer, question.BloomLevelName,
             question.Rubric, question.MaxScore, exchanges, terms), timeout.Token);
     }

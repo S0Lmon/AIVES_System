@@ -39,7 +39,7 @@ public sealed class GradingRepository(ApplicationDbContext context) : IGradingRe
     public async Task<int?> ClaimNextAsync(DateTime nowUtc, DateTime staleBeforeUtc, CancellationToken cancellationToken = default)
     {
         var candidates = await context.ExamAttempts
-            .Where(attempt => attempt.Status == InterviewStatus.Completed && attempt.GradingStatus == GradingStatus.Pending
+            .Where(attempt => !attempt.Candidate.IsAdminTest && attempt.Status == InterviewStatus.Completed && attempt.GradingStatus == GradingStatus.Pending
                 && (attempt.GradingClaimedAtUtc == null || attempt.GradingClaimedAtUtc < staleBeforeUtc))
             .OrderBy(attempt => attempt.CompletedAtUtc)
             .Take(3)
@@ -112,7 +112,9 @@ public sealed class GradingRepository(ApplicationDbContext context) : IGradingRe
 
     public async Task CompleteAiPassAsync(int candidateId, GradingStatus status, string? error, CancellationToken cancellationToken = default)
     {
-        var attempt = await context.ExamAttempts.FirstOrDefaultAsync(item => item.ExamCandidateId == candidateId, cancellationToken);
+        var attempt = await context.ExamAttempts
+            .Where(item => item.ExamCandidateId == candidateId && !item.Candidate.IsAdminTest)
+            .FirstOrDefaultAsync(cancellationToken);
         if (attempt is null)
             return;
         attempt.GradingStatus = status;
@@ -123,7 +125,9 @@ public sealed class GradingRepository(ApplicationDbContext context) : IGradingRe
 
     public async Task<bool> RequeueAsync(int candidateId, CancellationToken cancellationToken = default)
     {
-        var attempt = await context.ExamAttempts.FirstOrDefaultAsync(item => item.ExamCandidateId == candidateId, cancellationToken);
+        var attempt = await context.ExamAttempts
+            .Where(item => item.ExamCandidateId == candidateId && !item.Candidate.IsAdminTest)
+            .FirstOrDefaultAsync(cancellationToken);
         if (attempt is null || attempt.Status != InterviewStatus.Completed)
             return false;
         attempt.GradingStatus = GradingStatus.Pending;
@@ -143,6 +147,8 @@ public sealed class GradingRepository(ApplicationDbContext context) : IGradingRe
             .FirstOrDefaultAsync(item => item.Id == candidateId, cancellationToken)
             ?? throw new KeyNotFoundException($"Candidate {candidateId} was not found.");
         var attempt = candidate.Attempt ?? throw new InvalidOperationException("The candidate has no interview to grade.");
+        if (candidate.IsAdminTest)
+            throw new InvalidOperationException("Administrator test interviews cannot be graded.");
         foreach (var (questionId, maxScore, score, questionComment) in grades)
         {
             var question = candidate.Questions.FirstOrDefault(item => item.Id == questionId);
@@ -162,6 +168,7 @@ public sealed class GradingRepository(ApplicationDbContext context) : IGradingRe
     }
 
     private IQueryable<ExamCandidate> Candidates() => context.ExamCandidates.AsNoTracking()
+        .Where(item => !item.IsAdminTest)
         .Include(item => item.Exam)
         .Include(item => item.Questions).ThenInclude(question => question.Grade)
         .Include(item => item.Attempt).ThenInclude(attempt => attempt!.Turns).ThenInclude(turn => turn.Recording)
