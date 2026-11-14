@@ -81,7 +81,8 @@ public sealed class InterviewService(
             throw new InvalidOperationException(L10n.T("You have been marked absent for this exam. Please contact your lecturer."));
         if (!adminTest && context.StatusOverride == CandidateStatus.Cancelled)
             throw new InvalidOperationException(L10n.T("Your participation in this exam was cancelled. Please contact your lecturer."));
-        if (!adminTest && Now < context.SlotStartsAtUtc)
+        // The candidate may open the viva a few minutes early to check their setup; the slot end stays fixed.
+        if (!adminTest && Now < ExamSchedule.JoinOpensAt(context.SlotStartsAtUtc))
             throw new InvalidOperationException(L10n.T("Your exam slot has not started yet."));
         if (!adminTest && Now >= context.SlotEndsAtUtc)
             throw new InvalidOperationException(L10n.T("Your exam slot has ended."));

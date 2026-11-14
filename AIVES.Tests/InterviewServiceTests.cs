@@ -109,7 +109,7 @@ public sealed class InterviewServiceTests
     public async Task TheVivaCanOnlyStartDuringTheSlot()
     {
         var h = Build();
-        h.Clock.Current = Now.AddMinutes(-5);
+        h.Clock.Current = Now.AddMinutes(-7);   // earlier than the five-minute join window before the slot
         await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
         h.Clock.Current = Now.AddMinutes(40);
         await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
@@ -121,6 +121,21 @@ public sealed class InterviewServiceTests
         // Starting again resumes the same question instead of creating a second attempt.
         Assert.Equal(state.CurrentTurn.TurnId, (await h.Service.StartAsync(h.CandidateId, Email)).CurrentTurn!.TurnId);
         Assert.Single(h.Db.ExamAttempts);
+    }
+
+    [Fact]
+    public async Task TheVivaOpensFiveMinutesBeforeTheSlot()
+    {
+        var h = Build();
+        var slotStart = Now.AddMinutes(-1);   // the slot the fixture stored
+        h.Clock.Current = ExamSchedule.JoinOpensAt(slotStart).AddSeconds(-1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => h.Service.StartAsync(h.CandidateId, Email));
+
+        h.Clock.Current = ExamSchedule.JoinOpensAt(slotStart);
+        var state = await h.Service.StartAsync(h.CandidateId, Email);
+        Assert.Equal(InterviewStatus.InProgress, state.Status);
+        Assert.Equal(slotStart, state.SlotStartsAtUtc);
+        Assert.Equal("Main question 1?", state.CurrentTurn!.QuestionText);
     }
 
     [Fact]

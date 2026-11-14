@@ -949,6 +949,94 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         Assert.Contains("AI proposed a grade", audit);
     }
 
+    /// <summary>
+    /// A candidate may join five minutes before their slot (to check camera, microphone and
+    /// connection), but not earlier; the join window is what the My exams button follows.
+    /// </summary>
+    [SqlFact]
+    public async Task AStudentCanJoinTheVivaFiveMinutesEarly()
+    {
+        using var lecturer = app.Browser();
+        await SignIn(lecturer);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        var (subjectId, topicId) = await CreateCatalogTopic("Early join");
+        await AddQuestions(subjectId, topicId, 2);
+
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", WithPool(await QuestionIds(subjectId), new()
+        {
+            ["Input.Title"] = "Early join viva",
+            ["Input.SubjectId"] = subjectId.ToString(),
+            ["Input.TopicId"] = topicId.ToString(),
+            ["Input.StartsAtLocal"] = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd") + "T09:00",
+            ["Input.SlotMinutes"] = "20",
+            ["Input.MainQuestionCount"] = "1",
+            ["Input.MaxFollowUpQuestions"] = "1",
+            ["Input.Language"] = "En",
+            ["Input.Recording"] = "None",
+            ["Input.CandidateEmails"] = studentEmail
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        var examId = int.Parse(created.Headers.Location!.OriginalString.Split('/')[^1]);
+        int candidateId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var exam = await db.Exams.Include(item => item.Candidates).SingleAsync(item => item.Id == examId);
+            candidateId = exam.Candidates.Single().Id;
+            // Ten minutes out is still outside the join window.
+            await PlaceSlotAsync(db, examId, DateTime.UtcNow.AddMinutes(10), 20);
+        }
+
+        var page = await Html(await student.GetAsync("/MyExams"));
+        Assert.DoesNotContain($"href=\"/Interview/{candidateId}\"", page);
+        Assert.Contains("Opens 5 minutes before your slot", page);
+        using (var early = new HttpRequestMessage(HttpMethod.Post, $"/Interview/{candidateId}/Start"))
+        {
+            early.Headers.Add("RequestVerificationToken", await Antiforgery(student, candidateId));
+            early.Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                recordingConsent = false
+            });
+            var refused = await student.SendAsync(early);
+            Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+            Assert.Contains("has not started yet", await refused.Content.ReadAsStringAsync());
+        }
+
+        // Three minutes out is inside it: the Start button appears and the viva really starts.
+        using (var scope = app.Services.CreateScope())
+            await PlaceSlotAsync(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(), examId, DateTime.UtcNow.AddMinutes(3), 20);
+
+        Assert.Contains($"href=\"/Interview/{candidateId}\"", await Html(await student.GetAsync("/MyExams")));
+        var state = await InterviewCall(student, await Antiforgery(student, candidateId), $"/Interview/{candidateId}/Start",
+            new
+            {
+                recordingConsent = false
+            });
+        Assert.Equal("InProgress", state.GetProperty("status").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(state.GetProperty("currentTurn").GetProperty("questionText").GetString()));
+    }
+
+    /// <summary>Puts one exam's whole schedule at <paramref name="slotStartUtc"/>, as a lecturer moving slots by hand would.</summary>
+    private static async Task PlaceSlotAsync(ApplicationDbContext db, int examId, DateTime slotStartUtc, int slotMinutes)
+    {
+        var exam = await db.Exams.Include(item => item.Candidates).SingleAsync(item => item.Id == examId);
+        exam.StartsAtUtc = slotStartUtc;
+        exam.EndsAtUtc = slotStartUtc.AddMinutes(slotMinutes * exam.Candidates.Count);
+        foreach (var candidate in exam.Candidates)
+            candidate.SlotStartsAtUtc = slotStartUtc.AddMinutes(slotMinutes * (candidate.Order - 1));
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<string> Antiforgery(HttpClient browser, int candidateId)
+    {
+        var page = await browser.GetAsync($"/Interview/{candidateId}");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var match = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        Assert.True(match.Success, "The interview page must contain an antiforgery token.");
+        return WebUtility.HtmlDecode(match.Groups[1].Value);
+    }
+
     private static async Task<System.Text.Json.JsonElement> InterviewCall(HttpClient browser, string token, string url, object? body = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, url);

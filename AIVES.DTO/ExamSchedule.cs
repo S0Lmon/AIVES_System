@@ -11,6 +11,16 @@ namespace AIVES.DTO;
 public static class ExamSchedule
 {
     /// <summary>
+    /// How early a candidate may open their viva before their slot starts. The window exists so a
+    /// student can check their camera, microphone and connection and read the instructions without
+    /// holding up the examiner; answers are still only accepted until the slot ends.
+    /// </summary>
+    public const int JoinEarlyMinutes = 5;
+
+    /// <summary>When a candidate may open the viva: <see cref="JoinEarlyMinutes"/> before their slot.</summary>
+    public static DateTime JoinOpensAt(DateTime slotStartsAtUtc) => slotStartsAtUtc.AddMinutes(-JoinEarlyMinutes);
+
+    /// <summary>
     /// Start time of every candidate's slot, in sitting order: each slot begins after the previous
     /// one plus <paramref name="bufferMinutes"/>, and a break of <paramref name="breakMinutes"/>
     /// is inserted after every <paramref name="breakEveryCount"/> candidates when both are set.
