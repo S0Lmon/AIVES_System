@@ -96,7 +96,7 @@ public sealed class SettingsModel(
             return BadRequest(new { error = L10n.T("Choose Vietnamese or English.") });
         if (speechRate is { } rate && (!double.IsFinite(rate) || rate is < 0.6 or > 1.4))
             return BadRequest(new { error = L10n.T("Speaking rate must be between 0.6 and 1.4.") });
-        if (!voice.IsAvailable(language, voiceName))
+        if (!CanSynthesize(language, voiceName))
         {
             var message = EdgeTtsVoiceCatalog.TryResolve(voiceName, out _) && !edgeTts.IsAvailable
                 ? "Edge TTS is not installed. Run scripts/install-edge-tts.ps1 on the application server."
@@ -155,6 +155,21 @@ public sealed class SettingsModel(
             LoadInstalledSpeechEngines();
             return Page();
         }
+    }
+
+    /// <summary>
+    /// Whether this exact selection can be synthesized. Stricter than
+    /// <see cref="ITextToSpeech.IsAvailable(AppLanguage, string?)"/>, which falls back to another
+    /// installed voice: the sandbox must play the voice the admin picked, and saying the Edge runtime
+    /// is missing is more useful than silently playing a different voice.
+    /// </summary>
+    private bool CanSynthesize(AppLanguage language, string? voiceName)
+    {
+        if (EdgeTtsVoiceCatalog.TryResolve(voiceName, out var edgeVoice))
+            return edgeVoice.Language == language && edgeTts.IsAvailable;
+        return string.IsNullOrWhiteSpace(voiceName)
+            ? voice.IsAvailable(language)
+            : speechCatalog.SelectVoice(language, voiceName) is not null;
     }
 
     private void ValidateVoiceSelection(AppLanguage language, string? voiceName)

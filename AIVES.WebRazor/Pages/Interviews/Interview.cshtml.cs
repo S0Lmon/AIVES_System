@@ -45,6 +45,11 @@ public sealed class InterviewApiModel(
         try
         {
             State = await interviews.GetStateAsync(id, Email, cancellationToken, UserId, IsAdmin);
+            // A silent viva is otherwise invisible: say which language had no voice and which saved
+            // voice was rejected, so an admin can compare it with the speech settings page.
+            if (!ServerReadsQuestions)
+                logger.LogWarning("No server voice reads {Language} for candidate slot {CandidateId} (saved voice {Voice}); the questions will not be read aloud.",
+                    State.Language, id, State.Speech?.VoiceFor(State.Language) ?? "(none)");
             return Page();
         }
         catch (KeyNotFoundException) { return NotFound(); }

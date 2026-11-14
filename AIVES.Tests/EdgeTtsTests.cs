@@ -67,6 +67,42 @@ public sealed class EdgeTtsTests
     }
 
     [Fact]
+    public void ASavedVoiceThatIsNoLongerInstalledStillCountsAsAvailable()
+    {
+        var speech = new ConfiguredTextToSpeech(
+            new SystemTextToSpeech(new MemoryCache(new MemoryCacheOptions()),
+                new FakeSpeechCatalog(new InstalledSpeechEngine("Microsoft Zira Desktop", "en-US", true))),
+            new FakeEdgeTtsProvider(available: false));
+
+        // A stale System.Speech name and an Edge voice without its runtime both fall back to the
+        // installed voice, so the viva keeps speaking instead of going silent.
+        Assert.True(speech.IsAvailable(AppLanguage.En, "Microsoft HoaiMy"));
+        Assert.True(speech.IsAvailable(AppLanguage.En, EdgeTtsVoiceCatalog.Selection(EdgeTtsVoiceCatalog.ForLanguage(AppLanguage.En)[0])));
+        Assert.False(speech.UsesOnlineService(AppLanguage.En, EdgeTtsVoiceCatalog.Selection(EdgeTtsVoiceCatalog.ForLanguage(AppLanguage.En)[0])));
+        // A language nothing can read stays unavailable, and an Edge voice for another language stays rejected.
+        Assert.False(speech.IsAvailable(AppLanguage.Vi, "Microsoft An"));
+        Assert.False(speech.IsAvailable(AppLanguage.En, EdgeTtsVoiceCatalog.Selection(EdgeTtsVoiceCatalog.ForLanguage(AppLanguage.Vi)[0])));
+    }
+
+    [Fact]
+    public async Task AMissingEdgeRuntimeStillReadsTheQuestionWithAnInstalledVoice()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        var speech = new ConfiguredTextToSpeech(
+            new SystemTextToSpeech(new MemoryCache(new MemoryCacheOptions()), new SystemSpeechCatalog()),
+            new FakeEdgeTtsProvider(available: false));
+        if (!speech.IsAvailable(AppLanguage.En))
+            return;   // the runner has no English voice at all; nothing to fall back to
+
+        var saved = EdgeTtsVoiceCatalog.Selection(EdgeTtsVoiceCatalog.ForLanguage(AppLanguage.En)[0]);
+        var audio = await speech.SynthesizeAsync("Hello, I am the virtual examiner.", AppLanguage.En, 1, saved);
+
+        Assert.Equal("audio/wav", audio.ContentType);
+        Assert.True(audio.Data.Length > 44);   // more than the WAV header
+    }
+
+    [Fact]
     public async Task LiveEdgeTtsVoicesReturnMp3WhenExplicitlyEnabled()
     {
         if (Environment.GetEnvironmentVariable("AIVES_EDGE_TTS_LIVE_TESTS") != "1")
@@ -99,9 +135,22 @@ public sealed class EdgeTtsTests
         public InstalledSpeechEngine? SelectVoice(AppLanguage language, string? name) => null;
     }
 
-    private sealed class FakeEdgeTtsProvider : IEdgeTtsProvider
+    private sealed class FakeSpeechCatalog(params InstalledSpeechEngine[] voices) : ISystemSpeechCatalog
     {
-        public bool IsAvailable => true;
+        public IReadOnlyList<InstalledSpeechEngine> Voices(AppLanguage language) =>
+            voices.Where(voice => language == AppLanguage.Vi
+                ? voice.Culture.StartsWith("vi", StringComparison.OrdinalIgnoreCase)
+                : voice.Culture.StartsWith("en", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        public InstalledSpeechEngine? SelectVoice(AppLanguage language, string? name) =>
+            string.IsNullOrWhiteSpace(name)
+                ? Voices(language).FirstOrDefault(voice => voice.IsFemale) ?? Voices(language).FirstOrDefault()
+                : Voices(language).FirstOrDefault(voice => string.Equals(voice.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class FakeEdgeTtsProvider(bool available = true) : IEdgeTtsProvider
+    {
+        public bool IsAvailable { get; } = available;
         public string? LastVoice { get; private set; }
 
         public Task<byte[]> SynthesizeMp3Async(string text, string voiceId, double speed, bool useCache, CancellationToken cancellationToken)

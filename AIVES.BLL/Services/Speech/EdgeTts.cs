@@ -221,18 +221,24 @@ public sealed class ConfiguredTextToSpeech(
     public bool IsAvailable(AppLanguage language) =>
         systemSpeech.IsAvailable(language) || edgeTts.IsAvailable;
 
+    /// <summary>
+    /// Whether this language can be read aloud. A saved voice that has since gone away — a
+    /// System.Speech voice uninstalled from the server, or an Edge TTS voice whose Python runtime
+    /// was removed — must not silence the examiner: synthesis falls back to another installed voice
+    /// for the language, so availability follows the language rather than the saved name.
+    /// </summary>
     public bool IsAvailable(AppLanguage language, string? preferredVoiceName)
     {
         if (string.IsNullOrWhiteSpace(preferredVoiceName))
             return IsAvailable(language);
-        return EdgeTtsVoiceCatalog.TryResolve(preferredVoiceName, out var edgeVoice)
-            ? edgeVoice.Language == language && edgeTts.IsAvailable
-            : systemSpeech.IsAvailable(language, preferredVoiceName);
+        if (EdgeTtsVoiceCatalog.TryResolve(preferredVoiceName, out var edgeVoice))
+            return edgeVoice.Language == language && (edgeTts.IsAvailable || systemSpeech.IsAvailable(language));
+        return systemSpeech.IsAvailable(language);
     }
 
     public bool UsesOnlineService(AppLanguage language, string? preferredVoiceName) =>
         EdgeTtsVoiceCatalog.TryResolve(preferredVoiceName, out var selectedEdgeVoice)
-            ? selectedEdgeVoice.Language == language
+            ? selectedEdgeVoice.Language == language && edgeTts.IsAvailable
             : string.IsNullOrWhiteSpace(preferredVoiceName)
                 && !systemSpeech.HasFemaleVoice(language)
                 && edgeTts.IsAvailable
@@ -256,8 +262,19 @@ public sealed class ConfiguredTextToSpeech(
         {
             if (selectedEdgeVoice.Language != language)
                 throw new ArgumentException($"The selected Edge TTS voice does not support {language}.", nameof(preferredVoiceName));
-            var mp3 = await edgeTts.SynthesizeMp3Async(text, selectedEdgeVoice.Id, speed, useCache, cancellationToken);
-            return new SpeechAudio(mp3, "audio/mpeg");
+            if (edgeTts.IsAvailable)
+            {
+                var mp3 = await edgeTts.SynthesizeMp3Async(text, selectedEdgeVoice.Id, speed, useCache, cancellationToken);
+                return new SpeechAudio(mp3, "audio/mpeg");
+            }
+            // The Edge runtime went away after the voice was saved. Read the question with an
+            // installed voice instead of leaving the examiner silent mid-viva.
+            preferredVoiceName = null;
+        }
+        else if (!string.IsNullOrWhiteSpace(preferredVoiceName) && !systemSpeech.IsAvailable(language, preferredVoiceName))
+        {
+            // Same for a System.Speech voice that is no longer installed on this server.
+            preferredVoiceName = null;
         }
 
         if (!string.IsNullOrWhiteSpace(preferredVoiceName))

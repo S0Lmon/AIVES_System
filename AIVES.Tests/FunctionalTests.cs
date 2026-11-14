@@ -1,3 +1,4 @@
+using AIVES.BLL.Services.Operations;
 using AIVES.DAL.Data;
 using AIVES.DTO;
 using Microsoft.EntityFrameworkCore;
@@ -1015,6 +1016,14 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
             });
         Assert.Equal("InProgress", state.GetProperty("status").GetString());
         Assert.False(string.IsNullOrWhiteSpace(state.GetProperty("currentTurn").GetProperty("questionText").GetString()));
+
+        // The page must offer the server voice, and that endpoint must return playable audio.
+        var vivaPage = await Html(await student.GetAsync($"/Interview/{candidateId}"));
+        var audioUrl = Regex.Match(vivaPage, "data-audio-url=\"([^\"]*)\"").Groups[1].Value;
+        var turn = state.GetProperty("currentTurn");
+        var audio = await student.GetAsync($"{audioUrl}/{turn.GetProperty("turnId").GetInt32()}");
+        Assert.Equal($"/Interview/{candidateId}/QuestionAudio", audioUrl);
+        Assert.Equal(HttpStatusCode.OK, audio.StatusCode);
     }
 
     /// <summary>Puts one exam's whole schedule at <paramref name="slotStartUtc"/>, as a lecturer moving slots by hand would.</summary>
@@ -1035,6 +1044,63 @@ public sealed class FunctionalTests(FunctionalApp app) : IClassFixture<Functiona
         var match = Regex.Match(await page.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
         Assert.True(match.Success, "The interview page must contain an antiforgery token.");
         return WebUtility.HtmlDecode(match.Groups[1].Value);
+    }
+
+    /// <summary>
+    /// A saved voice that is no longer installed used to silence the viva while the admin's speech
+    /// page still played, because that page tests the voice currently in the dropdown. The viva must
+    /// fall back to an installed voice for the language.
+    /// </summary>
+    [SqlFact]
+    public async Task AStaleSavedVoiceDoesNotSilenceTheViva()
+    {
+        using var lecturer = app.Browser();
+        await SignIn(lecturer);
+        using var student = app.Browser();
+        var studentEmail = await SignIn(student, AppRoles.Student);
+        var (subjectId, topicId) = await CreateCatalogTopic("Stale voice");
+        await AddQuestions(subjectId, topicId, 2);
+
+        var created = await Post(lecturer, "/Exam/Create", "/Exam/Create", WithPool(await QuestionIds(subjectId), new()
+        {
+            ["Input.Title"] = "Stale voice viva",
+            ["Input.SubjectId"] = subjectId.ToString(),
+            ["Input.TopicId"] = topicId.ToString(),
+            ["Input.StartsAtLocal"] = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd") + "T09:00",
+            ["Input.SlotMinutes"] = "20",
+            ["Input.MainQuestionCount"] = "1",
+            ["Input.MaxFollowUpQuestions"] = "1",
+            ["Input.Language"] = "En",
+            ["Input.Recording"] = "None",
+            ["Input.CandidateEmails"] = studentEmail
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+        var examId = int.Parse(created.Headers.Location!.OriginalString.Split('/')[^1]);
+
+        int candidateId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var exam = await db.Exams.Include(item => item.Candidates).SingleAsync(item => item.Id == examId);
+            candidateId = exam.Candidates.Single().Id;
+            await PlaceSlotAsync(db, examId, DateTime.UtcNow.AddMinutes(2), 20);
+            // An English voice name that no server has: the saved preference, not a chosen dropdown value.
+            await scope.ServiceProvider.GetRequiredService<ISystemSettingsService>().SaveSpeechAsync(
+                new SpeechSettingsDto(AppLanguage.En, [AppLanguage.Vi, AppLanguage.En], 0.95, null, "Microsoft Not Installed Anywhere", 365));
+        }
+
+        var page = await Html(await student.GetAsync($"/Interview/{candidateId}"));
+        var audioUrl = Regex.Match(page, "data-audio-url=\"([^\"]*)\"").Groups[1].Value;
+        Assert.Equal($"/Interview/{candidateId}/QuestionAudio", audioUrl);
+
+        var state = await InterviewCall(student, await Antiforgery(student, candidateId), $"/Interview/{candidateId}/Start",
+            new
+            {
+                recordingConsent = false
+            });
+        var audio = await student.GetAsync($"{audioUrl}/{state.GetProperty("currentTurn").GetProperty("turnId").GetInt32()}");
+        Assert.Equal(HttpStatusCode.OK, audio.StatusCode);
+        Assert.True((await audio.Content.ReadAsByteArrayAsync()).Length > 44);
     }
 
     private static async Task<System.Text.Json.JsonElement> InterviewCall(HttpClient browser, string token, string url, object? body = null)
